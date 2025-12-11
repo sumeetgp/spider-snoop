@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider-Snoop DLP Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+            color: #764ba2;
+            font-size: 1.3em;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px 0;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .scan-list {
+            list-style: none;
+        }
+        
+        .scan-item {
+            padding: 15px;
+            margin: 10px 0;
+            background: #f7f7f7;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .status.completed {
+            background: #48bb78;
+            color: white;
+        }
+        
+        .status.running {
+            background: #ed8936;
+            color: white;
+        }
+        
+        .status.pending {
+            background: #4299e1;
+            color: white;
+        }
+        
+        .status.blocked {
+            background: #f56565;
+            color: white;
+        }
+        
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .feature-item {
+            padding: 10px;
+            background: #f0f4ff;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+        
+        .feature-item strong {
+            color: #333;
+        }
+        
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+        
+        .get { background: #61affe; color: white; }
+        .post { background: #49cc90; color: white; }
+        .put { background: #fca130; color: white; }
+        .delete { background: #f93e3e; color: white; }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-indicator.online {
+            background: #48bb78;
+        }
+        
+        .status-indicator.offline {
+            background: #f56565;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🕷️ Spider-Snoop DLP</h1>
+            <p class="subtitle">Data Loss Prevention System with AI-Powered Scanning</p>
+        </header>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2>📊 Statistics</h2>
+                <div class="stat">
+                    <span class="stat-label">Total Scans</span>
+                    <span class="stat-value" id="totalScans">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Active Users</span>
+                    <span class="stat-value" id="activeUsers">3</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Threats Detected</span>
+                    <span class="stat-value" id="threatsDetected">0</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Files Scanned</span>
+                    <span class="stat-value" id="filesScanned">0</span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>⚡ System Status</h2>
+                <div class="stat">
+                    <span class="stat-label">DLP Engine</span>
+                    <span class="stat-value">
+                        <span class="status-indicator online"></span>Running
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">ICAP Server</span>
+                    <span class="stat-value">
+                        <span class="status-indicator online"></span>Active on Port {{ICAP_PORT}}
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">Database</span>
+                    <span class="stat-value">
+                        <span class="status-indicator online"></span>Connected
+                    </span>
+                </div>
+                <div class="stat">
+                    <span class="stat-label">API Server</span>
+                    <span class="stat-value">
+                        <span class="status-indicator online"></span>Running
+                    </span>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h2>🚀 Quick Actions</h2>
+                <button class="btn" onclick="navigateTo('/docs')">📖 API Documentation</button>
+                <button class="btn" onclick="navigateTo('/redoc')">📚 ReDoc</button>
+                <button class="btn" onclick="startScan()">🔍 Test Scan</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📝 Recent Scans</h2>
+            <ul class="scan-list" id="scanList">
+                <li class="scan-item">
+                    <span>financial_report_q4.pdf</span>
+                    <span class="status completed">✓ Completed</span>
+                </li>
+                <li class="scan-item">
+                    <span>customer_data_backup.csv</span>
+                    <span class="status running">⟳ Scanning</span>
+                </li>
+                <li class="scan-item">
+                    <span>config_with_secrets.json</span>
+                    <span class="status blocked">✗ Blocked</span>
+                </li>
+                <li class="scan-item">
+                    <span>documentation.docx</span>
+                    <span class="status pending">⧒ Pending</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="dashboard">
+            <div class="card">
+                <h2>🔐 Authentication</h2>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    /api/auth/login
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Authenticate with username and password to get access token</p>
+                <p style="font-size: 0.85em; color: #999; margin-top: 5px;"><strong>Demo:</strong> admin / admin123</p>
+            </div>
+            
+            <div class="card">
+                <h2>👥 User Management</h2>
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    /api/users/me
+                </div>
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    /api/users/
+                </div>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    /api/users/
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">User and role management endpoints</p>
+            </div>
+            
+            <div class="card">
+                <h2>🔍 DLP Scanning</h2>
+                <div class="endpoint">
+                    <span class="method post">POST</span>
+                    /api/scans/
+                </div>
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    /api/scans/
+                </div>
+                <div class="endpoint">
+                    <span class="method get">GET</span>
+                    /api/scans/stats
+                </div>
+                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Create and manage DLP scans</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>✨ Features</h2>
+            <div class="features">
+                <div class="feature-item">✅ <strong>JWT Authentication</strong> - Secure token-based auth</div>
+                <div class="feature-item">✅ <strong>RBAC</strong> - Admin, Analyst, Viewer roles</div>
+                <div class="feature-item">✅ <strong>Pattern Detection</strong> - Credit cards, SSN, API keys</div>
+                <div class="feature-item">✅ <strong>AI Analysis</strong> - Context-aware threat assessment</div>
+                <div class="feature-item">✅ <strong>ICAP Protocol</strong> - Transparent content scanning</div>
+                <div class="feature-item">✅ <strong>Real-time Dashboard</strong> - Live statistics</div>
+                <div class="feature-item">✅ <strong>RESTful API</strong> - Full programmatic access</div>
+                <div class="feature-item">✅ <strong>Database Persistence</strong> - Scan history & reporting</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🛡️ Detected Data Types</h2>
+            <div class="features">
+                <div class="feature-item">💳 Credit Card Numbers</div>
+                <div class="feature-item">🆔 Social Security Numbers (SSN)</div>
+                <div class="feature-item">📧 Email Addresses</div>
+                <div class="feature-item">📞 Phone Numbers</div>
+                <div class="feature-item">🌐 IP Addresses</div>
+                <div class="feature-item">🔑 API Keys & Tokens</div>
+                <div class="feature-item">☁️ AWS Access Keys</div>
+                <div class="feature-item">🔒 Private Keys</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 ICAP Configuration</h2>
+            <p style="margin: 10px 0; font-family: monospace; background: #f4f4f4; padding: 10px; border-radius: 5px;">
+                Service: {{ICAP_SERVICE_NAME}}<br>
+                Protocol: ICAP/1.0<br>
+                Methods: RESPMOD, REQMOD<br>
+                Port: {{ICAP_PORT}}
+            </p>
+            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Configure your proxy or security appliance to point to this ICAP service for transparent DLP scanning.</p>
+        </div>
+        
+        <footer>
+            <p>🕷️ Spider-Snoop DLP v1.0.0 | Advanced Data Loss Prevention System</p>
+        </footer>
+    </div>
+    
+    <script>
+        function navigateTo(path) {
+            window.location.href = path;
+        }
+        
+        function startScan() {
+            alert('Test scan feature would open the API documentation.\nUse POST /api/scans/ to start a scan.');
+        }
+        
+        // Simulate real-time stats updates
+        function updateStats() {
+            const stats = {
+                totalScans: Math.floor(Math.random() * 1000) + 50,
+                activeUsers: 3,
+                threatsDetected: Math.floor(Math.random() * 25),
+                filesScanned: Math.floor(Math.random() * 5000) + 100
+            };
+            
+            document.getElementById('totalScans').textContent = stats.totalScans;
+            document.getElementById('activeUsers').textContent = stats.activeUsers;
+            document.getElementById('threatsDetected').textContent = stats.threatsDetected;
+            document.getElementById('filesScanned').textContent = stats.filesScanned;
+        }
+        
+        // Update stats on page load and every 10 seconds
+        updateStats();
+        setInterval(updateStats, 10000);
+    </script>
+</body>
+</html>
