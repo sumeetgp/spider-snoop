@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SpiderCob DLP Scanner</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 40px auto; padding: 20px; background: #f4f4f9; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        
+        /* Tabs */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; cursor: pointer; border-radius: 5px; background: #eee; }
+        .tab.active { background: #2563eb; color: white; font-weight: bold; }
+        
+        textarea { width: 100%; height: 150px; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        input[type="file"] { margin: 20px 0; font-size: 16px; }
+        
+        button { background: #2563eb; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; }
+        button:hover { background: #1d4ed8; }
+        
+        #result { margin-top: 20px; padding: 15px; border-radius: 5px; display: none; white-space: pre-wrap; }
+        .BLOCK { background: #fee2e2; border-left: 5px solid #ef4444; color: #991b1b; }
+        .ALLOW { background: #dcfce7; border-left: 5px solid #22c55e; color: #166534; }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🕷️ SpiderCob DLP Scanner</h1>
+        
+        <div class="tabs">
+            <div class="tab active" onclick="switchMode('text')" id="tabText">Scan Text</div>
+            <div class="tab" onclick="switchMode('file')" id="tabFile">Scan File</div>
+        </div>
+
+        <div id="textSection">
+            <p>Paste text below to scan for PII, Secrets, and IP leaks.</p>
+            <textarea id="inputText" placeholder="Paste suspicious text here..."></textarea>
+            <button onclick="scanText()">Scan Text</button>
+        </div>
+
+        <div id="fileSection" class="hidden">
+            <p>Upload a file (Source Code, Logs, JSON, CSV) to scan.</p>
+            <input type="file" id="inputFile">
+            <button onclick="scanFile()">Scan File</button>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function switchMode(mode) {
+            document.getElementById('result').style.display = 'none';
+            if (mode === 'text') {
+                document.getElementById('textSection').classList.remove('hidden');
+                document.getElementById('fileSection').classList.add('hidden');
+                document.getElementById('tabText').classList.add('active');
+                document.getElementById('tabFile').classList.remove('active');
+            } else {
+                document.getElementById('textSection').classList.add('hidden');
+                document.getElementById('fileSection').classList.remove('hidden');
+                document.getElementById('tabText').classList.remove('active');
+                document.getElementById('tabFile').classList.add('active');
+            }
+        }
+
+        async function scanText() {
+            runScan('http://localhost:8000/scan', JSON.stringify({ text: document.getElementById('inputText').value }), 'application/json');
+        }
+
+        async function scanFile() {
+            const fileInput = document.getElementById('inputFile');
+            if (fileInput.files.length === 0) { alert("Select a file first!"); return; }
+            
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            
+            // Note: No 'Content-Type' header needed for FormData, browser sets it automatically with boundary
+            runScan('http://localhost:8000/scan-file', formData, null);
+        }
+
+        async function runScan(url, body, contentType) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = "⏳ Scanning... (The Agent is reading the file)";
+            resultDiv.className = "";
+
+            try {
+                const headers = contentType ? { 'Content-Type': contentType } : {};
+                const response = await fetch(url, { method: 'POST', headers: headers, body: body });
+                const data = await response.json();
+                
+                const rawVerdict = data.verdict_raw;
+                if (rawVerdict.includes("BLOCK")) resultDiv.className = "BLOCK";
+                else resultDiv.className = "ALLOW";
+                
+                resultDiv.innerText = rawVerdict;
+            } catch (error) {
+                resultDiv.innerText = "Error: " + error.message;
+                resultDiv.className = "BLOCK";
+            }
+        }
+    </script>
+</body>
+</html>

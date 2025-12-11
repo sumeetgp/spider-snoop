@@ -3,7 +3,8 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-
+from fastapi import File, UploadFile # <--- NEW IMPORTS
+from fastapi.middleware.cors import CORSMiddleware
 # MCP & LangChain Imports
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -14,7 +15,6 @@ from langgraph.prebuilt import create_react_agent
 
 # --- SETUP ---
 os.environ["OPENAI_API_KEY"] = ""
-
 # Define the connection to your existing DLP Server
 server_params = StdioServerParameters(
     command="uv",
@@ -112,6 +112,15 @@ async def lifespan(app: FastAPI):
 # --- API DEFINITION ---
 app = FastAPI(lifespan=lifespan)
 
+# --- 2. CORS MIDDLEWARE (FIXES YOUR ERROR) ---
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Allows all origins (including file://)
+    allow_credentials=True,
+    allow_methods=["*"], # Allows POST, GET, etc.
+    allow_headers=["*"],
+)
+
 # The Input Schema (Type Checking)
 class ScanRequest(BaseModel):
     text: str
@@ -140,6 +149,47 @@ async def scan_text(request: ScanRequest):
     # Return JSON
     return {
         "status": "success",
+        "verdict_raw": final_answer
+    }
+
+# --- NEW ENDPOINT: FILE SCANNING ---
+@app.post("/scan-file")
+async def scan_file(file: UploadFile = File(...)):
+    if not app.state.agent:
+        raise HTTPException(status_code=503, detail="Agent not initialized")
+
+    print(f"\n📂 REQ: Receiving file: {file.filename}")
+
+    # 1. Read the file
+    content_bytes = await file.read()
+    
+    # 2. Decode to text (Simple version for Code/Logs/TXT)
+    try:
+        text_content = content_bytes.decode("utf-8")
+    except UnicodeDecodeError:
+        # If it's a binary file (like an Image or PDF), we fail gracefully for now
+        raise HTTPException(status_code=400, detail="File must be a text-based format (txt, py, json, csv, log).")
+
+    # 3. Safety Check: Truncate if too large (e.g., limit to 20k chars)
+    # This prevents you from accidentally spending $5 on one massive log file.
+    if len(text_content) > 20000:
+        text_content = text_content[:20000] + "\n...[TRUNCATED FOR COST SAVINGS]..."
+
+    print(f"📊 Analyzing {len(text_content)} characters...")
+
+    # 4. Inject Persona
+    messages = [
+        SystemMessage(content=app.state.system_prompt),
+        ("user", f"Here is the content of a file named '{file.filename}':\n\n{text_content}")
+    ]
+    
+    # 5. Run Agent
+    response = await app.state.agent.ainvoke({"messages": messages})
+    final_answer = response['messages'][-1].content
+    
+    return {
+        "status": "success",
+        "filename": file.filename,
         "verdict_raw": final_answer
     }
 
