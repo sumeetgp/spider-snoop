@@ -14,7 +14,8 @@ from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
 
 # --- SETUP ---
-os.environ["OPENAI_API_KEY"] = ""
+# OPENAI_API_KEY should be set in .env file
+
 # Define the connection to your existing DLP Server
 server_params = StdioServerParameters(
     command="uv",
