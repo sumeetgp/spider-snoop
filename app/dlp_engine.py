@@ -13,40 +13,36 @@ class DLPEngine:
     """Data Loss Prevention scanning engine"""
     
     def __init__(self, mcp_session=None):
-        self.patterns = {
-            'credit_card': r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
-            'ssn': r'\b\d{3}-\d{2}-\d{4}\b',
-            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
-            'phone': r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b',
-            'ip_address': r'\b(?:[0-9]{1,3}\.){3}[0-9]{1,3}\b',
-            'api_key': r'\b(?:api[_-]?key|apikey|access[_-]?token)\s*[:=]\s*[\'\"]?([a-zA-Z0-9_\-]{20,})[\'\"]?\b',
-            'aws_key': r'(?:A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}',
-        }
+        from app.core.dlp_patterns import DLPPatternMatcher
+        self.matcher = DLPPatternMatcher()
         self.mcp_session = mcp_session
     
     async def scan(self, content: str, use_ai: bool = True) -> Dict[str, Any]:
         """Perform DLP scan on content"""
         start_time = datetime.utcnow()
         
+        # Use the shared matcher
+        scan_results = self.matcher.scan(content)
+        
         findings = []
         risk_level = "LOW"
         
-        # Pattern-based detection
-        for data_type, pattern in self.patterns.items():
-            matches = re.findall(pattern, content, re.IGNORECASE)
-            if matches:
+        # Flatten findings from the matcher
+        for severity, items in scan_results.items():
+            for item in items:
                 findings.append({
-                    'type': data_type,
-                    'matches': matches,
-                    'count': len(matches)
+                    'type': item['type'],
+                    'matches': [item['value']], # Matcher masks values, but that's probably okay for findings list
+                    'count': 1,
+                    'severity': severity
                 })
                 
-                # Set risk level
-                if data_type in ['credit_card', 'ssn', 'aws_key']:
+                # Update overall risk level
+                if severity == "CRITICAL":
                     risk_level = "CRITICAL"
-                elif data_type in ['api_key', 'email'] and risk_level not in ['CRITICAL', 'HIGH']:
+                elif severity == "HIGH" and risk_level != "CRITICAL":
                     risk_level = "HIGH"
-                elif risk_level == "LOW":
+                elif severity == "MEDIUM" and risk_level in ["LOW", "INFO"]:
                     risk_level = "MEDIUM"
         
         # AI-based detection (optional)

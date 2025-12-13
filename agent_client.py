@@ -1,5 +1,8 @@
 import os
 import asyncio
+from dotenv import load_dotenv
+
+load_dotenv()
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -19,7 +22,7 @@ from langgraph.prebuilt import create_react_agent
 # Define the connection to your existing DLP Server
 server_params = StdioServerParameters(
     command="uv",
-    args=["run", "dlp_server.py"], 
+    args=["run", "mcp_server.py"], 
     env=None
 )
 
