@@ -1,425 +1,428 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spider-Snoop DLP Dashboard</title>
+    <title>SPIDERCOB Dashboard</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000000;
+            color: #ffffff;
             min-height: 100vh;
             padding: 20px;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
         }
-        
+
         header {
-            background: white;
-            padding: 30px;
+            background: #111111;
+            padding: 20px 30px;
             border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.1);
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #333;
         }
-        
-        h1 {
-            color: #333;
-            font-size: 2.5em;
-            margin-bottom: 10px;
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
-        
-        .subtitle {
-            color: #666;
-            font-size: 1.1em;
+
+        .header-left img {
+            height: 50px;
         }
-        
+
+        .header-left h1 {
+            font-size: 1.8em;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .header-left p {
+            color: #888;
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        .header-right {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .user-info {
+            display: none;
+            text-align: right;
+            margin-right: 15px;
+        }
+
+        .user-info span {
+            display: block;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        .user-info small {
+            color: #888;
+        }
+
+        .btn {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #007bff;
+            color: #007bff;
+        }
+
+        .btn-outline:hover {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.9em;
+        }
+
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
             margin-bottom: 20px;
         }
-        
+
         .card {
-            background: white;
+            background: #111111;
             padding: 25px;
             border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            border: 1px solid #333;
         }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0,0,0,0.15);
-        }
-        
+
         .card h2 {
-            color: #667eea;
+            color: #007bff;
             margin-bottom: 15px;
             font-size: 1.5em;
         }
-        
-        .stat {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid #eee;
+
+        .card p {
+            color: #cccccc;
         }
-        
-        .stat:last-child {
-            border-bottom: none;
-        }
-        
-        .stat-label {
-            color: #666;
-            font-weight: 500;
-        }
-        
-        .stat-value {
-            font-weight: bold;
-            color: #764ba2;
-            font-size: 1.3em;
-        }
-        
-        .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            font-weight: 600;
-            transition: transform 0.2s, box-shadow 0.2s;
-            margin: 10px 0;
-            width: 100%;
-        }
-        
-        .btn:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-        
-        .scan-list {
-            list-style: none;
-        }
-        
-        .scan-item {
+
+        .token-box {
+            background: #000000;
             padding: 15px;
-            margin: 10px 0;
-            background: #f7f7f7;
             border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #667eea;
-        }
-        
-        .status {
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-        
-        .status.completed {
-            background: #48bb78;
-            color: white;
-        }
-        
-        .status.running {
-            background: #ed8936;
-            color: white;
-        }
-        
-        .status.pending {
-            background: #4299e1;
-            color: white;
-        }
-        
-        .status.blocked {
-            background: #f56565;
-            color: white;
-        }
-        
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-top: 15px;
-        }
-        
-        .feature-item {
-            padding: 10px;
-            background: #f0f4ff;
-            border-radius: 5px;
-            border-left: 3px solid #667eea;
-        }
-        
-        .feature-item strong {
-            color: #333;
-        }
-        
-        .endpoint {
-            background: #f8f9fa;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            border-left: 4px solid #667eea;
-            font-family: 'Courier New', monospace;
-        }
-        
-        .method {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-            margin-right: 10px;
+            border: 1px solid #333;
+            margin-top: 10px;
+            word-break: break-all;
+            font-family: monospace;
             font-size: 0.9em;
+            display: none;
+            color: #00ff00;
         }
-        
-        .get { background: #61affe; color: white; }
-        .post { background: #49cc90; color: white; }
-        .put { background: #fca130; color: white; }
-        .delete { background: #f93e3e; color: white; }
-        
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .status-indicator.online {
-            background: #48bb78;
-        }
-        
-        .status-indicator.offline {
-            background: #f56565;
-        }
-        
-        footer {
+
+        .drop-zone {
+            border: 2px dashed #007bff;
+            border-radius: 10px;
+            padding: 30px;
             text-align: center;
-            color: white;
-            margin-top: 40px;
-            padding: 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 10px;
+            position: relative;
+            background: #0a0a0a;
+        }
+
+        .drop-zone:hover {
+            background: #1a1a1a;
+        }
+
+        .drop-zone input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .scan-result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .scan-result.safe {
+            background: #064e3b;
+            border: 1px solid #059669;
+            color: #a7f3d0;
+        }
+
+        .scan-result.danger {
+            background: #450a0a;
+            border: 1px solid #dc2626;
+            color: #fecaca;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .feature-item {
+            color: #cccccc;
+            margin-bottom: 8px;
+        }
+
+        strong {
+            color: #ffffff;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
-            <h1>🕷️ Spider-Snoop DLP</h1>
-            <p class="subtitle">Data Loss Prevention System with AI-Powered Scanning</p>
+            <div class="header-left">
+                <img src="/static/spidercob_tp.png" alt="SPIDERCOB Logo">
+                <div>
+                    <h1>SPIDERCOB</h1>
+                    <p>Intelligent Data Loss Prevention</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div id="userInfo" class="user-info">
+                    <span id="userName">User</span>
+                    <small id="userRole">Analyst</small>
+                </div>
+                <div id="authButtons">
+                    <a href="/login" class="btn btn-outline">Login</a>
+                    <a href="/register" class="btn">Get Started</a>
+                </div>
+                <button id="logoutBtn" class="btn btn-outline hidden" onclick="logout()">Logout</button>
+            </div>
         </header>
-        
-        <div class="dashboard">
-            <div class="card">
-                <h2>📊 Statistics</h2>
-                <div class="stat">
-                    <span class="stat-label">Total Scans</span>
-                    <span class="stat-value" id="totalScans">0</span>
+
+        <!-- Authenticated Content -->
+        <div id="mainDashboard" class="hidden">
+            <div class="dashboard">
+                <div class="card">
+                    <h2>🔑 API Access Token</h2>
+                    <p>Use this token locally or in other apps to authenticate with the DLP API.</p>
+                    <button class="btn btn-sm" onclick="toggleToken()">Show/Hide Token</button>
+                    <div id="tokenDisplay" class="token-box"></div>
                 </div>
-                <div class="stat">
-                    <span class="stat-label">Active Users</span>
-                    <span class="stat-value" id="activeUsers">3</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Threats Detected</span>
-                    <span class="stat-value" id="threatsDetected">0</span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Files Scanned</span>
-                    <span class="stat-value" id="filesScanned">0</span>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h2>⚡ System Status</h2>
-                <div class="stat">
-                    <span class="stat-label">DLP Engine</span>
-                    <span class="stat-value">
-                        <span class="status-indicator online"></span>Running
-                    </span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">ICAP Server</span>
-                    <span class="stat-value">
-                        <span class="status-indicator online"></span>Active on Port {{ICAP_PORT}}
-                    </span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">Database</span>
-                    <span class="stat-value">
-                        <span class="status-indicator online"></span>Connected
-                    </span>
-                </div>
-                <div class="stat">
-                    <span class="stat-label">API Server</span>
-                    <span class="stat-value">
-                        <span class="status-indicator online"></span>Running
-                    </span>
+
+                <div class="card">
+                    <h2>📤 File Scanner Test</h2>
+                    <p>Upload a file to test the DLP engine detection.</p>
+                    <div class="drop-zone">
+                        <input type="file" id="fileInput" onchange="handleFileUpload(this)">
+                        <span style="font-size: 2em;">📁</span>
+                        <p>Click or Drag file here</p>
+                        <small>Supported: .txt, .py, .md, .csv, .json</small>
+                    </div>
+                    <div id="scanResult" class="scan-result"></div>
                 </div>
             </div>
-            
+
             <div class="card">
-                <h2>🚀 Quick Actions</h2>
-                <button class="btn" onclick="navigateTo('/docs')">📖 API Documentation</button>
-                <button class="btn" onclick="navigateTo('/redoc')">📚 ReDoc</button>
-                <button class="btn" onclick="startScan()">🔍 Test Scan</button>
+                <h2>📝 Recent Activity</h2>
+                <div id="scanList">
+                    <p style="color: #666; font-style: italic;">Loading recent scans...</p>
+                </div>
             </div>
         </div>
-        
-        <div class="card">
-            <h2>📝 Recent Scans</h2>
-            <ul class="scan-list" id="scanList">
-                <li class="scan-item">
-                    <span>financial_report_q4.pdf</span>
-                    <span class="status completed">✓ Completed</span>
-                </li>
-                <li class="scan-item">
-                    <span>customer_data_backup.csv</span>
-                    <span class="status running">⟳ Scanning</span>
-                </li>
-                <li class="scan-item">
-                    <span>config_with_secrets.json</span>
-                    <span class="status blocked">✗ Blocked</span>
-                </li>
-                <li class="scan-item">
-                    <span>documentation.docx</span>
-                    <span class="status pending">⧒ Pending</span>
-                </li>
-            </ul>
-        </div>
-        
-        <div class="dashboard">
-            <div class="card">
-                <h2>🔐 Authentication</h2>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    /api/auth/login
-                </div>
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Authenticate with username and password to get access token</p>
-                <p style="font-size: 0.85em; color: #999; margin-top: 5px;"><strong>Demo:</strong> admin / admin123</p>
-            </div>
-            
-            <div class="card">
-                <h2>👥 User Management</h2>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    /api/users/me
-                </div>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    /api/users/
-                </div>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    /api/users/
-                </div>
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">User and role management endpoints</p>
-            </div>
-            
-            <div class="card">
-                <h2>🔍 DLP Scanning</h2>
-                <div class="endpoint">
-                    <span class="method post">POST</span>
-                    /api/scans/
-                </div>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    /api/scans/
-                </div>
-                <div class="endpoint">
-                    <span class="method get">GET</span>
-                    /api/scans/stats
-                </div>
-                <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Create and manage DLP scans</p>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>✨ Features</h2>
-            <div class="features">
-                <div class="feature-item">✅ <strong>JWT Authentication</strong> - Secure token-based auth</div>
-                <div class="feature-item">✅ <strong>RBAC</strong> - Admin, Analyst, Viewer roles</div>
-                <div class="feature-item">✅ <strong>Pattern Detection</strong> - Credit cards, SSN, API keys</div>
-                <div class="feature-item">✅ <strong>AI Analysis</strong> - Context-aware threat assessment</div>
-                <div class="feature-item">✅ <strong>ICAP Protocol</strong> - Transparent content scanning</div>
-                <div class="feature-item">✅ <strong>Real-time Dashboard</strong> - Live statistics</div>
-                <div class="feature-item">✅ <strong>RESTful API</strong> - Full programmatic access</div>
-                <div class="feature-item">✅ <strong>Database Persistence</strong> - Scan history & reporting</div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>🛡️ Detected Data Types</h2>
-            <div class="features">
-                <div class="feature-item">💳 Credit Card Numbers</div>
-                <div class="feature-item">🆔 Social Security Numbers (SSN)</div>
-                <div class="feature-item">📧 Email Addresses</div>
-                <div class="feature-item">📞 Phone Numbers</div>
-                <div class="feature-item">🌐 IP Addresses</div>
-                <div class="feature-item">🔑 API Keys & Tokens</div>
-                <div class="feature-item">☁️ AWS Access Keys</div>
-                <div class="feature-item">🔒 Private Keys</div>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h2>🔧 ICAP Configuration</h2>
-            <p style="margin: 10px 0; font-family: monospace; background: #f4f4f4; padding: 10px; border-radius: 5px;">
-                Service: {{ICAP_SERVICE_NAME}}<br>
-                Protocol: ICAP/1.0<br>
-                Methods: RESPMOD, REQMOD<br>
-                Port: {{ICAP_PORT}}
+
+        <!-- Guest Content -->
+        <div id="guestWelcome" class="card" style="text-align: center; padding: 50px;">
+            <h1 style="color: #ffffff; margin-bottom: 20px;">Protect Your Sensitive Data</h1>
+            <p style="font-size: 1.2em; color: #888; margin-bottom: 30px;">
+                SPIDERCOB detects exposed secrets, PII, and sensitive intellectual property in real-time.
             </p>
-            <p style="font-size: 0.9em; color: #666; margin-top: 10px;">Configure your proxy or security appliance to point to this ICAP service for transparent DLP scanning.</p>
+            <a href="/register" class="btn" style="font-size: 1.1em; padding: 15px 30px;">Create Free Account</a>
         </div>
-        
-        <footer>
-            <p>🕷️ Spider-Snoop DLP v1.0.0 | Advanced Data Loss Prevention System</p>
-        </footer>
     </div>
-    
+
     <script>
-        function navigateTo(path) {
-            window.location.href = path;
+        // Check Authentication
+        const token = localStorage.getItem('access_token');
+
+        async function init() {
+            if (token) {
+                document.getElementById('authButtons').classList.add('hidden');
+                document.getElementById('logoutBtn').classList.remove('hidden');
+                document.getElementById('tokenDisplay').textContent = token;
+
+                try {
+                    // Fetch user info
+                    const userRes = await fetch('/api/users/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (userRes.ok) {
+                        const user = await userRes.json();
+                        document.getElementById('userName').textContent = user.full_name;
+                        document.getElementById('userRole').textContent = user.role;
+                        document.getElementById('userInfo').style.display = 'block';
+
+                        document.getElementById('mainDashboard').classList.remove('hidden');
+                        document.getElementById('guestWelcome').classList.add('hidden');
+
+                        loadRecentScans();
+                    } else {
+                        throw new Error('Session expired');
+                    }
+                } catch (e) {
+                    logout();
+                }
+            }
         }
-        
-        function startScan() {
-            alert('Test scan feature would open the API documentation.\nUse POST /api/scans/ to start a scan.');
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.reload();
         }
-        
-        // Simulate real-time stats updates
-        function updateStats() {
-            const stats = {
-                totalScans: Math.floor(Math.random() * 1000) + 50,
-                activeUsers: 3,
-                threatsDetected: Math.floor(Math.random() * 25),
-                filesScanned: Math.floor(Math.random() * 5000) + 100
-            };
-            
-            document.getElementById('totalScans').textContent = stats.totalScans;
-            document.getElementById('activeUsers').textContent = stats.activeUsers;
-            document.getElementById('threatsDetected').textContent = stats.threatsDetected;
-            document.getElementById('filesScanned').textContent = stats.filesScanned;
+
+        function toggleToken() {
+            const el = document.getElementById('tokenDisplay');
+            el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
-        
-        // Update stats on page load and every 10 seconds
-        updateStats();
-        setInterval(updateStats, 10000);
+
+        async function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'scan-result';
+            resultDiv.textContent = 'Scanning...';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/scans/upload_file', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    resultDiv.className = 'scan-result danger';
+                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> ${data.detail || 'Upload failed'} <br><small>Status: ${res.status}</small>`;
+                    return;
+                }
+
+                const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
+
+                if (risk === 'high' || risk === 'critical' || risk === 'medium') {
+                    resultDiv.className = 'scan-result danger';
+                    let details = '';
+                    if (data.findings && data.findings.length > 0) {
+                        details = '<div style="margin-top:15px; text-align:left; background:rgba(0,0,0,0.3); padding:15px; border-radius:5px;">';
+                        details += '<h4 style="color:#ffcccc; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">Detailed Findings:</h4>';
+                        details += '<ul style="list-style:none; padding:0;">';
+                        data.findings.forEach(f => {
+                            details += `<li style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                                <div style="display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="color:#ffffff; font-weight:600;">${f.type.replace(/_/g, ' ').toUpperCase()}</span>
+                                    <span style="background:${f.severity === 'CRITICAL' ? '#dc2626' : f.severity === 'HIGH' ? '#ed561b' : '#ca8a04'}; padding:2px 8px; border-radius:10px; font-size:0.8em; color:white;">${f.severity}</span>
+                                </div>
+                                <div style="color:#cccccc; font-size:0.9em; margin-top:4px;">
+                                    Matches: <span style="font-family:monospace; color:#a5f3fc;">${f.matches.join(', ')}</span>
+                                </div>
+                            </li>`;
+                        });
+                        details += '</ul></div>';
+                    }
+
+                    // AI Analysis Section
+                    if (data.ai_analysis) {
+                        resultDiv.innerHTML += `
+                        <div style="margin-top:15px; text-align:left; background:rgba(0,123,255,0.1); padding:15px; border-radius:5px; border:1px solid rgba(0,123,255,0.3);">
+                            <h4 style="color:#60a5fa; margin-bottom:10px; display:flex; align-items:center; gap:8px;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                AI Risk Assessment
+                            </h4>
+                            <div style="color:#e2e8f0; font-size:0.95em; line-height:1.6;">${data.ai_analysis.replace(/\n/g, '<br>')}</div>
+                        </div>`;
+                    }
+                } else {
+                    resultDiv.className = 'scan-result safe';
+                    resultDiv.innerHTML = `<strong>✅ SAFE:</strong> No sensitive data found. <br><small>Verified by SPIDERCOB DLP</small>`;
+                }
+
+                loadRecentScans(); // Refresh list
+            } catch (e) {
+                resultDiv.textContent = 'Error scanning file.';
+            }
+        }
+
+        async function loadRecentScans() {
+            try {
+                const res = await fetch('/api/scans/', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const scans = await res.json();
+
+                const list = document.getElementById('scanList');
+                if (scans.length === 0) {
+                    list.innerHTML = '<p>No scans found.</p>';
+                    return;
+                }
+
+                let html = '<ul style="list-style: none;">';
+                scans.slice(0, 5).forEach(scan => {
+                    const color = (scan.risk_level === 'HIGH' || scan.risk_level === 'CRITICAL') ? '#f56565' : '#48bb78';
+                    html += `
+                        <li style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                            <span>${scan.source}</span>
+                            <span style="color: ${color}; font-weight: bold;">${scan.risk_level || 'CLEAN'}</span>
+                        </li>
+                    `;
+                });
+                html += '</ul>';
+                list.innerHTML = html;
+            } catch (e) { }
+        }
+
+        init();
     </script>
 </body>
+
 </html>

@@ -72,6 +72,7 @@ app.include_router(scans.router)
 app.include_router(dashboard.router)
 
 # Mount static files and templates
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 templates = Jinja2Templates(directory="app/templates")
 
@@ -89,6 +90,24 @@ async def root():
     html_content = html_content.replace("{{ICAP_SERVICE_NAME}}", settings.ICAP_SERVICE_NAME)
     
     return html_content
+
+@app.get("/login", response_class=HTMLResponse)
+async def login_page():
+    """Login page"""
+    template_path = Path("app/templates/login.html")
+    if not template_path.exists():
+        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
+    with open(template_path, "r") as f:
+        return f.read()
+
+@app.get("/register", response_class=HTMLResponse)
+async def register_page():
+    """Registration page"""
+    template_path = Path("app/templates/register.html")
+    if not template_path.exists():
+        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
+    with open(template_path, "r") as f:
+        return f.read()
 
 @app.get("/health")
 async def health_check():

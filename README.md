@@ -211,14 +211,68 @@ For issues and questions:
 
 ## 🎯 Roadmap
 
-- [ ] Web Dashboard UI (React/Vue)
+- [x] Web Dashboard UI (HTML/Jinja2)
 - [ ] Email notifications for critical findings
 - [ ] Custom detection rules
 - [ ] Machine learning model training
 - [ ] Multi-language support
 - [ ] Reporting & exports
 - [ ] Integration with SIEM systems
-- [ ] Docker containerization
+- [x] Docker containerization
+
+## ☁️ Cloud Deployment
+
+Spider-Snoop is cloud-ready and includes a full Docker stack with Nginx as a reverse proxy.
+
+### 1. Requirements
+- A cloud server (AWS EC2, DigitalOcean Droplet, Linode, etc.)
+- OS: Ubuntu 20.04+ (Recommended)
+- **Git** installed on the server (to clone the repo)
+
+### 2. Quick Deployment Script
+We provide a zero-configuration deployment script (`deploy.sh`) that automates everything: checking/installing Docker, setting up credentials, and launching the services.
+
+1. **Clone the repository/copy files** to your server:
+   ```bash
+   git clone https://github.com/sumeetgp/spider-snoop.git
+   cd spider-snoop
+   ```
+
+2. **Run the deployment script**:
+   ```bash
+   chmod +x deploy.sh
+   ./deploy.sh
+   ```
+   > The script will prompt you for your `OPENAI_API_KEY` if it's not present in `.env`.
+
+3. **Access the application**:
+   - Open your browser and navigate to: `http://<your-server-ip>`
+   - The application usually listens on **Port 80**. Ensure your firewall allows HTTP traffic.
+
+### 3. Manual Docker Deployment
+If you prefer to run `docker-compose` manually:
+
+1. **Configure Environment**:
+   ```bash
+   cp .env.example .env
+   # Add your OPENAI_API_KEY to .env
+   ```
+
+2. **Start Services**:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. **Verify**:
+   ```bash
+   docker ps
+   # You should see 3 containers: spider-snoop-nginx, spider-snoop-api, spider-snoop-db
+   ```
+
+### 4. Nginx Configuration
+The included `nginx/nginx.conf` handles reverse proxying to the API and serving static files. It is configured to run on Port 80 inside the Docker network.
+
+---
 
 ---
 

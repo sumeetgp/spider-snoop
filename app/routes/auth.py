@@ -5,9 +5,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models.user import User
-from app.schemas.user import Token
-from app.utils.auth import verify_password, create_access_token
+from app.models.user import User, UserRole
+from app.schemas.user import Token, UserCreate
+from app.utils.auth import verify_password, create_access_token, get_password_hash
 from app.config import settings
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
@@ -33,6 +33,43 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/register", response_model=Token)
+async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+    """Public registration endpoint"""
+    # Check existing user
+    if db.query(User).filter(User.email == user_data.email).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+    if db.query(User).filter(User.username == user_data.username).first():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already taken"
+        )
+    
+    # Create new user
+    db_user = User(
+        email=user_data.email,
+        username=user_data.username,
+        hashed_password=get_password_hash(user_data.password),
+        full_name=user_data.full_name,
+        role=UserRole.ANALYST, # Default role for new signups
+        is_active=True
+    )
+    
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    
+    # Auto-login (create token)
+    access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": db_user.username}, expires_delta=access_token_expires
     )
     
     return {"access_token": access_token, "token_type": "bearer"}

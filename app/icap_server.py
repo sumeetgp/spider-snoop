@@ -151,11 +151,12 @@ class ICAPServer:
         ]
         http_response_str = "\r\n".join(http_response)
         
+        header_len = len(http_response_str.split('\r\n\r\n')[0]) + 4
         icap_response = [
             "ICAP/1.0 200 OK",
             "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
             "ISTag: \"spider-snoop-1.0\"",
-            f"Encapsulated: res-hdr=0, res-body={len(http_response_str.split('\r\n\r\n')[0]) + 4}",
+            f"Encapsulated: res-hdr=0, res-body={header_len}",
             "",
             http_response_str
         ]

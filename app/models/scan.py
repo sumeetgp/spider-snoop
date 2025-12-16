@@ -31,6 +31,7 @@ class DLPScan(Base):
     risk_level = Column(Enum(RiskLevel), nullable=True)
     findings = Column(JSON, nullable=True)  # Detailed findings
     verdict = Column(String, nullable=True)
+    ai_analysis = Column(Text, nullable=True)
     scan_duration_ms = Column(Integer, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)

@@ -14,6 +14,7 @@ class ScanResponse(BaseModel):
     status: ScanStatus
     risk_level: Optional[RiskLevel]
     verdict: Optional[str]
+    ai_analysis: Optional[str] = None
     findings: Optional[List[Dict[str, Any]]]
     scan_duration_ms: Optional[int]
     created_at: datetime

@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     """Application settings"""
     
     # Application
-    APP_NAME: str = "Spider-Snoop DLP"
+    APP_NAME: str = "SPIDERCOB DLP"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
     

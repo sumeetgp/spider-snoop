@@ -1,6 +1,6 @@
 """API Routes - DLP Scanning"""
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -41,6 +41,83 @@ async def create_scan(
         db_scan.risk_level = result['risk_level']
         db_scan.findings = result['findings']
         db_scan.verdict = result['verdict']
+        db_scan.scan_duration_ms = result['scan_duration_ms']
+        db_scan.completed_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(db_scan)
+        
+    except Exception as e:
+        db_scan.status = ScanStatus.FAILED
+        db_scan.verdict = f"Scan failed: {str(e)}"
+        db.commit()
+        db.refresh(db_scan)
+    
+    return db_scan
+
+@router.post("/upload_file", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+async def upload_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """Upload and scan a file"""
+    # Read file content
+    try:
+        content_bytes = await file.read()
+        
+        if file.filename.lower().endswith('.docx'):
+            try:
+                import io
+                import docx
+                doc = docx.Document(io.BytesIO(content_bytes))
+                content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to process DOCX file: {str(e)}"
+                )
+        else:
+            try:
+                content = content_bytes.decode('utf-8')
+            except UnicodeDecodeError:
+                try:
+                    # Fallback to latin-1
+                    content = content_bytes.decode('latin-1')
+                except:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Binary files are not supported. Please upload text or DOCX files."
+                    )
+    except HTTPException:
+        raise
+    except Exception as e:
+         raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"File upload error: {str(e)}"
+        )
+    
+    # Create scan record
+    db_scan = DLPScan(
+        user_id=current_user.id,
+        source=f"FILE:{file.filename}",
+        content=content, # Note: In prod, maybe don't store full file content in DB if huge
+        status=ScanStatus.SCANNING
+    )
+    db.add(db_scan)
+    db.commit()
+    db.refresh(db_scan)
+    
+    try:
+        # Perform scan
+        result = await dlp_engine.scan(content)
+        
+        # Update scan record
+        db_scan.status = ScanStatus.COMPLETED
+        db_scan.risk_level = result['risk_level']
+        db_scan.findings = result['findings']
+        db_scan.verdict = result['verdict']
+        db_scan.ai_analysis = result.get('ai_analysis')
         db_scan.scan_duration_ms = result['scan_duration_ms']
         db_scan.completed_at = datetime.utcnow()
         

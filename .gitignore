@@ -34,3 +34,9 @@ Thumbs.db
 
 # MCP cache
 .cache_remote_*.py
+
+# Local Secrets & Data
+aws_key.txt
+secret.txt
+postgres_data/
+spidercob-deploy.tar.gz
