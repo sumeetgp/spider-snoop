@@ -26,7 +26,10 @@ pydantic>=2.7.4
 pydantic-settings==2.1.0
 email-validator==2.1.0
 python-dateutil==2.8.2
-python-docx>=1.1.0
+python-docx
+pypdf
+pytesseract
+Pillow>=1.1.0
 
 # Monitoring & Logging
 python-json-logger==2.0.7

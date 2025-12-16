@@ -65,10 +65,11 @@ async def upload_file(
     # Read file content
     try:
         content_bytes = await file.read()
+        import io
+        filename = file.filename.lower()
         
-        if file.filename.lower().endswith('.docx'):
+        if filename.endswith('.docx'):
             try:
-                import io
                 import docx
                 doc = docx.Document(io.BytesIO(content_bytes))
                 content = "\n".join([paragraph.text for paragraph in doc.paragraphs])
@@ -77,6 +78,32 @@ async def upload_file(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to process DOCX file: {str(e)}"
                 )
+                
+        elif filename.endswith('.pdf'):
+            try:
+                import pypdf
+                pdf_reader = pypdf.PdfReader(io.BytesIO(content_bytes))
+                content = ""
+                for page in pdf_reader.pages:
+                    content += page.extract_text() + "\n"
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to process PDF file: {str(e)}"
+                )
+                
+        elif filename.endswith(('.png', '.jpg', '.jpeg')):
+            try:
+                import pytesseract
+                from PIL import Image
+                image = Image.open(io.BytesIO(content_bytes))
+                content = pytesseract.image_to_string(image)
+            except Exception as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Failed to process Image file (OCR): {str(e)}"
+                )
+                
         else:
             try:
                 content = content_bytes.decode('utf-8')
@@ -87,7 +114,7 @@ async def upload_file(
                 except:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Binary files are not supported. Please upload text or DOCX files."
+                        detail="Binary files are not supported. Please upload text, DOCX, PDF, or Image files."
                     )
     except HTTPException:
         raise
