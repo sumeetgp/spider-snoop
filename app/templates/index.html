@@ -386,6 +386,19 @@
                     </div>
                     <div id="scanResult" class="scan-result"></div>
                 </div>
+
+                <div class="card">
+                    <h2>📹 Video/Audio Scanner</h2>
+                    <p>Upload a video to scan spoken content (Speech-to-Text DLP).</p>
+                    <div class="drop-zone" style="border-color: #e83e8c;">
+                        <input type="file" id="videoInput" accept=".mp4,.mov,.avi,.mkv"
+                            onchange="handleVideoUpload(this)">
+                        <span style="font-size: 2em;">🎬</span>
+                        <p>Click or Drag video here</p>
+                        <small>Supported: MP4, MOV, AVI, MKV (Max 25MB)</small>
+                    </div>
+                    <div id="videoScanResult" class="scan-result"></div>
+                </div>
             </div>
 
             <div class="card">
@@ -454,6 +467,104 @@
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
+        async function handleVideoUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const resultDiv = document.getElementById('videoScanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'scan-result';
+            resultDiv.innerHTML = '<strong>⏳ Processing Video...</strong><br><small>Extracting audio & transcribing (this may take 10-20s)</small>';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/scans/upload_video', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                if (res.status === 413) {
+                    resultDiv.className = 'scan-result danger';
+                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> Video too large. <br><small>Maximum size allowed is 25 MB.</small>`;
+                    return;
+                }
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    resultDiv.className = 'scan-result danger';
+                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> ${data.detail || 'Upload failed'} <br><small>Status: ${res.status}</small>`;
+                    return;
+                }
+
+                renderScanResult(data, resultDiv);
+                loadRecentScans(); // Refresh list
+            } catch (e) {
+                resultDiv.className = 'scan-result danger';
+                resultDiv.textContent = 'Error uploading video.';
+            }
+        }
+
+        // Shared function to render results
+        function renderScanResult(data, resultDiv) {
+            const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
+
+            if (risk === 'high' || risk === 'critical' || risk === 'medium') {
+                resultDiv.className = 'scan-result danger';
+                let details = '';
+                if (data.findings && data.findings.length > 0) {
+                    details = '<div style="margin-top:15px; text-align:left; background:rgba(0,0,0,0.3); padding:15px; border-radius:5px;">';
+                    details += '<h4 style="color:#ffcccc; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">Detailed Findings:</h4>';
+                    details += '<ul style="list-style:none; padding:0;">';
+                    data.findings.forEach(f => {
+                        const matchStr = f.matches ? f.matches.join(', ') : '';
+                        details += `<li style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <span style="color:#ffffff; font-weight:600;">${f.type.replace(/_/g, ' ').toUpperCase()}</span>
+                                <span style="background:${f.severity === 'CRITICAL' ? '#dc2626' : f.severity === 'HIGH' ? '#ed561b' : '#ca8a04'}; padding:2px 8px; border-radius:10px; font-size:0.8em; color:white;">${f.severity}</span>
+                            </div>
+                            <div style="color:#cccccc; font-size:0.9em; margin-top:4px;">
+                                Matches: <span style="font-family:monospace; color:#a5f3fc;">${matchStr}</span>
+                            </div>
+                        </li>`;
+                    });
+                    details += '</ul></div>';
+                }
+
+                // Add details content
+                resultDiv.innerHTML = `<strong>⚠️ ${risk.toUpperCase()} RISK DETECTED</strong>${details}`;
+
+
+                // AI Analysis Section
+                if (data.ai_analysis) {
+                    const score = data.ai_analysis.score || 0;
+                    let scoreColor = '#48bb78'; // Green
+                    if (score >= 70) scoreColor = '#f56565'; // Red
+                    else if (score >= 40) scoreColor = '#ed8936'; // Orange
+
+                    resultDiv.innerHTML += `
+                    <div style="margin-top:15px; text-align:left; background:rgba(0,123,255,0.1); padding:15px; border-radius:5px; border:1px solid rgba(0,123,255,0.3);">
+                        <h4 style="color:#60a5fa; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                            <span style="display:flex; align-items:center;">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                AI Risk Assessment
+                            </span>
+                            <span style="background:${scoreColor}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8em;">Score: ${score}/100</span>
+                        </h4>
+                        <div style="color:#e2e8f0; font-size:0.95em; line-height:1.6;">
+                            ${data.ai_analysis.reason ? data.ai_analysis.reason.replace(/\n/g, '<br>') : (data.ai_analysis.verdict_raw || data.ai_analysis)}
+                        </div>
+                    </div>`;
+                }
+            } else {
+                resultDiv.className = 'scan-result safe';
+                resultDiv.innerHTML = `<strong>✅ SAFE:</strong> No sensitive data found. <br><small>Verified by SPIDERCOB DLP</small>`;
+            }
+        }
+
         async function handleFileUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -472,7 +583,7 @@
                     headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
-
+                // ... Error handling duplicated in new function, refactoring would be better but keeping simple for now
                 if (res.status === 413) {
                     resultDiv.className = 'scan-result danger';
                     resultDiv.innerHTML = `<strong>❌ ERROR:</strong> File too large. <br><small>Maximum size allowed is 10 MB.</small>`;
@@ -487,56 +598,8 @@
                     return;
                 }
 
-                const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
-
-                if (risk === 'high' || risk === 'critical' || risk === 'medium') {
-                    resultDiv.className = 'scan-result danger';
-                    let details = '';
-                    if (data.findings && data.findings.length > 0) {
-                        details = '<div style="margin-top:15px; text-align:left; background:rgba(0,0,0,0.3); padding:15px; border-radius:5px;">';
-                        details += '<h4 style="color:#ffcccc; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">Detailed Findings:</h4>';
-                        details += '<ul style="list-style:none; padding:0;">';
-                        data.findings.forEach(f => {
-                            details += `<li style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                                <div style="display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="color:#ffffff; font-weight:600;">${f.type.replace(/_/g, ' ').toUpperCase()}</span>
-                                    <span style="background:${f.severity === 'CRITICAL' ? '#dc2626' : f.severity === 'HIGH' ? '#ed561b' : '#ca8a04'}; padding:2px 8px; border-radius:10px; font-size:0.8em; color:white;">${f.severity}</span>
-                                </div>
-                                <div style="color:#cccccc; font-size:0.9em; margin-top:4px;">
-                                    Matches: <span style="font-family:monospace; color:#a5f3fc;">${f.matches.join(', ')}</span>
-                                </div>
-                            </li>`;
-                        });
-                        details += '</ul></div>';
-                    }
-
-                    // AI Analysis Section
-                    if (data.ai_analysis) {
-                        const score = data.ai_analysis.score || 0;
-                        let scoreColor = '#48bb78'; // Green
-                        if (score >= 70) scoreColor = '#f56565'; // Red
-                        else if (score >= 40) scoreColor = '#ed8936'; // Orange
-
-                        resultDiv.innerHTML += `
-                        <div style="margin-top:15px; text-align:left; background:rgba(0,123,255,0.1); padding:15px; border-radius:5px; border:1px solid rgba(0,123,255,0.3);">
-                            <h4 style="color:#60a5fa; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                                <span style="display:flex; align-items:center;">
-                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                    AI Risk Assessment
-                                </span>
-                                <span style="background:${scoreColor}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8em;">Score: ${score}/100</span>
-                            </h4>
-                            <div style="color:#e2e8f0; font-size:0.95em; line-height:1.6;">
-                                ${data.ai_analysis.reason ? data.ai_analysis.reason.replace(/\n/g, '<br>') : (data.ai_analysis.verdict_raw || data.ai_analysis)}
-                            </div>
-                        </div>`;
-                    }
-                } else {
-                    resultDiv.className = 'scan-result safe';
-                    resultDiv.innerHTML = `<strong>✅ SAFE:</strong> No sensitive data found. <br><small>Verified by SPIDERCOB DLP</small>`;
-                }
-
-                loadRecentScans(); // Refresh list
+                renderScanResult(data, resultDiv);
+                loadRecentScans();
             } catch (e) {
                 resultDiv.textContent = 'Error scanning file.';
             }
