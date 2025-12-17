@@ -180,6 +180,95 @@ async def upload_file(
     
     return db_scan
 
+@router.post("/upload_video", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("20/60minute") # Stricter limit for heavy video processing
+async def upload_video(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Upload and scan a video file for sensitive spoken data (Audio DLP).
+    
+    Process:
+    1. Extract audio from video.
+    2. Transcribe audio to text (OpenAI Whisper).
+    3. Scan transcript for sensitive info.
+    
+    **Limit**: 25 MB per file.
+    """
+    if not file.filename.lower().endswith(('.mp4', '.mov', '.avi', '.mkv')):
+        raise HTTPException(status_code=400, detail="Invalid video format. Use MP4, MOV, AVI, or MKV.")
+
+    # 1. Save temp file
+    import shutil
+    import os
+    from app.utils.video import VideoProcessor
+    
+    temp_filename = f"temp_{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
+    try:
+        with open(temp_filename, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+            
+        # Check size (approx)
+        if os.path.getsize(temp_filename) > 25 * 1024 * 1024:
+            os.remove(temp_filename)
+            raise HTTPException(status_code=413, detail="Video too large. Limit is 25MB.")
+
+        # 2. Process Video (Extract & Transcribe)
+        transcription = await VideoProcessor.process_video(temp_filename)
+        
+        # Cleanup video immediately
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
+            
+        if "[Error" in transcription:
+             raise HTTPException(status_code=500, detail=f"Video processing failed: {transcription}")
+
+    except HTTPException:
+        if os.path.exists(temp_filename): os.remove(temp_filename)
+        raise
+    except Exception as e:
+        if os.path.exists(temp_filename): os.remove(temp_filename)
+        raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
+    # 3. Create Scan Record using Transcript
+    db_scan = DLPScan(
+        user_id=current_user.id,
+        source=f"VIDEO:{file.filename}",
+        content=f"[TRANSCRIPT]\n{transcription}", 
+        status=ScanStatus.SCANNING
+    )
+    db.add(db_scan)
+    db.commit()
+    db.refresh(db_scan)
+
+    try:
+        # 4. Perform Scan on Transcript
+        result = await dlp_engine.scan(transcription)
+        
+        db_scan.status = ScanStatus.COMPLETED
+        db_scan.risk_level = result['risk_level']
+        db_scan.findings = result['findings']
+        db_scan.verdict = result['verdict']
+        if result.get('ai_analysis'):
+            import json
+            db_scan.ai_analysis = json.dumps(result['ai_analysis'])
+        db_scan.scan_duration_ms = result['scan_duration_ms']
+        db_scan.completed_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(db_scan)
+        
+    except Exception as e:
+        db_scan.status = ScanStatus.FAILED
+        db_scan.verdict = f"Scan failed: {str(e)}"
+        db.commit()
+        db.refresh(db_scan)
+
+    return db_scan
+
 @router.get("/", response_model=List[ScanResponse])
 async def list_scans(
     skip: int = 0,

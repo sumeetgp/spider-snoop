@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     tesseract-ocr \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies

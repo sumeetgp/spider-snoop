@@ -25,7 +25,7 @@ class DLPEngine:
         scan_results = self.matcher.scan(content)
         
         findings = []
-        risk_level = "LOW"
+        risk_level = "low"
         
         # Flatten findings from the matcher
         for severity, items in scan_results.items():
@@ -39,11 +39,11 @@ class DLPEngine:
                 
                 # Update overall risk level
                 if severity == "CRITICAL":
-                    risk_level = "CRITICAL"
-                elif severity == "HIGH" and risk_level != "CRITICAL":
-                    risk_level = "HIGH"
-                elif severity == "MEDIUM" and risk_level in ["LOW", "INFO"]:
-                    risk_level = "MEDIUM"
+                    risk_level = "critical"
+                elif severity == "HIGH" and risk_level != "critical":
+                    risk_level = "high"
+                elif severity == "MEDIUM" and risk_level in ["low", "info"]:
+                    risk_level = "medium"
         
         # AI-based detection (optional)
         ai_verdict = None
