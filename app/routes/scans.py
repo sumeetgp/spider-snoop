@@ -11,11 +11,17 @@ from app.schemas.scan import ScanCreate, ScanResponse, ScanStats
 from app.utils.auth import get_current_active_user
 from app.dlp_engine import DLPEngine
 
+from app.dlp_engine import DLPEngine
+from app.utils.limiter import limiter, get_rate_limit_key
+from fastapi import Request
+
 router = APIRouter(prefix="/api/scans", tags=["DLP Scanning"])
 dlp_engine = DLPEngine()
 
 @router.post("/", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("50/60minute")
 async def create_scan(
+    request: Request,
     scan_data: ScanCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
@@ -59,7 +65,9 @@ async def create_scan(
     return db_scan
 
 @router.post("/upload_file", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("50/60minute")
 async def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
