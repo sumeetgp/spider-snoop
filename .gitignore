@@ -38,5 +38,6 @@ Thumbs.db
 # Local Secrets & Data
 aws_key.txt
 secret.txt
+production_credentials.txt
 postgres_data/
 spidercob-deploy.tar.gz

@@ -71,16 +71,18 @@ class DLPEngine:
             finding_summary = ", ".join([f"{f['count']} {f['type']}(s)" for f in findings])
             
             prompt = f"""
-            Analyze the following content for data sensitivity and provide a brief risk assessment.
+            Analyze the following content for data sensitivity and provide a risk assessment with a score.
             
             Detected patterns: {finding_summary}
             
             Content preview: {content[:500]}...
             
-            Provide a concise risk assessment (2-3 sentences) focusing on:
-            1. Likelihood this is actual sensitive data vs false positive
-            2. Potential business impact if leaked
-            3. Recommended action
+            OUTPUT FORMAT:
+            Provide a JSON object with:
+            - verdict: "BLOCK" or "ALLOW" or "REVIEW"
+            - score: 0-100 (0=Safe, 100=Critical)
+            - reason: A concise explanation (2 sentences max)
+            - category: "Financial", "Personal", "Secrets", or "None"
             """
             
             client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -88,15 +90,22 @@ class DLPEngine:
                 client.chat.completions.create,
                 model="gpt-3.5-turbo",
                 messages=[
-                    {"role": "system", "content": "You are a data security analyst."},
+                    {"role": "system", "content": "You are a data security analyst. Return strict JSON."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=150,
-                temperature=0.1
+                temperature=0.1,
+                response_format={"type": "json_object"}
             )
             
             message_content = response.choices[0].message.content
-            return message_content.strip() if message_content else "AI analysis returned no content"
+            import json
+            try:
+                if message_content:
+                    return json.loads(message_content)
+                return {"verdict": "REVIEW", "score": 50, "reason": "No content returned"}
+            except:
+                return {"verdict": "REVIEW", "score": 50, "reason": message_content}
             
         except Exception as e:
             return f"AI analysis unavailable: {str(e)}"
@@ -206,39 +215,49 @@ class DLPEngine:
 
             OUTPUT FORMAT (STRICT):
             Your Final Answer MUST be exactly in this format:
-            "VERDICT: [BLOCK/ALLOW] | CATEGORY: [Category Name] | REASON: [Brief explanation with specific findings]"
+            "VERDICT: [BLOCK/ALLOW] | SCORE: [0-100] | CATEGORY: [Category Name] | REASON: [Brief explanation with specific findings]"
             
-            Example outputs:
-            - "VERDICT: BLOCK | CATEGORY: CRITICAL | REASON: Credit card (4567...1234) and AWS key (AKIA...) detected"
-            - "VERDICT: BLOCK | CATEGORY: HIGH | REASON: 3 email addresses and 2 phone numbers found"
-            - "VERDICT: ALLOW | CATEGORY: None | REASON: No sensitive patterns detected"
+            Scoring Guide:
+            0-10: Safe / Public info
+            11-40: Low Risk / Internal but not sensitive
+            41-70: Medium Risk / Sensitive Personnel or Financial
+            71-90: High Risk / IP / Secrets
+            91-100: Critical / Immediate Data Exfiltration
             """
 
         agent = create_react_agent(llm, tools)
 
         try:
             result = await agent.ainvoke({"input": text, "instructions": system_instruction})
-            output = result["output"] if isinstance(result, dict) and "output" in result else str(result)
+            questions = result["messages"][-1].content
+            output = questions if isinstance(questions, str) else str(questions)
         except Exception as e:
-            return {"verdict": "ALLOW", "category": "None", "reason": f"Agent error: {e}"}
+            return {"verdict": "ALLOW", "score": 0, "category": "None", "reason": f"Agent error: {e}"}
 
-        verdict, category, reason = "ALLOW", "None", output
+        verdict, score, category, reason = "ALLOW", 0, "None", output
         try:
             if "VERDICT:" in output:
                 parts = output.split("VERDICT:")[-1].strip()
                 segments = [s.strip() for s in parts.split("|")]
+                
                 if segments:
                     verdict = segments[0]
+                
                 for seg in segments[1:]:
                     up = seg.upper()
                     if up.startswith("CATEGORY:"):
                         category = seg.split(":",1)[1].strip()
+                    elif up.startswith("SCORE:"):
+                        try:
+                            score = int(seg.split(":",1)[1].strip())
+                        except ValueError:
+                            score = 75 # Default high score if parsing fails but verdict found
                     elif up.startswith("REASON:"):
                         reason = seg.split(":",1)[1].strip()
         except Exception:
             pass
 
-        return {"verdict": verdict, "category": category, "reason": reason}
+        return {"verdict": verdict, "score": score, "category": category, "reason": reason}
 
     def _generate_verdict(self, findings: List[Dict], ai_verdict: Any = None) -> str:
         """Generate human-readable verdict"""

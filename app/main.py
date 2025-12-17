@@ -53,7 +53,15 @@ app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
     description="Data Loss Prevention System with ICAP Protocol Support",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json",
+    swagger_ui_init_oauth={
+        "clientId": "",
+        "clientSecret": "",
+        "usePkceWithAuthorizationCodeGrant": False
+    }
 )
 
 # CORS middleware

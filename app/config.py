@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
+    USE_LANGCHAIN_CISO: bool = True
     
     # Logging
     LOG_LEVEL: str = "INFO"

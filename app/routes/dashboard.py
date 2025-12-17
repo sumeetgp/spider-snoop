@@ -18,29 +18,38 @@ async def get_dashboard_overview(
 ):
     """Get dashboard overview statistics"""
     
+    # Base query filter
+    filter_user = None
+    if current_user.role.value != "admin":
+        filter_user = DLPScan.user_id == current_user.id
+        
+    def apply_filter(query):
+        return query.filter(filter_user) if filter_user is not None else query
+
     # Total scans
-    total_scans = db.query(func.count(DLPScan.id)).scalar()
+    q = db.query(func.count(DLPScan.id))
+    total_scans = apply_filter(q).scalar()
     
     # Scans today
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    scans_today = db.query(func.count(DLPScan.id)).filter(
-        DLPScan.created_at >= today_start
-    ).scalar()
+    q = db.query(func.count(DLPScan.id)).filter(DLPScan.created_at >= today_start)
+    scans_today = apply_filter(q).scalar()
     
     # High risk scans (last 7 days)
     week_ago = datetime.utcnow() - timedelta(days=7)
-    high_risk_scans = db.query(func.count(DLPScan.id)).filter(
+    q = db.query(func.count(DLPScan.id)).filter(
         DLPScan.created_at >= week_ago,
         DLPScan.risk_level.in_([RiskLevel.HIGH, RiskLevel.CRITICAL])
-    ).scalar()
+    )
+    high_risk_scans = apply_filter(q).scalar()
     
-    # Total users
-    total_users = db.query(func.count(User.id)).scalar()
-    
-    # Active users (logged in last 30 days - would need login tracking)
-    active_users = db.query(func.count(User.id)).filter(
-        User.is_active == True
-    ).scalar()
+    # Total users (Only show real count if admin, else 1)
+    if current_user.role.value == "admin":
+        total_users = db.query(func.count(User.id)).scalar()
+        active_users = db.query(func.count(User.id)).filter(User.is_active == True).scalar()
+    else:
+        total_users = 1
+        active_users = 1
     
     # Scan trends (last 7 days)
     scan_trends = []
@@ -48,10 +57,11 @@ async def get_dashboard_overview(
         day_start = today_start - timedelta(days=i)
         day_end = day_start + timedelta(days=1)
         
-        count = db.query(func.count(DLPScan.id)).filter(
+        q = db.query(func.count(DLPScan.id)).filter(
             DLPScan.created_at >= day_start,
             DLPScan.created_at < day_end
-        ).scalar()
+        )
+        count = apply_filter(q).scalar()
         
         scan_trends.append({
             'date': day_start.strftime('%Y-%m-%d'),
@@ -63,9 +73,8 @@ async def get_dashboard_overview(
     # Risk distribution
     risk_distribution = {}
     for risk_level in RiskLevel:
-        count = db.query(func.count(DLPScan.id)).filter(
-            DLPScan.risk_level == risk_level
-        ).scalar()
+        q = db.query(func.count(DLPScan.id)).filter(DLPScan.risk_level == risk_level)
+        count = apply_filter(q).scalar()
         risk_distribution[risk_level.value] = count
     
     return {

@@ -19,52 +19,52 @@ def init_db():
     db = SessionLocal()
     
     try:
-        # Check if admin exists
-        admin = db.query(User).filter(User.username == "admin").first()
-        
-        if not admin:
-            admin = User(
-                email="admin@spider-snoop.local",
+        # Create admin user
+        if not get_user_by_username(db, "admin"):
+            admin_user = User(
+                email="admin@spidercob.com",
                 username="admin",
                 hashed_password=get_password_hash("admin123"),
-                full_name="System Administrator",
+                full_name="Admin User",
                 role=UserRole.ADMIN,
                 is_active=True
             )
-            db.add(admin)
-            db.commit()
-            logger.info("Default admin user created (username: admin, password: admin123)")
+            db.add(admin_user)
+            print("Default admin user created (username: admin, password: admin123)")
         else:
             logger.info("Admin user already exists")
-        
-        # Create demo users
-        analyst = db.query(User).filter(User.username == "analyst").first()
-        if not analyst:
-            analyst = User(
-                email="analyst@spider-snoop.local",
+
+        # Create analyst user
+        if not get_user_by_username(db, "analyst"):
+            analyst_user = User(
+                email="analyst@spidercob.com",
                 username="analyst",
                 hashed_password=get_password_hash("analyst123"),
-                full_name="Security Analyst",
+                full_name="Analyst User",
                 role=UserRole.ANALYST,
                 is_active=True
             )
-            db.add(analyst)
-            db.commit()
-            logger.info("Demo analyst user created (username: analyst, password: analyst123)")
-        
-        viewer = db.query(User).filter(User.username == "viewer").first()
-        if not viewer:
-            viewer = User(
-                email="viewer@spider-snoop.local",
+            db.add(analyst_user)
+            print("Demo analyst user created (username: analyst, password: analyst123)")
+        else:
+            logger.info("Analyst user already exists")
+
+        # Create viewer user
+        if not get_user_by_username(db, "viewer"):
+            viewer_user = User(
+                email="viewer@spidercob.com",
                 username="viewer",
                 hashed_password=get_password_hash("viewer123"),
-                full_name="Read-Only Viewer",
+                full_name="Viewer User",
                 role=UserRole.VIEWER,
                 is_active=True
             )
-            db.add(viewer)
-            db.commit()
-            logger.info("Demo viewer user created (username: viewer, password: viewer123)")
+            db.add(viewer_user)
+            print("Demo viewer user created (username: viewer, password: viewer123)")
+        else:
+            logger.info("Viewer user already exists")
+            
+        db.commit() # Commit all changes at once after adding all users
             
     except Exception as e:
         logger.error(f"Error creating default users: {e}")

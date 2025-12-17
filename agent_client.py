@@ -98,7 +98,14 @@ async def lifespan(app: FastAPI):
             - If text is generic conversation -> ALLOW.
 
             OUTPUT FORMAT:
-            Final Answer must be: "VERDICT: [BLOCK/ALLOW] | CATEGORY: [Category Name] | REASON: [Brief explanation]"
+            Final Answer must be: "VERDICT: [BLOCK/ALLOW] | SCORE: [0-100] | CATEGORY: [Category Name] | REASON: [Brief explanation]"
+            
+            Scoring Guide:
+            0-10: Safe / Public info
+            11-40: Low Risk / Internal but not sensitive
+            41-70: Medium Risk / Sensitive Personnel or Financial
+            71-90: High Risk / IP / Secrets
+            91-100: Critical / Immediate Data Exfiltration
             """
             
             # Create Agent

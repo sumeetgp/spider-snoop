@@ -41,6 +41,9 @@ async def create_scan(
         db_scan.risk_level = result['risk_level']
         db_scan.findings = result['findings']
         db_scan.verdict = result['verdict']
+        if result.get('ai_analysis'):
+            import json
+            db_scan.ai_analysis = json.dumps(result['ai_analysis'])
         db_scan.scan_duration_ms = result['scan_duration_ms']
         db_scan.completed_at = datetime.utcnow()
         
@@ -61,7 +64,15 @@ async def upload_file(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
-    """Upload and scan a file"""
+    """
+    Upload and scan a file for sensitive data.
+    
+    Supported formats:
+    - **Documents**: PDF, DOCX, TXT, MD, CSV, JSON
+    - **Images**: PNG, JPG, JPEG (OCR enabled)
+    
+    **Limit**: 10 MB per file.
+    """
     # Read file content
     try:
         content_bytes = await file.read()
@@ -144,7 +155,9 @@ async def upload_file(
         db_scan.risk_level = result['risk_level']
         db_scan.findings = result['findings']
         db_scan.verdict = result['verdict']
-        db_scan.ai_analysis = result.get('ai_analysis')
+        if result.get('ai_analysis'):
+            import json
+            db_scan.ai_analysis = json.dumps(result['ai_analysis'])
         db_scan.scan_duration_ms = result['scan_duration_ms']
         db_scan.completed_at = datetime.utcnow()
         
@@ -170,7 +183,7 @@ async def list_scans(
     # Regular users can only see their own scans
     query = db.query(DLPScan)
     
-    if current_user.role.value == "viewer":
+    if current_user.role.value != "admin":
         query = query.filter(DLPScan.user_id == current_user.id)
     
     scans = query.order_by(DLPScan.created_at.desc()).offset(skip).limit(limit).all()
@@ -184,7 +197,8 @@ async def get_scan_stats(
     """Get scan statistics"""
     query = db.query(DLPScan)
     
-    if current_user.role.value == "viewer":
+    if current_user.role.value != "admin":
+        query = query.filter(DLPScan.user_id == current_user.id)
         query = query.filter(DLPScan.user_id == current_user.id)
     
     all_scans = query.all()
@@ -238,7 +252,7 @@ async def get_scan(
         )
     
     # Check permissions
-    if current_user.role.value == "viewer" and scan.user_id != current_user.id:
+    if current_user.role.value != "admin" and scan.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
