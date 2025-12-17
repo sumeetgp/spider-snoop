@@ -270,6 +270,56 @@
             #authNav .btn {
                 width: 100%;
             }
+
+            #authNav .btn {
+                width: 100%;
+            }
+        }
+
+        /* Scan List Styles */
+        .scan-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .scan-item:last-child {
+            border-bottom: none;
+        }
+
+        .scan-summary {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+            list-style: none;
+            /* Remove default arrow */
+        }
+
+        .scan-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .scan-summary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .scan-details {
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.9em;
+            color: #cccccc;
+        }
+
+        .ai-score-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: bold;
+            color: white;
+            margin-left: 10px;
         }
     </style>
 </head>
@@ -504,19 +554,65 @@
                     return;
                 }
 
-                let html = '<ul style="list-style: none;">';
-                scans.slice(0, 5).forEach(scan => {
-                    const color = (scan.risk_level === 'HIGH' || scan.risk_level === 'CRITICAL') ? '#f56565' : '#48bb78';
+                let html = '<div class="scan-list">';
+                scans.slice(0, 10).forEach(scan => { // Increased to 10
+                    const riskColor = (scan.risk_level === 'HIGH' || scan.risk_level === 'CRITICAL') ? '#f56565' :
+                        (scan.risk_level === 'MEDIUM') ? '#ed8936' : '#48bb78';
+
+                    let aiSection = '';
+                    if (scan.ai_analysis) {
+                        const score = scan.ai_analysis.score || 0;
+                        let scoreColor = score >= 70 ? '#f56565' : score >= 40 ? '#ed8936' : '#48bb78';
+                        const reason = scan.ai_analysis.reason || (scan.ai_analysis.verdict_raw || 'No details available.');
+
+                        aiSection = `
+                            <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px;">
+                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                    <strong style="color: #60a5fa;">🤖 AI Analysis</strong>
+                                    <span class="ai-score-badge" style="background: ${scoreColor}">Score: ${score}/100</span>
+                                    <span class="ai-score-badge" style="background: #4a5568; margin-left: 5px;">${scan.ai_analysis.verdict || 'REVIEW'}</span>
+                                </div>
+                                <p style="line-height: 1.5;">${reason.replace(/\n/g, '<br>')}</p>
+                            </div>
+                        `;
+                    } else {
+                        aiSection = `<div style="margin-top: 10px; font-style: italic; color: #666;">No AI analysis available for this scan.</div>`;
+                    }
+
+                    // Format date
+                    const date = new Date(scan.created_at).toLocaleString();
+
                     html += `
-                        <li style="padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
-                            <span>${scan.source}</span>
-                            <span style="color: ${color}; font-weight: bold;">${scan.risk_level || 'CLEAN'}</span>
-                        </li>
+                        <details class="scan-item">
+                            <summary class="scan-summary">
+                                <div style="display: flex; flex-direction: column;">
+                                    <span style="font-weight: 500; color: #fff;">${scan.source || 'Upload'}</span>
+                                    <small style="color: #888;">${date}</small>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="color: ${riskColor}; font-weight: bold;">${scan.risk_level || 'CLEAN'}</span>
+                                    <span style="color: #666;">▼</span>
+                                </div>
+                            </summary>
+                            <div class="scan-details">
+                                <p><strong>Status:</strong> ${scan.status}</p>
+                                <p><strong>Duration:</strong> ${scan.scan_duration_ms || '< 1'} ms</p>
+                                ${aiSection}
+                                ${scan.findings ? `
+                                    <div style="margin-top: 10px;">
+                                        <strong>Findings (${scan.findings.length}):</strong>
+                                        <ul style="margin-top: 5px; padding-left: 20px;">
+                                            ${scan.findings.map(f => `<li>${f.type} (${f.count}) - <span style="color: ${f.severity === 'CRITICAL' ? '#f56565' : '#ccc'}">${f.severity}</span></li>`).join('')}
+                                        </ul>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </details>
                     `;
                 });
-                html += '</ul>';
+                html += '</div>';
                 list.innerHTML = html;
-            } catch (e) { }
+            } catch (e) { console.error(e); }
         }
 
         init();
