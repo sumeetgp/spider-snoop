@@ -1,4 +1,4 @@
-# Spider-Snoop DLP System
+# Spider-Snoop DLP ![CI Status](https://github.com/sumeetgp/spider-snoop/actions/workflows/deploy.yml/badge.svg) System
 
 🕷️ **Spider-Snoop** is a comprehensive Data Loss Prevention (DLP) system with AI-powered scanning, ICAP protocol support, and a modern web dashboard.
 
