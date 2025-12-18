@@ -84,6 +84,21 @@ async def upload_file(
     # Read file content
     try:
         content_bytes = await file.read()
+        
+        # 0. File Guard (AV/YARA)
+        # Check if file_guard is available (it might fail if ClamAV container is down, but we proceed or fail open/closed?)
+        if hasattr(request.app.state, 'file_guard') and request.app.state.file_guard:
+            is_safe, findings = await request.app.state.file_guard.scan_bytes(content_bytes)
+            if not is_safe:
+                # Log the threat
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"File Guard blocked upload: {file.filename}, Findings: {findings}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Security Threat Detected: {', '.join(findings)}"
+                )
+
         import io
         filename = file.filename.lower()
         
@@ -97,7 +112,7 @@ async def upload_file(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to process DOCX file: {str(e)}"
                 )
-                
+                  
         elif filename.endswith('.pdf'):
             try:
                 import pypdf
@@ -110,7 +125,7 @@ async def upload_file(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to process PDF file: {str(e)}"
                 )
-                
+                   
         elif filename.endswith(('.png', '.jpg', '.jpeg')):
             try:
                 import pytesseract
@@ -122,7 +137,7 @@ async def upload_file(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"Failed to process Image file (OCR): {str(e)}"
                 )
-                
+                   
         else:
             try:
                 content = content_bytes.decode('utf-8')
@@ -138,7 +153,7 @@ async def upload_file(
     except HTTPException:
         raise
     except Exception as e:
-         raise HTTPException(
+            raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"File upload error: {str(e)}"
         )
@@ -215,6 +230,17 @@ async def upload_video(
         if os.path.getsize(temp_filename) > 25 * 1024 * 1024:
             os.remove(temp_filename)
             raise HTTPException(status_code=413, detail="Video too large. Limit is 25MB.")
+            
+        # 1.5 File Guard (AV/YARA)
+        if hasattr(request.app.state, 'file_guard') and request.app.state.file_guard:
+            is_safe, findings = await request.app.state.file_guard.scan_file(temp_filename)
+            if not is_safe:
+                if os.path.exists(temp_filename):
+                    os.remove(temp_filename)
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Security Threat Detected: {', '.join(findings)}"
+                )
 
         # 2. Process Video (Extract & Transcribe)
         transcription = await VideoProcessor.process_video(temp_filename)

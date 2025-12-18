@@ -4,19 +4,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - SPIDERCOB</title>
+    <title>ACCESS CONTROL // SPIDERCOB</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+
     <style>
+        :root {
+            --bg-void: #050505;
+            --accent-cyan: #00F0FF;
+            --accent-purple: #BC13FE;
+            --text-main: #E0E0E0;
+            --text-dim: #888888;
+            --glass-bg: rgba(20, 20, 20, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-void);
+            color: var(--text-main);
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0;
-            color: #ffffff;
+            overflow: hidden;
             position: relative;
-            z-index: 1;
+        }
+
+        /* Scanline Overlay */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.2) 50%,
+                    transparent 100%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.3;
         }
 
         #bgCanvas {
@@ -29,171 +68,213 @@
         }
 
         .login-card {
-            background: rgba(17, 17, 17, 0.3);
+            background: var(--glass-bg);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.2);
             width: 100%;
             max-width: 400px;
-            border: 1px solid #333;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
+
+            /* Chamfered Edges */
+            clip-path: polygon(20px 0, 100% 0,
+                    100% calc(100% - 20px), calc(100% - 20px) 100%,
+                    0 100%, 0 20px);
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
 
-        .login-header {
+        .login-card:hover {
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+        }
+
+        .header {
             text-align: center;
             margin-bottom: 30px;
         }
 
-        .login-header img {
-            max-width: 80px;
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px var(--accent-cyan);
             margin-bottom: 10px;
+            display: block;
         }
 
-        .login-header h1 {
-            color: #ffffff;
-            font-size: 24px;
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: var(--text-main);
             margin-bottom: 5px;
         }
 
-        .login-header p {
-            color: #888;
-            margin: 0;
+        p {
+            color: var(--text-dim);
+            font-size: 0.8rem;
         }
 
         .form-group {
             margin-bottom: 20px;
         }
 
-        .form-group label {
+        label {
             display: block;
             margin-bottom: 8px;
-            color: #aaa;
-            font-weight: 500;
+            color: var(--accent-cyan);
+            font-size: 0.8rem;
         }
 
         .form-control {
             width: 100%;
             padding: 12px;
+            background: rgba(0, 0, 0, 0.5);
             border: 1px solid #333;
-            background: #222;
             color: #fff;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            transition: 0.3s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+            background: rgba(0, 0, 0, 0.8);
         }
 
-        .btn {
+        .btn-glitch {
             width: 100%;
-            padding: 12px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
+            background: transparent;
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .btn:hover {
-            background: #0056b3;
-        }
-
-        .error-msg {
-            color: #ff4d4d;
-            font-size: 14px;
+            transition: 0.3s;
             margin-top: 10px;
-            text-align: center;
-            display: none;
+        }
+
+        .btn-glitch:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent-cyan);
         }
 
         .links {
             margin-top: 20px;
             text-align: center;
-            font-size: 14px;
-            color: #888;
+            font-size: 0.8rem;
+            color: var(--text-dim);
         }
 
         .links a {
-            color: #007bff;
+            color: var(--accent-purple);
             text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .links a:hover {
+            color: var(--accent-cyan);
+            text-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .error-msg {
+            color: #ff3333;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+            border: 1px solid #ff3333;
+            padding: 5px;
+            background: rgba(255, 51, 51, 0.1);
         }
 
         .close-btn {
             position: absolute;
             top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 24px;
-            cursor: pointer;
-            transition: color 0.2s;
+            right: 20px;
+            color: var(--text-dim);
+            font-size: 1.5rem;
             text-decoration: none;
-            line-height: 1;
+            transition: 0.3s;
         }
 
         .close-btn:hover {
-            color: #fff;
-        }
-
-        @media (max-width: 480px) {
-            .login-card {
-                padding: 20px;
-                width: 90%;
-            }
+            color: var(--accent-cyan);
         }
     </style>
 </head>
 
 <body>
     <canvas id="bgCanvas"></canvas>
-    <div class="login-card" onclick="event.stopPropagation()">
+
+    <div class="login-card">
         <a href="/" class="close-btn">&times;</a>
-        <div class="login-header">
-            <img src="/static/spidercobnew.png" alt="SPIDERCOB Logo">
-            <h1>SPIDERCOB</h1>
-            <p>Sign in to your account</p>
+        <div class="header">
+            <span class="logo">&lt;SpiderCob /&gt;</span>
+            <h1>ACCESS CONTROL</h1>
+            <p>// AUTHENTICATE_USER</p>
         </div>
+
         <form id="loginForm" onsubmit="handleLogin(event)">
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="username" class="form-control" required placeholder="Enter username">
+                <label>USERNAME</label>
+                <input type="text" id="username" class="form-control" required placeholder="enter_username">
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" class="form-control" required placeholder="Enter password">
+                <label>PASSWORD</label>
+                <input type="password" id="password" class="form-control" required placeholder="enter_password">
             </div>
-            <button type="submit" class="btn">Sign In</button>
-            <div id="errorMsg" class="error-msg">Invalid credentials</div>
+
+            <button type="submit" class="btn-glitch">INITIATE_SESSION</button>
+            <div id="errorMsg" class="error-msg">ACCESS_DENIED: Invalid Credentials</div>
         </form>
+
         <div class="links">
-            Don't have an account? <a href="/register">Register here</a>
+            NO_CREDENTIALS? <a href="/register">[CREATE_IDENTITY]</a>
         </div>
     </div>
 
+    <script src="/static/js/particles.js"></script>
     <script>
-        // Close/Redirect when clicking outside the card
-        document.body.addEventListener('click', function () {
-            window.location.href = '/';
-        });
+        // Particles Config
+        if (window.particlesJS) {
+            particlesJS("bgCanvas", {
+                "particles": {
+                    "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#00F0FF" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.5 },
+                    "size": { "value": 3 },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#BC13FE", "opacity": 0.3, "width": 1 },
+                    "move": { "enable": true, "speed": 1 }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": { "onhover": { "enable": true, "mode": "grab" } },
+                    "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 1 } } }
+                },
+                "retina_detect": true
+            });
+        }
 
+        // Login Logic
         async function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
+            const submitBtn = document.querySelector('button[type="submit"]');
 
             errorMsg.style.display = 'none';
+            submitBtn.textContent = 'AUTHENTICATING...';
+            submitBtn.style.opacity = '0.7';
 
-            // Format data as x-www-form-urlencoded
             const formData = new URLSearchParams();
             formData.append('username', username);
             formData.append('password', password);
@@ -201,28 +282,30 @@
             try {
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     localStorage.setItem('access_token', data.access_token);
-                    window.location.href = '/';
+                    submitBtn.textContent = 'ACCESS_GRANTED';
+                    submitBtn.style.backgroundColor = 'var(--accent-cyan)';
+                    submitBtn.style.color = '#000';
+                    // Force redirect immediately
+                    setTimeout(() => window.location.replace('/'), 200);
                 } else {
-                    errorMsg.style.display = 'block';
-                    errorMsg.textContent = 'Invalid username or password';
+                    throw new Error('Invalid credentials');
                 }
             } catch (err) {
                 console.error(err);
                 errorMsg.style.display = 'block';
-                errorMsg.textContent = 'Connection error';
+                errorMsg.textContent = '>> ACCESS_DENIED: CHECK_CREDENTIALS';
+                submitBtn.textContent = 'INITIATE_SESSION';
+                submitBtn.style.opacity = '1';
             }
         }
     </script>
-    <script src="/static/js/particles.js"></script>
 </body>
 
 </html>

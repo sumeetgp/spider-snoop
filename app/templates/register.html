@@ -4,19 +4,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register - SPIDERCOB</title>
+    <title>NEW IDENTITY // SPIDERCOB</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+
     <style>
+        :root {
+            --bg-void: #050505;
+            --accent-cyan: #00F0FF;
+            --accent-purple: #BC13FE;
+            --text-main: #E0E0E0;
+            --text-dim: #888888;
+            --glass-bg: rgba(20, 20, 20, 0.6);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-void);
+            color: var(--text-main);
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0;
-            color: #ffffff;
+            overflow: hidden;
             position: relative;
-            z-index: 1;
+        }
+
+        /* Scanline Overlay */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.2) 50%,
+                    transparent 100%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.3;
         }
 
         #bgCanvas {
@@ -28,165 +67,199 @@
             z-index: -1;
         }
 
-        .register-card {
-            background: rgba(17, 17, 17, 0.3);
+        .card {
+            background: var(--glass-bg);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0, 123, 255, 0.2);
+            padding: 30px 40px;
             width: 100%;
             max-width: 450px;
-            border: 1px solid #333;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: relative;
+
+            /* Chamfered Edges */
+            clip-path: polygon(20px 0, 100% 0,
+                    100% calc(100% - 20px), calc(100% - 20px) 100%,
+                    0 100%, 0 20px);
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
 
-        .register-header {
+        .card:hover {
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
+        }
+
+        .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 25px;
         }
 
-        .register-header img {
-            max-width: 80px;
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px var(--accent-cyan);
             margin-bottom: 10px;
+            display: block;
         }
 
-        .register-header h1 {
-            color: #ffffff;
-            font-size: 24px;
-            margin-bottom: 5px;
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: var(--text-main);
+        }
+
+        p {
+            color: var(--text-dim);
+            font-size: 0.8rem;
         }
 
         .form-group {
             margin-bottom: 15px;
         }
 
-        .form-group label {
+        label {
             display: block;
-            margin-bottom: 5px;
-            color: #aaa;
-            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--accent-purple);
+            /* Purple for Register to diff */
+            font-size: 0.8rem;
         }
 
         .form-control {
             width: 100%;
             padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
             border: 1px solid #333;
-            background: #222;
             color: #fff;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1rem;
+            transition: 0.3s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: #007bff;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 10px rgba(188, 19, 254, 0.3);
+            background: rgba(0, 0, 0, 0.8);
         }
 
-        .btn {
+        .btn-glitch {
             width: 100%;
-            padding: 12px;
-            background: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: 600;
+            background: transparent;
+            color: var(--accent-purple);
+            border: 1px solid var(--accent-purple);
+            padding: 15px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
             cursor: pointer;
+            transition: 0.3s;
             margin-top: 10px;
         }
 
-        .btn:hover {
-            background: #0056b3;
-        }
-
-        .error-msg {
-            color: #ff4d4d;
-            font-size: 14px;
-            margin-top: 10px;
-            text-align: center;
-            display: none;
+        .btn-glitch:hover {
+            background: var(--accent-purple);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent-purple);
         }
 
         .links {
             margin-top: 20px;
             text-align: center;
-            font-size: 14px;
-            color: #888;
+            font-size: 0.8rem;
+            color: var(--text-dim);
         }
 
         .links a {
-            color: #007bff;
+            color: var(--accent-cyan);
             text-decoration: none;
+            transition: 0.3s;
+        }
+
+        .links a:hover {
+            color: #fff;
+            text-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .error-msg {
+            color: #ff3333;
+            font-size: 0.9rem;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+            border: 1px solid #ff3333;
+            padding: 5px;
+            background: rgba(255, 51, 51, 0.1);
         }
 
         .close-btn {
             position: absolute;
             top: 15px;
-            right: 15px;
-            background: none;
-            border: none;
-            color: #888;
-            font-size: 24px;
-            cursor: pointer;
-            transition: color 0.2s;
+            right: 20px;
+            color: var(--text-dim);
+            font-size: 1.5rem;
             text-decoration: none;
-            line-height: 1;
+            transition: 0.3s;
         }
 
         .close-btn:hover {
-            color: #fff;
-        }
-
-        @media (max-width: 480px) {
-            .register-card {
-                padding: 20px;
-                width: 90%;
-            }
+            color: var(--accent-purple);
         }
     </style>
 </head>
 
 <body>
     <canvas id="bgCanvas"></canvas>
-    <div class="register-card" onclick="event.stopPropagation()">
+    <div class="card">
         <a href="/" class="close-btn">&times;</a>
-        <div class="register-header">
-            <img src="/static/spidercobnew.png" alt="SPIDERCOB Logo">
-            <h1>Create Account</h1>
-            <p style="color: #888">Join SPIDERCOB DLP</p>
+        <div class="header">
+            <span class="logo">&lt;SpiderCob /&gt;</span>
+            <h1>INITIALIZE_IDENTITY</h1>
+            <p>// CREATE_NEW_RECORD</p>
         </div>
         <form id="registerForm" onsubmit="handleRegister(event)">
             <div class="form-group">
-                <label>Full Name</label>
+                <label>FULL_NAME</label>
                 <input type="text" id="fullname" class="form-control" required placeholder="John Doe">
             </div>
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="username" class="form-control" required placeholder="johndoe">
+                <label>USERNAME</label>
+                <input type="text" id="username" class="form-control" required placeholder="user_handle">
             </div>
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="email" class="form-control" required placeholder="john@example.com">
+                <label>EMAIL</label>
+                <input type="email" id="email" class="form-control" required placeholder="contact@domain.com">
             </div>
             <div class="form-group">
-                <label>Password</label>
+                <label>PASSWORD</label>
                 <input type="password" id="password" class="form-control" required placeholder="********">
             </div>
-            <button type="submit" class="btn">Register</button>
+            <button type="submit" class="btn-glitch">REGISTER_USER</button>
             <div id="errorMsg" class="error-msg"></div>
         </form>
         <div class="links">
-            Already have an account? <a href="/login">Login here</a>
+            EXISTING_RECORD? <a href="/login">[AUTHENTICATE]</a>
         </div>
     </div>
 
+    <script src="/static/js/particles.js"></script>
     <script>
-        // Close/Redirect when clicking outside the card
-        document.body.addEventListener('click', function () {
-            window.location.href = '/';
-        });
+        if (window.particlesJS) {
+            particlesJS("bgCanvas", {
+                "particles": {
+                    "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#BC13FE" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.5 },
+                    "size": { "value": 3 },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#00F0FF", "opacity": 0.3, "width": 1 },
+                    "move": { "enable": true, "speed": 1 }
+                },
+                "retina_detect": true
+            });
+        }
 
         async function handleRegister(event) {
             event.preventDefault();
@@ -195,8 +268,10 @@
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorMsg = document.getElementById('errorMsg');
+            const btn = document.querySelector('button[type="submit"]');
 
             errorMsg.style.display = 'none';
+            btn.textContent = 'CREATING_RECORD...';
 
             try {
                 const response = await fetch('/api/auth/register', {
@@ -213,21 +288,23 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Auto login on success
                     localStorage.setItem('access_token', data.access_token);
-                    window.location.href = '/';
+                    btn.textContent = 'SUCCESS // REDIRECTING';
+                    btn.style.background = 'var(--accent-purple)';
+                    setTimeout(() => window.location.href = '/', 800);
                 } else {
                     errorMsg.style.display = 'block';
-                    errorMsg.textContent = data.detail || 'Registration failed';
+                    errorMsg.textContent = `>> ERROR: ${data.detail || 'Registration failed'}`;
+                    btn.textContent = 'REGISTER_USER';
                 }
             } catch (err) {
                 console.error(err);
                 errorMsg.style.display = 'block';
-                errorMsg.textContent = 'Connection error';
+                errorMsg.textContent = '>> SYSTEM_ERROR: CONNECTION_FAILED';
+                btn.textContent = 'REGISTER_USER';
             }
         }
     </script>
-    <script src="/static/js/particles.js"></script>
 </body>
 
 </html>

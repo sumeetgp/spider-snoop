@@ -15,6 +15,13 @@ services:
       timeout: 5s
       retries: 5
 
+  clamav:
+    image: clamav/clamav:latest
+    ports:
+      - "3310:3310"
+    volumes:
+      - clamav_db:/var/lib/clamav
+
   api:
     build: .
     volumes:
@@ -45,3 +52,4 @@ services:
 
 volumes:
   postgres_data:
+  clamav_db:

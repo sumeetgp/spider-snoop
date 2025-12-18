@@ -4,8 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SPIDERCOB Dashboard</title>
+    <title>SpiderCob // Digital Hive</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+        rel="stylesheet">
+
     <style>
+        :root {
+            --bg-void: #050505;
+            --accent-cyan: #00F0FF;
+            --accent-purple: #BC13FE;
+            --text-main: #E0E0E0;
+            --text-dim: #888888;
+            --glass-bg: rgba(20, 20, 20, 0.6);
+            --border-glow: rgba(0, 240, 255, 0.3);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,15 +30,33 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-void);
+            color: var(--text-main);
             min-height: 100vh;
-            padding: 20px;
+            overflow-x: hidden;
             position: relative;
-            z-index: 1;
         }
 
+        /* Scanline Overlay */
+        body::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: repeating-linear-gradient(to bottom,
+                    transparent 0%,
+                    rgba(0, 0, 0, 0.2) 50%,
+                    transparent 100%);
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 999;
+            opacity: 0.3;
+        }
+
+        /* Background Canvas */
         #bgCanvas {
             position: fixed;
             top: 0;
@@ -31,397 +66,475 @@
             z-index: -1;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        /* Typography Defaults */
+        h1,
+        h2,
+        h3 {
+            font-family: 'Orbitron', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
+        a {
+            text-decoration: none;
+            color: var(--accent-cyan);
+            transition: 0.3s;
+        }
+
+        /* HUD Header */
         header {
-            background: #111111;
-            padding: 20px 30px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 123, 255, 0.1);
-            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border: 1px solid #333;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-glow);
+            background: rgba(5, 5, 5, 0.9);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(5px);
         }
 
-        .header-left {
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: var(--accent-cyan);
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        .nav-icons {
             display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .header-left img {
-            height: 50px;
-        }
-
-        .header-left h1 {
-            font-size: 1.8em;
-            color: #ffffff;
-            margin: 0;
-        }
-
-        .header-left p {
-            color: #888;
-            margin: 0;
-            font-size: 0.9em;
-        }
-
-        .header-right {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .user-info {
-            display: none;
-            text-align: right;
-            margin-right: 15px;
-        }
-
-        .user-info span {
-            display: block;
-            font-weight: bold;
-            color: #ffffff;
-        }
-
-        .user-info small {
-            color: #888;
-        }
-
-        .btn {
-            background: #007bff;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: 600;
-            text-decoration: none;
-            display: inline-block;
-            transition: background 0.2s;
-        }
-
-        .btn:hover {
-            background: #0056b3;
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 2px solid #007bff;
-            color: #007bff;
-        }
-
-        .btn-outline:hover {
-            background: #007bff;
-            color: white;
-        }
-
-        .btn-sm {
-            padding: 5px 10px;
-            font-size: 0.9em;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
+        }
+
+        .nav-link {
+            font-size: 0.9rem;
+            color: var(--text-dim);
+            border: 1px solid transparent;
+            padding: 5px 10px;
+        }
+
+        .nav-link:hover {
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            box-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        /* Hero Section */
+        .hero {
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            position: relative;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
             margin-bottom: 20px;
+            background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
         }
 
-        .card {
-            background: rgba(17, 17, 17, 0.3);
+        .hero p {
+            max-width: 600px;
+            margin-bottom: 40px;
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        /* Glitch Button */
+        .btn-glitch {
+            background: transparent;
+            color: var(--accent-cyan);
+            border: 1px solid var(--accent-cyan);
+            padding: 15px 30px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: 0.3s;
+        }
+
+        .btn-glitch:hover {
+            background: var(--accent-cyan);
+            color: #000;
+            box-shadow: 0 0 20px var(--accent-cyan);
+        }
+
+        /* Bento Grid */
+        .bento-container {
+            max-width: 1200px;
+            margin: 0 auto 100px auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(2, auto);
+            gap: 20px;
+            padding: 0 20px;
+        }
+
+        .bento-box {
+            background: var(--glass-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
             padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            border: 1px solid #333;
+            position: relative;
+            /* Chamfered Edges */
+            clip-path: polygon(10px 0, 100% 0,
+                    100% calc(100% - 10px), calc(100% - 10px) 100%,
+                    0 100%, 0 10px);
+            transition: transform 0.3s, border-color 0.3s;
         }
 
-        .card h2 {
-            color: #007bff;
-            margin-bottom: 15px;
-            font-size: 1.5em;
+        .bento-box:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.2);
         }
 
-        .card p {
-            color: #cccccc;
+        /* Grid Spans */
+        .box-large {
+            grid-column: span 2;
         }
 
-        .token-box {
-            background: #000000;
-            padding: 15px;
-            border-radius: 5px;
-            border: 1px solid #333;
-            margin-top: 10px;
-            word-break: break-all;
-            font-family: monospace;
-            font-size: 0.9em;
-            display: none;
-            color: #00ff00;
+        .box-tall {
+            grid-row: span 2;
         }
 
-        .drop-zone {
-            border: 2px dashed #007bff;
-            border-radius: 10px;
-            padding: 30px;
+        /* Specific Bento Styles */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-cyan);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 5px var(--accent-cyan);
+        }
+
+        .upload-area {
+            border: 1px dashed var(--text-dim);
+            padding: 40px;
             text-align: center;
             cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 10px;
-            position: relative;
-            background: #0a0a0a;
+            transition: 0.3s;
+            margin-top: 20px;
+            color: var(--text-dim);
         }
 
-        .drop-zone:hover {
-            background: #1a1a1a;
-        }
-
-        .drop-zone input {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            top: 0;
-            left: 0;
-            opacity: 0;
-            cursor: pointer;
+        .upload-area:hover {
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            background: rgba(0, 240, 255, 0.05);
         }
 
         .scan-result {
-            margin-top: 20px;
-            padding: 15px;
-            border-radius: 5px;
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-left: 3px solid var(--accent-cyan);
             display: none;
-        }
-
-        .scan-result.safe {
-            background: #064e3b;
-            border: 1px solid #059669;
-            color: #a7f3d0;
+            font-size: 0.9rem;
         }
 
         .scan-result.danger {
-            background: #450a0a;
-            border: 1px solid #dc2626;
-            color: #fecaca;
+            border-left-color: #ff3333;
+            color: #ffcccc;
         }
 
+        /* Blink Animation */
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        .blink {
+            animation: blink 1s infinite;
+        }
+
+        /* Footer Terminal */
+        footer {
+            background: #000;
+            padding: 40px 0;
+            font-family: 'JetBrains Mono', monospace;
+            border-top: 1px solid #333;
+            text-align: center;
+            color: var(--text-dim);
+        }
+
+        /* Utility */
         .hidden {
             display: none !important;
         }
 
-        .feature-item {
-            color: #cccccc;
-            margin-bottom: 8px;
+        .system-text {
+            color: var(--accent-cyan);
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            display: block;
         }
 
-        strong {
-            color: #ffffff;
-        }
-
+        /* Mobile Adjustments */
         @media (max-width: 768px) {
-            body {
-                padding: 10px;
-            }
-
             header {
-                flex-direction: column;
-                padding: 15px;
-                gap: 15px;
-                text-align: center;
+                padding: 15px 20px;
             }
 
-            .header-left {
-                flex-direction: column;
-                text-align: center;
-                gap: 10px;
+            .logo {
+                font-size: 1.2rem;
+                white-space: nowrap;
             }
 
-            .header-right {
-                width: 100%;
-                flex-direction: column;
-                justify-content: center;
+            .hero h1 {
+                font-size: 2.5rem;
             }
 
-            .dashboard {
+            .bento-container {
                 grid-template-columns: 1fr;
             }
 
-            .card {
-                padding: 15px;
-            }
-
-            .btn {
-                width: 100%;
-                text-align: center;
-                margin-bottom: 5px;
-                display: block;
-            }
-
-            #authNav {
-                flex-direction: column;
-                width: 100%;
-            }
-
-            #authNav .btn {
-                width: 100%;
-            }
-
-            #authNav .btn {
-                width: 100%;
+            .box-large,
+            .box-tall {
+                grid-column: span 1;
+                grid-row: span 1;
             }
         }
 
-        /* Scan List Styles */
-        .scan-item {
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        /* --- Archives Tab Styles --- */
+        .tab-nav {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 15px;
         }
 
-        .scan-item:last-child {
-            border-bottom: none;
-        }
-
-        .scan-summary {
-            padding: 15px;
+        .tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--text-dim);
+            color: var(--text-dim);
+            padding: 10px 20px;
+            font-family: 'Orbitron', sans-serif;
             cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(0, 240, 255, 0.1);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
+        }
+
+        .archive-list {
+            max-width: 1000px;
+            margin: 0 auto 100px auto;
+        }
+
+        .archive-item {
+            background: var(--glass-bg);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 15px;
+            overflow: hidden;
+            /* Chamfered Box for item */
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+        }
+
+        .archive-header {
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            transition: background 0.2s;
-            list-style: none;
-            /* Remove default arrow */
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.3);
+            transition: 0.2s;
         }
 
-        .scan-summary::-webkit-details-marker {
+        .archive-header:hover {
+            background: rgba(0, 240, 255, 0.05);
+        }
+
+        .archive-details {
             display: none;
+            padding: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.6);
         }
 
-        .scan-summary:hover {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .scan-details {
+        .ai-analysis-box {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px dashed var(--accent-cyan);
             padding: 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
-            font-size: 0.9em;
-            color: #cccccc;
+            color: #fff;
+            margin-top: 15px;
+            position: relative;
         }
 
-        .ai-score-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.8em;
-            font-weight: bold;
-            color: white;
-            margin-left: 10px;
+        .ai-analysis-box::before {
+            content: "AI_ANALYSIS_PROTOCOL";
+            position: absolute;
+            top: -10px;
+            left: 10px;
+            background: #000;
+            padding: 0 5px;
+            color: var(--accent-cyan);
+            font-size: 0.7rem;
         }
     </style>
 </head>
 
 <body>
     <canvas id="bgCanvas"></canvas>
-    <div class="container">
-        <header>
-            <div class="header-left">
-                <img src="/static/spidercobnew.png" alt="SPIDERCOB Logo" style="height: 100px;">
-                <div>
-                    <!-- <h1>SPIDERCOB</h1> Removed as per request -->
-                    <p style="font-size: 1.2em; color: #ffffff; font-weight: 500;">Intelligent Data Loss Protection v1.0
-                    </p>
-                </div>
-            </div>
-            <div class="header-right">
-                <div id="userInfo" class="user-info">
-                    <span id="userName">User</span>
-                    <small id="userRole">Analyst</small>
-                </div>
-                <div id="authButtons">
-                    <a href="/login" class="btn btn-outline">Login</a>
-                </div>
-                <div id="authNav" class="hidden" style="display:flex; align-items:center; gap:10px;">
-                    <a href="/api/docs" target="_blank" class="btn btn-outline btn-sm">📚 API Documentation</a>
-                    <button id="logoutBtn" class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
-                </div>
-            </div>
-        </header>
 
-        <!-- Authenticated Content -->
-        <div id="mainDashboard" class="hidden">
-            <div class="dashboard">
-                <div class="card">
-                    <h2>🔑 API Access Token</h2>
-                    <p>Use this token locally or in other apps to authenticate with the DLP API.</p>
-                    <button class="btn btn-sm" onclick="toggleToken()">Show/Hide Token & Usage</button>
-                    <div id="tokenDisplay" class="token-box">
-                        <div style="margin-bottom:15px; border-bottom:1px solid #333; padding-bottom:10px;">
-                            <strong>Your Token:</strong><br>
-                            <span id="actualToken" style="word-break: break-all; color:#00ff00;"></span>
-                        </div>
-                        <details>
-                            <summary style="cursor:pointer; color:#007bff; margin-bottom:10px;">How to use this token?
-                            </summary>
-                            <p style="color:#ccc; margin-bottom:5px;">Example: Scan a file using valid CURL command:</p>
-                            <pre
-                                style="background:#222; padding:10px; border-radius:5px; overflow-x:auto; color:#a5f3fc;">curl -X POST "https://spidercob.com/api/scans/upload_file" \
-  -H "Authorization: Bearer <span id="usageToken">YOUR_TOKEN</span>" \
-  -F "file=@/path/to/your/document.pdf"</pre>
-                        </details>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>📤 File Scanner Test</h2>
-                    <p>Upload a file to test the DLP engine detection.</p>
-                    <div class="drop-zone">
-                        <input type="file" id="fileInput" onchange="handleFileUpload(this)">
-                        <span style="font-size: 2em;">📁</span>
-                        <p>Click or Drag file here</p>
-                        <small>Supported: .txt, .py, .md, .csv, .json</small>
-                    </div>
-                    <div id="scanResult" class="scan-result"></div>
-                </div>
-
-                <div class="card">
-                    <h2>📹 Video/Audio Scanner</h2>
-                    <p>Upload a video to scan spoken content (Speech-to-Text DLP).</p>
-                    <div class="drop-zone" style="border-color: #e83e8c;">
-                        <input type="file" id="videoInput" accept=".mp4,.mov,.avi,.mkv"
-                            onchange="handleVideoUpload(this)">
-                        <span style="font-size: 2em;">🎬</span>
-                        <p>Click or Drag video here</p>
-                        <small>Supported: MP4, MOV, AVI, MKV (Max 25MB)</small>
-                    </div>
-                    <div id="videoScanResult" class="scan-result"></div>
-                </div>
+    <!-- Header HUD -->
+    <header>
+        <div class="logo">&lt;SpiderCob /&gt;</div>
+        <div class="nav-icons">
+            <div id="userInfo" style="display:none; text-align:right; margin-right:20px;">
+                <span id="userName" style="color:var(--accent-cyan);">User</span>
+                <small id="userRole" style="display:block; font-size:0.7em; color:var(--text-dim);">[ANALYST]</small>
             </div>
 
-            <div class="card">
-                <h2>📝 Recent Activity</h2>
-                <div id="scanList">
-                    <p style="color: #666; font-style: italic;">Loading recent scans...</p>
-                </div>
+            <div id="authButtons">
+                <a href="/login" class="nav-link">[01_LOGIN]</a>
+            </div>
+
+            <div id="authNav" class="hidden">
+                <a href="/api/docs" target="_blank" class="nav-link">[DOCS]</a>
+                <button onclick="logout()" class="nav-link" style="background:none; cursor:pointer;">[LOGOUT]</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Content Wrapper -->
+    <div id="guestContent">
+        <section class="hero">
+            <span class="system-text">SYSTEM STATUS: ONLINE // V1.1</span>
+            <h1>WEAVE YOUR<br>DIGITAL FUTURE</h1>
+            <p>Unified Threat Detection. Malware Guard. DLP Scanning.<br>The trap is set for malicious actors.</p>
+            <button class="btn-glitch" onclick="window.location.href='/register'">INITIALIZE_PROTOCOL</button>
+        </section>
+    </div>
+
+    <div id="dashboardContent" class="hidden">
+        <div style="padding: 40px 20px; text-align: center;">
+            <h2>// DASHBOARD_ACCESS_GRANTED</h2>
+            <p style="color:var(--text-dim); margin-bottom:20px;">Select a module to begin scanning.</p>
+
+            <div class="tab-nav">
+                <button class="tab-btn active" onclick="switchTab('active')">[ ACTIVE_SCAN ]</button>
+                <button class="tab-btn" onclick="switchTab('archives')">[ SCAN_ARCHIVES ]</button>
             </div>
         </div>
 
-        <!-- Guest Content -->
-        <div id="guestWelcome" class="card" style="text-align: center; padding: 50px;">
-            <h1 style="color: #ffffff; margin-bottom: 20px;">Protect Your Sensitive Data</h1>
-            <p style="font-size: 1.2em; color: #888; margin-bottom: 30px;">
-                SPIDERCOB detects exposed secrets, PII, and sensitive intellectual property in real-time.
-            </p>
-            <a href="/register" class="btn" style="font-size: 1.1em; padding: 15px 30px;">Get Started</a>
+        <!-- TAB 1: ACTIVE -->
+        <div id="tab-active" class="bento-container">
+            <!-- Box 1: File Scanner -->
+            <div class="bento-box box-large">
+                <span class="system-text">MODULE: FILE_GUARD</span>
+                <h3>Target Upload</h3>
+                <p style="color:var(--text-dim); font-size:0.9rem;">Upload files for Malware + YARA pattern matching +
+                    DLP analysis.</p>
+
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    [CLICK TO UPLOAD TARGET]
+                    <input type="file" id="fileInput" style="display:none;" onchange="handleFileUpload(this)">
+                </div>
+                <div id="scanResult" class="scan-result"></div>
+            </div>
+
+            <!-- Box 2: System Stats (Tall) -->
+            <div class="bento-box box-tall">
+                <span class="system-text">SYSTEM_METRICS</span>
+                <h3>Protocols</h3>
+                <ul style="list-style:none; margin-top:20px; line-height:2;">
+                    <li><span class="status-indicator"></span>Malware Signature Engine</li>
+                    <li><span class="status-indicator"></span>Pattern Matching Grid</li>
+                    <li><span class="status-indicator"></span>DLP Regex Analysis</li>
+                    <li><span class="status-indicator"></span>Semantic Context AI</li>
+                </ul>
+                <div style="margin-top:40px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
+                    <span class="system-text">RECENT ACTIVITY</span>
+                    <div id="scanList" style="font-size:0.8rem; color:var(--text-dim);">
+                        Loading...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Box 3: Video Scanner -->
+            <div class="bento-box box-large">
+                <span class="system-text">MODULE: A/V_INTERCEPT</span>
+                <h3>Video Analysis</h3>
+                <p style="color:var(--text-dim); font-size:0.9rem;">Extract audio from video feeds for transcribed DLP
+                    scanning.</p>
+                <div class="upload-area" onclick="document.getElementById('videoInput').click()"
+                    style="border-color:var(--accent-purple);">
+                    [UPLOAD VIDEO FEED]
+                    <input type="file" id="videoInput" accept=".mp4,.mov,.avi,.mkv" style="display:none;"
+                        onchange="handleVideoUpload(this)">
+                </div>
+                <div id="videoScanResult" class="scan-result"></div>
+            </div>
+
+            <!-- Box 4: Token -->
+            <div class="bento-box">
+                <span class="system-text">ACCESS_KEY</span>
+                <button onclick="toggleToken()"
+                    style="background:none; border:1px solid var(--text-dim); color:var(--text-dim); padding:5px 10px; cursor:pointer; font-family:inherit;">[SHOW_TOKEN]</button>
+                <div id="tokenDisplay"
+                    style="display:none; margin-top:10px; word-break:break-all; font-size:0.8em; color:var(--accent-cyan);">
+                </div>
+            </div>
+        </div> <!-- End Tab Active -->
+
+        <!-- TAB 2: ARCHIVES -->
+        <div id="tab-archives" class="archive-list" style="display:none;">
+            <div id="archivesContainer">
+                <p style="text-align:center; color:var(--text-dim);">LOADING_ARCHIVES...</p>
+            </div>
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer>
+        <p>root@spidercob:~$ Copyright 2025. System distinct. End of line.<span class="blink">_</span></p>
+    </footer>
+
+    <!-- Particles.js -->
     <script src="/static/js/particles.js"></script>
     <script>
-        // Check Authentication
+        // Init Particles in "Spider Web" configuration
+        /* particlesJS.load(@dom-id, @path-json, @callback (optional)); */
+        // We will inline configuration for the specific "Digital Hive" network look
+        if (window.particlesJS) {
+            particlesJS("bgCanvas", {
+                "particles": {
+                    "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
+                    "color": { "value": "#00F0FF" },
+                    "shape": { "type": "circle" },
+                    "opacity": { "value": 0.5, "random": false },
+                    "size": { "value": 3, "random": true },
+                    "line_linked": { "enable": true, "distance": 150, "color": "#BC13FE", "opacity": 0.4, "width": 1 },
+                    "move": { "enable": true, "speed": 2, "direction": "none", "random": false, "straight": false, "out_mode": "out", "bounce": false }
+                },
+                "interactivity": {
+                    "detect_on": "canvas",
+                    "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
+                    "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 1 } } }
+                },
+                "retina_detect": true
+            });
+        }
+
+        // --- APPLICATION LOGIC (Preserved) ---
         const token = localStorage.getItem('access_token');
 
         async function init() {
@@ -429,31 +542,38 @@
                 document.getElementById('authButtons').classList.add('hidden');
                 document.getElementById('authNav').classList.remove('hidden');
 
-                document.getElementById('actualToken').textContent = token;
-                document.getElementById('usageToken').textContent = token;
+                // Show Dashboard, Hide Guest
+                document.getElementById('dashboardContent').classList.remove('hidden');
+                document.getElementById('guestContent').classList.add('hidden');
+
+                document.getElementById('tokenDisplay').textContent = token;
 
                 try {
-                    // Fetch user info
                     const userRes = await fetch('/api/users/me', {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
 
                     if (userRes.ok) {
                         const user = await userRes.json();
-                        document.getElementById('userName').textContent = user.full_name;
-                        document.getElementById('userRole').textContent = user.role;
+                        document.getElementById('userName').textContent = user.full_name.toUpperCase();
+                        document.getElementById('userRole').textContent = `[${user.role.toUpperCase()}]`;
                         document.getElementById('userInfo').style.display = 'block';
-
-                        document.getElementById('mainDashboard').classList.remove('hidden');
-                        document.getElementById('guestWelcome').classList.add('hidden');
-
                         loadRecentScans();
                     } else {
-                        throw new Error('Session expired');
+                        if (userRes.status === 401 || userRes.status === 403) {
+                            logout();
+                        } else {
+                            console.error('API Error:', userRes.status);
+                            // Don't logout, just show offline state or retry?
+                            // For now, let's just keep the dashboard visible but maybe show an error
+                        }
                     }
                 } catch (e) {
-                    logout();
+                    console.error('Auth Check Failed:', e);
+                    // Network error - do NOT logout.
                 }
+            } else {
+                // Initialize particles only if guest (saves performance) or strictly for visuals
             }
         }
 
@@ -467,6 +587,83 @@
             el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
+        // --- UPLOAD HANDLERS (With Progress UI) ---
+
+        async function handleFileUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const resultDiv = document.getElementById('scanResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'scan-result';
+
+            // Progressive UI
+            resultDiv.innerHTML = `
+                <div style="text-align:left;">
+                    <div style="margin-bottom:8px; color:var(--accent-cyan);">>> INITIATING_SCAN_PROTOCOL...</div>
+                    <div id="step-guard" style="opacity:0.7;">[ ] GUARD_CHECK (Malware/YARA) <span class="blink">...</span></div>
+                    <div id="step-dlp" style="opacity:0.4;">[ ] DLP_ANALYSIS</div>
+                </div>
+            `;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const res = await fetch('/api/scans/upload_file', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    body: formData
+                });
+
+                const guardEl = document.getElementById('step-guard');
+                const dlpEl = document.getElementById('step-dlp');
+
+                // Error / Block Handling
+                if (res.status === 400 || res.status === 413) {
+                    const errData = await res.json();
+                    const msg = errData.detail || 'Upload failed';
+
+                    if (msg.includes("Security Threat")) {
+                        if (guardEl) guardEl.innerHTML = `[!] GUARD_CHECK: <span style="color:#ff3333; font-weight:bold;">THREAT_DETECTED</span>`;
+                        resultDiv.className = 'scan-result danger';
+                        resultDiv.innerHTML += `<div style="margin-top:10px; color:#ff3333;">>> BLOCKING_FILE.<br>REASON: ${msg}</div>`;
+                        return;
+                    }
+
+                    if (res.status === 413) {
+                        if (guardEl) guardEl.innerHTML = `[!] SIZE_LIMIT_EXCEEDED`;
+                        resultDiv.className = 'scan-result danger';
+                        return;
+                    }
+
+                    resultDiv.innerHTML = `>> ERROR: ${msg}`;
+                    return;
+                }
+
+                // Success
+                if (guardEl) {
+                    guardEl.innerHTML = `[x] GUARD_CHECK: <span style="color:var(--accent-cyan);">CLEAN</span>`;
+                    guardEl.style.opacity = '1';
+                }
+                if (dlpEl) {
+                    dlpEl.innerHTML = `[>] DLP_ANALYSIS: <span class="blink">PROCESSING</span>`;
+                    dlpEl.style.opacity = '1';
+                }
+
+                const data = await res.json();
+
+                setTimeout(() => {
+                    renderScanResult(data, resultDiv, true);
+                }, 800);
+
+                loadRecentScans();
+            } catch (e) {
+                console.error(e);
+                resultDiv.textContent = '>> SYSTEM ERROR: CONNECTION_FAILED';
+            }
+        }
+
         async function handleVideoUpload(input) {
             const file = input.files[0];
             if (!file) return;
@@ -474,7 +671,14 @@
             const resultDiv = document.getElementById('videoScanResult');
             resultDiv.style.display = 'block';
             resultDiv.className = 'scan-result';
-            resultDiv.innerHTML = '<strong>⏳ Processing Video...</strong><br><small>Extracting audio & transcribing (this may take 10-20s)</small>';
+
+            resultDiv.innerHTML = `
+                <div style="text-align:left;">
+                    <div style="margin-bottom:8px; color:var(--accent-purple);">>> INITIATING_AV_INTERCEPT...</div>
+                    <div id="v-step-guard" style="opacity:0.7;">[ ] GUARD_CHECK <span class="blink">...</span></div>
+                    <div id="v-step-dlp" style="opacity:0.4;">[ ] AUDIO_TRANSCRIPTION</div>
+                </div>
+            `;
 
             const formData = new FormData();
             formData.append('file', file);
@@ -486,197 +690,204 @@
                     body: formData
                 });
 
-                if (res.status === 413) {
-                    resultDiv.className = 'scan-result danger';
-                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> Video too large. <br><small>Maximum size allowed is 25 MB.</small>`;
+                const guardEl = document.getElementById('v-step-guard');
+                const dlpEl = document.getElementById('v-step-dlp');
+
+                if (res.status === 400 || res.status === 413) {
+                    // ... same error handling logic simplified ...
+                    const errData = await res.json();
+                    if (errData.detail.includes("Security Threat")) {
+                        if (guardEl) guardEl.innerHTML = `[!] GUARD_CHECK: <span style="color:#ff3333;">THREAT_DETECTED</span>`;
+                        resultDiv.className = 'scan-result danger';
+                        return;
+                    }
+                    resultDiv.innerHTML = `>> ERROR: ${errData.detail}`;
                     return;
+                }
+
+                if (guardEl) guardEl.innerHTML = `[x] GUARD_CHECK: <span style="color:var(--accent-cyan);">CLEAN</span>`;
+                if (dlpEl) {
+                    dlpEl.innerHTML = `[>] AUDIO_TRANSCRIPTION: <span class="blink">PROCESSING</span>`;
+                    dlpEl.style.opacity = '1';
                 }
 
                 const data = await res.json();
-
-                if (!res.ok) {
-                    resultDiv.className = 'scan-result danger';
-                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> ${data.detail || 'Upload failed'} <br><small>Status: ${res.status}</small>`;
-                    return;
-                }
-
-                renderScanResult(data, resultDiv);
-                loadRecentScans(); // Refresh list
-            } catch (e) {
-                resultDiv.className = 'scan-result danger';
-                resultDiv.textContent = 'Error uploading video.';
-            }
-        }
-
-        // Shared function to render results
-        function renderScanResult(data, resultDiv) {
-            const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
-
-            if (risk === 'high' || risk === 'critical' || risk === 'medium') {
-                resultDiv.className = 'scan-result danger';
-                let details = '';
-                if (data.findings && data.findings.length > 0) {
-                    details = '<div style="margin-top:15px; text-align:left; background:rgba(0,0,0,0.3); padding:15px; border-radius:5px;">';
-                    details += '<h4 style="color:#ffcccc; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:5px;">Detailed Findings:</h4>';
-                    details += '<ul style="list-style:none; padding:0;">';
-                    data.findings.forEach(f => {
-                        const matchStr = f.matches ? f.matches.join(', ') : '';
-                        details += `<li style="margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.05);">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <span style="color:#ffffff; font-weight:600;">${f.type.replace(/_/g, ' ').toUpperCase()}</span>
-                                <span style="background:${f.severity === 'CRITICAL' ? '#dc2626' : f.severity === 'HIGH' ? '#ed561b' : '#ca8a04'}; padding:2px 8px; border-radius:10px; font-size:0.8em; color:white;">${f.severity}</span>
-                            </div>
-                            <div style="color:#cccccc; font-size:0.9em; margin-top:4px;">
-                                Matches: <span style="font-family:monospace; color:#a5f3fc;">${matchStr}</span>
-                            </div>
-                        </li>`;
-                    });
-                    details += '</ul></div>';
-                }
-
-                // Add details content
-                resultDiv.innerHTML = `<strong>⚠️ ${risk.toUpperCase()} RISK DETECTED</strong>${details}`;
-
-
-                // AI Analysis Section
-                if (data.ai_analysis) {
-                    const score = data.ai_analysis.score || 0;
-                    let scoreColor = '#48bb78'; // Green
-                    if (score >= 70) scoreColor = '#f56565'; // Red
-                    else if (score >= 40) scoreColor = '#ed8936'; // Orange
-
-                    resultDiv.innerHTML += `
-                    <div style="margin-top:15px; text-align:left; background:rgba(0,123,255,0.1); padding:15px; border-radius:5px; border:1px solid rgba(0,123,255,0.3);">
-                        <h4 style="color:#60a5fa; margin-bottom:10px; display:flex; align-items:center; justify-content:space-between; gap:8px;">
-                            <span style="display:flex; align-items:center;">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:5px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-                                AI Risk Assessment
-                            </span>
-                            <span style="background:${scoreColor}; color:white; padding:2px 8px; border-radius:12px; font-size:0.8em;">Score: ${score}/100</span>
-                        </h4>
-                        <div style="color:#e2e8f0; font-size:0.95em; line-height:1.6;">
-                            ${data.ai_analysis.reason ? data.ai_analysis.reason.replace(/\n/g, '<br>') : (data.ai_analysis.verdict_raw || data.ai_analysis)}
-                        </div>
-                    </div>`;
-                }
-            } else {
-                resultDiv.className = 'scan-result safe';
-                resultDiv.innerHTML = `<strong>✅ SAFE:</strong> No sensitive data found. <br><small>Verified by SPIDERCOB DLP</small>`;
-            }
-        }
-
-        async function handleFileUpload(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const resultDiv = document.getElementById('scanResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'scan-result';
-            resultDiv.textContent = 'Scanning...';
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const res = await fetch('/api/scans/upload_file', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-                // ... Error handling duplicated in new function, refactoring would be better but keeping simple for now
-                if (res.status === 413) {
-                    resultDiv.className = 'scan-result danger';
-                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> File too large. <br><small>Maximum size allowed is 10 MB.</small>`;
-                    return;
-                }
-
-                const data = await res.json();
-
-                if (!res.ok) {
-                    resultDiv.className = 'scan-result danger';
-                    resultDiv.innerHTML = `<strong>❌ ERROR:</strong> ${data.detail || 'Upload failed'} <br><small>Status: ${res.status}</small>`;
-                    return;
-                }
-
-                renderScanResult(data, resultDiv);
+                setTimeout(() => { renderScanResult(data, resultDiv, true); }, 800);
                 loadRecentScans();
+
             } catch (e) {
-                resultDiv.textContent = 'Error scanning file.';
+                resultDiv.textContent = '>> SYSTEM ERROR: UPLOAD_FAILED';
             }
+        }
+
+        function renderScanResult(data, resultDiv, isUpdate = false) {
+            const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
+            let color = risk === 'low' ? 'var(--accent-cyan)' : '#ff3333';
+            let status = risk === 'low' ? 'SAFE' : 'RISK_DETECTED';
+
+            let html = `<div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:10px; padding-top:10px;">
+                <div>>> ANALYSIS_COMPLETE</div>
+                <div>VERDICT: <span style="color:${color}; font-weight:bold;">${status}</span></div>
+             `;
+
+            if (data.findings && data.findings.length > 0) {
+                html += `<ul style="margin-top:10px; padding-left:20px; color:var(--text-dim);">`;
+                data.findings.forEach(f => {
+                    html += `<li>${f.type}: ${f.severity}</li>`;
+                });
+                html += `</ul>`;
+            }
+
+            if (data.ai_analysis) {
+                const score = data.ai_analysis.score || 0;
+                html += `<div style="margin-top:10px; font-size:0.8rem; color: #fff;">AI_SCORE: ${score}/100</div>`;
+            }
+
+            html += `</div>`;
+
+            // Keep the progressive logs if we want, or just overwrite. Overwriting for cleanliness in this theme.
+            resultDiv.innerHTML = html;
+            if (risk !== 'low') resultDiv.className = 'scan-result danger';
         }
 
         async function loadRecentScans() {
+            // ... Simple list loading ...
             try {
-                const res = await fetch('/api/scans/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const res = await fetch('/api/scans/', { headers: { 'Authorization': `Bearer ${token}` } });
+                const scans = await res.json();
+                const list = document.getElementById('scanList');
+                if (scans.length === 0) { list.innerHTML = '>> NO_DATA'; return; }
+
+                let html = '<ul style="list-style:none; padding:0;">';
+                scans.slice(0, 5).forEach(s => {
+                    let color = (s.risk_level === 'HIGH' || s.risk_level === 'CRITICAL') ? '#ff3333' : 'var(--accent-cyan)';
+                    html += `<li style="margin-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:2px;">
+                        <span style="color:${color};">[${s.risk_level}]</span> ${s.source} <span style="float:right; color:var(--text-dim);">${new Date(s.created_at).toLocaleTimeString()}</span>
+                    </li>`;
                 });
+                html += '</ul>';
+                list.innerHTML = html;
+            } catch (e) { }
+        }
+
+        // --- NEW: ARCHIVES LOGIC ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                if (b.textContent.includes(tabId.toUpperCase())) b.classList.add('active');
+            });
+
+            if (tabId === 'active') {
+                document.getElementById('tab-active').style.display = 'grid';
+                document.getElementById('tab-archives').style.display = 'none';
+            } else {
+                document.getElementById('tab-active').style.display = 'none';
+                document.getElementById('tab-archives').style.display = 'block';
+                loadArchives();
+            }
+        }
+
+        function toggleArchiveDetail(id) {
+            const detail = document.getElementById(`detail-${id}`);
+            const toggleBtn = document.getElementById(`toggle-${id}`);
+            const isVisible = detail.style.display === 'block';
+
+            detail.style.display = isVisible ? 'none' : 'block';
+            if (toggleBtn) {
+                toggleBtn.textContent = isVisible ? '[ EXPAND ]' : '[ COLLAPSE ]';
+                toggleBtn.style.color = isVisible ? 'var(--text-dim)' : 'var(--accent-cyan)';
+            }
+        }
+
+        async function loadArchives() {
+            const container = document.getElementById('archivesContainer');
+            try {
+                const res = await fetch('/api/scans/', { headers: { 'Authorization': `Bearer ${token}` } });
                 const scans = await res.json();
 
-                const list = document.getElementById('scanList');
                 if (scans.length === 0) {
-                    list.innerHTML = '<p>No scans found.</p>';
+                    container.innerHTML = '<p style="text-align:center;">NO_ARCHIVES_FOUND</p>';
                     return;
                 }
 
-                let html = '<div class="scan-list">';
-                scans.slice(0, 10).forEach(scan => { // Increased to 10
-                    const riskColor = (scan.risk_level === 'HIGH' || scan.risk_level === 'CRITICAL') ? '#f56565' :
-                        (scan.risk_level === 'MEDIUM') ? '#ed8936' : '#48bb78';
+                let html = '';
+                scans.forEach(s => {
+                    const risk = s.risk_level || 'UNKNOWN';
+                    const riskColor = (risk === 'HIGH' || risk === 'CRITICAL') ? '#ff3333' : 'var(--accent-cyan)';
 
-                    let aiSection = '';
-                    if (scan.ai_analysis) {
-                        const score = scan.ai_analysis.score || 0;
-                        let scoreColor = score >= 70 ? '#f56565' : score >= 40 ? '#ed8936' : '#48bb78';
-                        const reason = scan.ai_analysis.reason || (scan.ai_analysis.verdict_raw || 'No details available.');
+                    // Parse AI Analysis
+                    let aiBlock = '';
+                    if (s.ai_analysis) {
+                        try {
+                            // Handle both stringified JSON and direct object (depending on API)
+                            const ai = (typeof s.ai_analysis === 'string') ? JSON.parse(s.ai_analysis) : s.ai_analysis;
 
-                        aiSection = `
-                            <div style="margin-top: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px;">
-                                <div style="display: flex; align-items: center; margin-bottom: 8px;">
-                                    <strong style="color: #60a5fa;">🤖 AI Analysis</strong>
-                                    <span class="ai-score-badge" style="background: ${scoreColor}">Score: ${score}/100</span>
-                                    <span class="ai-score-badge" style="background: #4a5568; margin-left: 5px;">${scan.ai_analysis.verdict || 'REVIEW'}</span>
+                            // Fields from dlp_engine.py: verdict, score, category, reason
+                            aiBlock = `
+                                <div class="ai-analysis-box">
+                                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
+                                        <span style="color:var(--accent-cyan);">>> CISO_AI_VERDICT: ${ai.verdict || 'PENDING'}</span>
+                                        <span>SCORE: <span style="font-size:1.2em; font-weight:bold; color:${(ai.score > 50) ? '#ff3333' : 'var(--accent-cyan)'};">${ai.score || 0}</span>/100</span>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns: 1fr 3fr; gap:10px; margin-bottom:10px; font-size:0.9rem;">
+                                        <div style="color:var(--text-dim);">CATEGORY:</div>
+                                        <div>${ai.category || 'General'}</div>
+                                    </div>
+                                    <div style="display:grid; grid-template-columns: 1fr 3fr; gap:10px; font-size:0.9rem;">
+                                        <div style="color:var(--text-dim);">ANALYSIS:</div>
+                                        <div style="line-height:1.5; color:#fff;">${ai.reason || ai.reasoning || 'No specific reasoning provided.'}</div>
+                                    </div>
                                 </div>
-                                <p style="line-height: 1.5;">${reason.replace(/\n/g, '<br>')}</p>
-                            </div>
-                        `;
+                            `;
+                        } catch (e) { aiBlock = `<div class="ai-analysis-box" style="border-color:red;">AI DATA CORRUPT: ${e.message}</div>`; }
                     } else {
-                        aiSection = `<div style="margin-top: 10px; font-style: italic; color: #666;">No AI analysis available for this scan.</div>`;
+                        aiBlock = `<div class="ai-analysis-box" style="border-style:dashed; opacity:0.6;">>> AI_ANALYSIS_NOT_AVAILABLE</div>`;
                     }
 
-                    // Format date
-                    const date = new Date(scan.created_at).toLocaleString();
+                    // Findings List
+                    let findingsBlock = '';
+                    if (s.findings && s.findings.length > 0) {
+                        findingsBlock = '<ul style="margin-top:10px; padding-left:20px; color:var(--text-dim);">';
+                        s.findings.forEach(f => {
+                            if (typeof f === 'string') findingsBlock += `<li>${f}</li>`;
+                            else findingsBlock += `<li><span style="color:#fff;">${f.type}</span>: ${f.severity} (Count: ${f.count || 1})</li>`;
+                        });
+                        findingsBlock += '</ul>';
+                    } else {
+                        findingsBlock = '<p style="color:var(--text-dim); margin-top:10px;">>> NO_THREAT_PATTERNS_DETECTED</p>';
+                    }
 
                     html += `
-                        <details class="scan-item">
-                            <summary class="scan-summary">
-                                <div style="display: flex; flex-direction: column;">
-                                    <span style="font-weight: 500; color: #fff;">${scan.source || 'Upload'}</span>
-                                    <small style="color: #888;">${date}</small>
+                        <div class="archive-item">
+                            <div class="archive-header" onclick="toggleArchiveDetail(${s.id})">
+                                <div>
+                                    <span style="color:${riskColor}; font-weight:bold;">[${risk}]</span>
+                                    <span style="color:#fff; margin-left:10px;">${s.source}</span>
                                 </div>
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="color: ${riskColor}; font-weight: bold;">${scan.risk_level || 'CLEAN'}</span>
-                                    <span style="color: #666;">▼</span>
+                                <div style="color:var(--text-dim); font-size:0.8rem;">
+                                    ${new Date(s.created_at).toLocaleString()} 
+                                    <span id="toggle-${s.id}" style="margin-left:10px; color:var(--text-dim);">[ EXPAND ]</span>
                                 </div>
-                            </summary>
-                            <div class="scan-details">
-                                <p><strong>Status:</strong> ${scan.status}</p>
-                                <p><strong>Duration:</strong> ${scan.scan_duration_ms || '< 1'} ms</p>
-                                ${aiSection}
-                                ${scan.findings ? `
-                                    <div style="margin-top: 10px;">
-                                        <strong>Findings (${scan.findings.length}):</strong>
-                                        <ul style="margin-top: 5px; padding-left: 20px;">
-                                            ${scan.findings.map(f => `<li>${f.type} (${f.count}) - <span style="color: ${f.severity === 'CRITICAL' ? '#f56565' : '#ccc'}">${f.severity}</span></li>`).join('')}
-                                        </ul>
-                                    </div>
-                                ` : ''}
                             </div>
-                        </details>
+                            <div id="detail-${s.id}" class="archive-details">
+                                <div style="margin-bottom:15px; color:var(--text-dim); font-size:0.9rem;">
+                                    SCAN_ID: ${s.id} // DURATION: ${s.scan_duration_ms || 0}ms // VERDICT: ${s.verdict}
+                                </div>
+                                ${aiBlock}
+                                <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
+                                    <span style="color:var(--accent-purple);">>> FORENSIC_FINDINGS_LOG</span>
+                                    ${findingsBlock}
+                                </div>
+                            </div>
+                        </div>
                     `;
                 });
-                html += '</div>';
-                list.innerHTML = html;
-            } catch (e) { console.error(e); }
+                container.innerHTML = html;
+                container.innerHTML = html;
+            } catch (e) {
+                console.error("Archive Load Error:", e);
+                container.innerHTML = `<p style="text-align:center; color:#ff3333;">ERROR: ${e.message}</p>`;
+            }
         }
 
         init();
