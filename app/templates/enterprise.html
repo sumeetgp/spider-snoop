@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise // SpiderCob</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <script src="/static/js/particles.js" defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        card: '#161B22',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        accent: '#00E5FF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0D1117;
+            color: #C9D1D9;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 120px;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
+        }
+
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #88FFFF 0%, #00E5FF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .pill {
+            background: rgba(136, 255, 255, 0.1);
+            border: 1px solid rgba(136, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        input,
+        select,
+        textarea {
+            background-color: #0D1117;
+            border: 1px solid #30363d;
+            color: #C9D1D9;
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            border-color: #88FFFF;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans selection:bg-brand/30">
+    <canvas id="bgCanvas" class="opacity-30"></canvas>
+
+    <!-- Navbar -->
+    <nav class="border-b border-border p-4 flex justify-between items-center bg-bg/80 backdrop-blur sticky top-0 z-50">
+        <a href="/" class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+            <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+        </a>
+        <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
+            <a href="/#features" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" class="text-brand transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="hover:text-white transition">About Us</a>
+        </div>
+        <div class="flex gap-4 items-center">
+            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
+            <a href="/login" id="btn-login"
+                class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                Launch Console
+            </a>
+            <a href="/dashboard" id="btn-dashboard"
+                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                Scan Portal
+            </a>
+            <button id="btn-logout" onclick="logout()"
+                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
+                LOGOUT
+            </button>
+            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenu"
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+                <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
+            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" onclick="toggleMobileMenu()" class="text-brand">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
+            <div class="h-px bg-border my-4"></div>
+            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1">
+
+        <!-- Hero -->
+        <header class="relative pt-24 pb-16 px-4 text-center">
+            <div class="max-w-5xl mx-auto relative z-10">
+                <div class="inline-block pill text-brand mb-8 uppercase tracking-widest">Enterprise Platform</div>
+                <h1 class="text-4xl md:text-7xl font-black tracking-tighter text-white mb-6 leading-tight">
+                    Bank-Grade Security. <br>
+                    <span class="hero-gradient italic">Deployed on Your Terms.</span>
+                </h1>
+                <p class="text-xl text-gray-400 max-w-3xl mx-auto mb-12Leading-relaxed">
+                    Scale your Data Loss Prevention and Threat Detection across thousands of employees without
+                    compromising speed or privacy.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <a href="#contact"
+                        class="w-full sm:w-auto bg-brand hover:bg-opacity-90 text-black px-10 py-4 rounded-xl font-black text-lg transition shadow-xl shadow-brand/20">
+                        Book a Demo
+                    </a>
+                    <a href="#contact"
+                        class="w-full sm:w-auto border border-brand text-brand hover:bg-brand/10 px-10 py-4 rounded-xl font-black text-lg transition">
+                        Contact Sales
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- Why SpiderCob? -->
+        <section class="py-24 px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-3xl font-black text-white mb-4">Why SpiderCob Enterprise?</h2>
+                    <p class="text-gray-400">Transforming developer-friendly tools into a robust Governance Platform.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <!-- 1. Private Deployment -->
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-brand">
+                        <div class="mb-4 text-brand">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">1. Private Cloud & On-Prem</h3>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-4">Your data never needs to leave your
+                            perimeter.</p>
+                        <ul class="text-sm text-gray-400 space-y-2">
+                            <li><strong>BYOC:</strong> Deploy into your AWS/Azure VPC.</li>
+                            <li><strong>Air-Gapped:</strong> Run offline on your own hardware.</li>
+                            <li><strong>Data Sovereignty:</strong> EU-only processing options.</li>
+                        </ul>
+                    </div>
+
+                    <!-- 2. Policy Engine -->
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-accent">
+                        <div class="mb-4 text-accent">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">2. Custom Policy Engine</h3>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-4">Context-aware rules for your business.</p>
+                        <ul class="text-sm text-gray-400 space-y-2">
+                            <li><strong>Custom Terms:</strong> Block "Project Skylark" instantly.</li>
+                            <li><strong>RBAC:</strong> Usage rules for HR vs Contractors.</li>
+                            <li><strong>Advanced Regex:</strong> Tailored DLP patterns.</li>
+                        </ul>
+                    </div>
+
+                    <!-- 3. Compliance -->
+                    <div class="glass-panel p-8 rounded-2xl border-t-4 border-white">
+                        <div class="mb-4 text-white">
+                            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-4">3. Advanced Compliance</h3>
+                        <p class="text-sm text-gray-400 leading-relaxed mb-4">Audit-ready logs for SOC2, HIPAA, ISO.</p>
+                        <ul class="text-sm text-gray-400 space-y-2">
+                            <li><strong>Immutable Logs:</strong> Every action recorded.</li>
+                            <li><strong>SIEM Integration:</strong> Alerts to Splunk/Datadog.</li>
+                            <li><strong>SOC Workflow:</strong> Seamless incident response.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feature Matrix -->
+        <section class="py-24 px-4 bg-black/20">
+            <div class="max-w-5xl mx-auto">
+                <h2 class="text-3xl font-black text-white mb-12 text-center">Enterprise Feature Matrix</h2>
+                <div class="glass-panel rounded-2xl overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-border bg-gray-900/50">
+                                <th class="p-6 text-gray-400 font-bold uppercase text-sm">Feature</th>
+                                <th class="p-6 text-white font-black text-lg">Standard</th>
+                                <th class="p-6 text-brand font-black text-lg">Enterprise</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border text-sm text-gray-300">
+                            <tr>
+                                <td class="p-6 font-bold">Throughput</td>
+                                <td class="p-6">1,000 requests/min</td>
+                                <td class="p-6 text-white">Unlimited / Dedicated Capacity</td>
+                            </tr>
+                            <tr>
+                                <td class="p-6 font-bold">Deployment</td>
+                                <td class="p-6">Public Cloud (SaaS)</td>
+                                <td class="p-6 text-white">Private VPC / On-Premise</td>
+                            </tr>
+                            <tr>
+                                <td class="p-6 font-bold">Support</td>
+                                <td class="p-6">Email Support</td>
+                                <td class="p-6 text-white">24/7 Dedicated Solutions Engineer</td>
+                            </tr>
+                            <tr>
+                                <td class="p-6 font-bold">SLA</td>
+                                <td class="p-6">99.0% Uptime</td>
+                                <td class="p-6 text-white">99.99% Uptime Guarantee</td>
+                            </tr>
+                            <tr>
+                                <td class="p-6 font-bold">Policy Engine</td>
+                                <td class="p-6">Standard Regex</td>
+                                <td class="p-6 text-white">Custom AI Models & Knowledge Base</td>
+                            </tr>
+                            <tr>
+                                <td class="p-6 font-bold">Red Teaming</td>
+                                <td class="p-6 text-gray-500">Waitlist</td>
+                                <td class="p-6 text-brand font-bold">Priority Access to ARTEMIS Agent</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Use Cases -->
+        <section class="py-24 px-4">
+            <div class="max-w-4xl mx-auto space-y-12">
+                <div class="flex gap-6 items-start">
+                    <div class="p-3 bg-gray-800 rounded-lg text-brand"><svg class="w-6 h-6" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">For Financial Services</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">Automated scrubbing of PII (SSNs, Credit Cards)
+                            from loan applications before they enter your data lake. Sanitization (CDR) of all email
+                            attachments to prevent zero-day ransomware.</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 items-start">
+                    <div class="p-3 bg-gray-800 rounded-lg text-accent"><svg class="w-6 h-6" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">For Software Companies</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">Prevent accidental commits of AWS Keys and
+                            Secrets to public repositories. Supply chain scanning for thousands of microservices in your
+                            CI/CD pipeline.</p>
+                    </div>
+                </div>
+                <div class="flex gap-6 items-start">
+                    <div class="p-3 bg-gray-800 rounded-lg text-red-500"><svg class="w-6 h-6" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                            </path>
+                        </svg></div>
+                    <div>
+                        <h3 class="text-xl font-bold text-white mb-2">For Healthcare</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed">HIPAA-compliant redaction of patient names and
+                            medical IDs from research documents.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- White Glove Service -->
+        <section class="py-16 px-4 text-center">
+            <div class="max-w-3xl mx-auto glass-panel p-12 rounded-[3rem] border-brand/20">
+                <h2 class="text-3xl font-black text-white mb-6">Let's Build Your Defense.</h2>
+                <p class="text-gray-400 mb-8">
+                    Every enterprise environment is unique. We offer a <strong>White-Glove Onboarding</strong> service
+                    where our engineers assist you in configuring custom YARA rules, integrating with your SSO
+                    (Okta/Auth0), and stress-testing the deployment.
+                </p>
+                <div class="flex flex-col md:flex-row justify-center gap-8 text-sm font-mono text-brand">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        contact@spidercob.com
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z">
+                            </path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        HQ: Bengaluru, India
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Form -->
+        <section id="contact" class="pb-32 px-4">
+            <div class="max-w-xl mx-auto bg-card rounded-2xl p-8 border border-border">
+                <h3 class="text-xl font-bold text-white mb-6">Request Consultation</h3>
+                <form id="consultation-form" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Name</label>
+                        <input id="form-name" type="text" placeholder="John Doe" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Work Email</label>
+                        <input id="form-email" type="email" placeholder="john@company.com" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Company Size</label>
+                        <select id="form-size">
+                            <option value="1-100 Employees">1-100 Employees</option>
+                            <option value="100-1000 Employees">100-1000 Employees</option>
+                            <option value="1000+ Employees">1000+ Employees</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Interest</label>
+                        <select id="form-interest">
+                            <option value="On-Premise Deployment">On-Premise Deployment</option>
+                            <option value="Custom Pricing">Custom Pricing</option>
+                            <option value="Compliance Audit">Compliance Audit</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="btn-submit"
+                        class="w-full bg-brand hover:bg-opacity-90 text-black font-black py-4 rounded-lg mt-4 transition">
+                        Request Consultation
+                    </button>
+                    <p id="form-status" class="text-xs text-center text-gray-600 mt-4 h-4">Average response time:
+                        &lt; 2 hours.</p>
+                </form>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black py-12 px-8 border-t border-border">
+        <div
+            class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-xs text-gray-600 font-mono">
+            <div class="flex items-center gap-2 text-white font-black tracking-tighter mb-4 md:mb-0">
+                <span class="text-lg">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <div>&copy; 2025 SPIDER-SNOOP ENTERPRISE.</div>
+        </div>
+    </footer>
+
+    <script>
+        // Form Handling
+        document.getElementById('consultation-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('btn-submit');
+            const status = document.getElementById('form-status');
+            const originalText = btn.innerText;
+
+            // Lock UI
+            btn.disabled = true;
+            btn.innerText = "Processing...";
+            btn.classList.add('opacity-50');
+            status.innerText = "";
+            status.className = "text-xs text-center text-gray-600 mt-4 h-4";
+
+            // Gather Data
+            const payload = {
+                name: document.getElementById('form-name').value,
+                email: document.getElementById('form-email').value,
+                company_size: document.getElementById('form-size').value,
+                interest: document.getElementById('form-interest').value
+            };
+
+            try {
+                const res = await fetch('/api/enterprise/consultation', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw new Error("Request failed");
+                const data = await res.json();
+
+                // Success UI
+                btn.innerText = "Request Sent ✅";
+                btn.classList.remove('bg-brand', 'text-black');
+                btn.classList.add('bg-green-500', 'text-white');
+                status.innerText = `Ticket #${data.ticket_id} created successfully.`;
+                status.classList.add('text-green-400');
+
+                // Reset form
+                e.target.reset();
+
+                // Revert button after 3s
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerText = originalText;
+                    btn.classList.add('bg-brand', 'text-black');
+                    btn.classList.remove('bg-green-500', 'text-white', 'opacity-50');
+                }, 3000);
+
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerText = "Try Again";
+                btn.classList.remove('opacity-50');
+                status.innerText = "Failed to send request. Please try again.";
+                status.classList.add('text-alert');
+            }
+        });
+
+        // Check Auth & Update Nav
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            // User is logged in - Update Nav
+            const btnLogin = document.getElementById('btn-login');
+            const btnDash = document.getElementById('btn-dashboard');
+
+            if (btnLogin) {
+                btnLogin.classList.add('hidden');
+                btnLogin.classList.remove('sm:block');
+            }
+            if (btnDash) {
+                btnDash.classList.remove('hidden');
+                btnDash.classList.add('sm:block');
+            }
+
+            // Toggle Logout Button
+            const btnLogout = document.getElementById('btn-logout');
+            if (btnLogout) btnLogout.classList.remove('hidden');
+
+            // Fetch Username
+            fetch('/api/users/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Unauthorized');
+                    return res.json();
+                })
+                .then(user => {
+                    const navName = document.getElementById('nav-username');
+                    if (navName) {
+                        navName.innerText = user.username;
+                        navName.classList.remove('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.warn('Session expired', err);
+                    localStorage.removeItem('access_token');
+                    window.location.reload();
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.reload();
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Us // SpiderCob</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <script src="/static/js/particles.js" defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        card: '#161B22',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        accent: '#00E5FF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0D1117;
+            color: #C9D1D9;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 120px;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
+        }
+
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #88FFFF 0%, #00E5FF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mesh-gradient {
+            background-image: radial-gradient(circle at 2px 2px, #88FFFF 1px, transparent 0);
+            background-size: 40px 40px;
+            transform: translateZ(0);
+            opacity: 0.15;
+        }
+
+        .pill {
+            background: rgba(136, 255, 255, 0.1);
+            border: 1px solid rgba(136, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .section-header {
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            color: white;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans selection:bg-brand/30">
+    <canvas id="bgCanvas" class="opacity-30"></canvas>
+
+    <!-- Navbar -->
+    <nav class="border-b border-border p-4 flex justify-between items-center bg-bg/80 backdrop-blur sticky top-0 z-50">
+        <a href="/" class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+            <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+        </a>
+        <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
+            <a href="/#features" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" class="hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="text-brand transition">About Us</a>
+        </div>
+        <div class="flex gap-4 items-center">
+            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
+            <a href="/login" id="btn-login"
+                class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                Launch Console
+            </a>
+            <a href="/dashboard" id="btn-dashboard"
+                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                Scan Portal
+            </a>
+            <button id="btn-logout" onclick="logout()"
+                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
+                LOGOUT
+            </button>
+            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu -->
+    <div id="mobileMenu"
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+                <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
+            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" onclick="toggleMobileMenu()" class="text-brand">About Us</a>
+            <div class="h-px bg-border my-4"></div>
+            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+        </div>
+    </div>
+
+    <!-- About Content -->
+    <main class="flex-1">
+        <header class="relative pt-24 pb-16 px-4">
+            <div class="max-w-4xl mx-auto text-center relative z-10">
+                <div class="inline-block pill text-brand mb-8 uppercase tracking-widest">About SpiderCob</div>
+                <h1 class="text-4xl md:text-6xl section-header mb-8 leading-tight">
+                    We built SpiderCob because <br>
+                    <span class="hero-gradient italic">"Antivirus" is a 1990s word for a 2025 problem.</span>
+                </h1>
+            </div>
+        </header>
+
+        <section class="py-16 px-4">
+            <div class="max-w-3xl mx-auto space-y-12">
+                <!-- Origin Story -->
+                <div class="glass-panel p-8 md:p-12 rounded-[2rem] border-l-4 border-brand/30">
+                    <h2 class="text-2xl font-black text-white mb-6 uppercase tracking-tight">The Origin Story</h2>
+                    <div class="space-y-4 text-gray-400 leading-relaxed">
+                        <p>Security used to be simple: <span class="text-white font-bold">"Is this file a virus? Yes or
+                                No."</span></p>
+                        <p>But the digital world changed. Today, a "clean" file can still destroy your business.</p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-8">
+                            <div class="bg-bg/50 p-4 rounded-xl border border-border/50">
+                                <p class="text-sm italic">"A spreadsheet isn't a virus, but if it contains 10,000
+                                    customer credit card numbers, it’s a <strong class="text-alert">lethal data
+                                        leak</strong>."</p>
+                            </div>
+                            <div class="bg-bg/50 p-4 rounded-xl border border-border/50">
+                                <p class="text-sm italic">"A Python script isn't malware, but if it contains your AWS
+                                    Secret Keys, it’s a <strong class="text-brand">backdoor for hackers</strong>."</p>
+                            </div>
+                        </div>
+
+                        <p>A PDF invoice looks safe, until a hidden macro executes ransomware the moment you click
+                            "Enable Editing."</p>
+                        <p>We realized that traditional security tools were asking the wrong question. They were looking
+                            for signatures (known bad code). They weren't looking at context (what the data actually
+                            means).</p>
+                        <p class="text-white font-black text-lg">That was the spark for SpiderCob.</p>
+                        <p>We set out to build a security engine that doesn't just "scan" files—it reads them,
+                            understands them, and sanitizes them. We moved beyond "Block/Allow" to "Intelligent
+                            Analysis."</p>
+                    </div>
+                </div>
+
+                <!-- Philosophy -->
+                <div class="space-y-8">
+                    <h2 class="text-3xl font-black text-white text-center">Our Philosophy: The Digital Immune System
+                    </h2>
+                    <p class="text-center text-gray-400 max-w-2xl mx-auto">We believe security shouldn't be a 10-foot
+                        thick concrete wall that stops your developers from working. It should be a spiderweb: strong,
+                        invisible, and capable of catching the "bugs" while letting your business flow through.</p>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="glass-panel p-6 rounded-2xl">
+                            <h3 class="text-brand font-black mb-3">Context Over Keywords</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">Old DLPs block the word "Skylark" because
+                                it matches a project name. Our AI understands if you are talking about "Project Skylark"
+                                (Block) or just a bird (Allow). Security shouldn't be stupid.</p>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl">
+                            <h3 class="text-brand font-black mb-3">Democratizing Enterprise Grade</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">Tools like CDR and Secret Scanning used to
+                                be reserved for Fortune 500 banks. We built SpiderCob to put that power into a simple
+                                API that any developer can afford.</p>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl">
+                            <h3 class="text-brand font-black mb-3">Proactive, Not Reactive</h3>
+                            <p class="text-xs text-gray-400 leading-relaxed">We aren't waiting for the attack. With our
+                                upcoming Red Teaming capabilities, we are building a future where your security system
+                                attacks itself to find holes first.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Technology -->
+                <div class="bg-card/30 p-8 md:p-12 rounded-[2rem] border border-border/50 relative overflow-hidden">
+                    <div class="absolute inset-0 mesh-gradient opacity-10"></div>
+                    <div class="relative z-10">
+                        <h2 class="text-2xl font-black text-white mb-6 uppercase tracking-tight">The Technology</h2>
+                        <p class="text-gray-400 mb-8">We didn't just wrap a wrapper around an antivirus. We engineered a
+                            Hybrid Intelligence Pipeline:</p>
+
+                        <div class="space-y-6">
+                            <div class="flex gap-4">
+                                <div class="text-brand text-2xl font-black">01</div>
+                                <div>
+                                    <h4 class="text-white font-bold">The Muscle</h4>
+                                    <p class="text-sm text-gray-500">Industry-standard open-source engines like ClamAV,
+                                        TruffleHog, and OSV provide the raw scanning power.</p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="text-brand text-2xl font-black">02</div>
+                                <div>
+                                    <h4 class="text-white font-bold">The Brain</h4>
+                                    <p class="text-sm text-gray-500">We integrated AI to act as the "Security Officer,"
+                                        analyzing risk, reading metadata, and making intelligent decisions on the fly.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex gap-4">
+                                <div class="text-brand text-2xl font-black">03</div>
+                                <div>
+                                    <h4 class="text-white font-bold">The Speed</h4>
+                                    <p class="text-sm text-gray-500">Hosted on high-performance Cloud Infrastructure, we
+                                        scan heavy archives and compile code without the lag.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Promise -->
+                <div class="text-center py-12">
+                    <h2 class="text-3xl font-black text-white mb-4">Our Promise</h2>
+                    <p class="text-gray-400 text-lg mb-2">Whether you are a solo developer protecting your first app, or
+                        an enterprise team securing a supply chain, SpiderCob is your safety net.</p>
+                    <p class="text-brand font-black text-2xl">We catch what others miss.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-black py-20 px-8 border-t border-border">
+        <div class="max-w-4xl mx-auto text-center space-y-8">
+            <h2 id="cta-heading" class="text-3xl font-black text-white">Ready to secure your data?</h2>
+            <a id="cta-button" href="/register"
+                class="inline-block bg-brand hover:bg-opacity-90 text-black px-12 py-5 rounded-xl font-black text-xl transition shadow-xl shadow-brand/20">
+                Get Started for Free
+            </a>
+            <div
+                class="pt-12 border-t border-border/30 flex justify-between items-center text-[10px] text-gray-700 font-mono">
+                <div class="flex items-center gap-2 text-white text-lg font-black tracking-tighter">
+                    <span class="text-xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+                </div>
+                <div>&copy; 2025 ALL RIGHTS RESERVED.</div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+
+        // Check Auth - Hide CTA if logged in & Update Nav
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            // Hide CTA
+            const h = document.getElementById('cta-heading');
+            const b = document.getElementById('cta-button');
+            if (h) h.style.display = 'none';
+            if (b) b.style.display = 'none';
+
+            // User is logged in - Update Nav
+            const btnLogin = document.getElementById('btn-login');
+            const btnDash = document.getElementById('btn-dashboard');
+
+            if (btnLogin) {
+                btnLogin.classList.add('hidden');
+                btnLogin.classList.remove('sm:block');
+            }
+            if (btnDash) {
+                btnDash.classList.remove('hidden');
+                btnDash.classList.add('sm:block');
+            }
+
+            // Toggle Logout Button
+            const btnLogout = document.getElementById('btn-logout');
+            if (btnLogout) btnLogout.classList.remove('hidden');
+
+            // Fetch Username
+            fetch('/api/users/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Unauthorized');
+                    return res.json();
+                })
+                .then(user => {
+                    const navName = document.getElementById('nav-username');
+                    if (navName) {
+                        navName.innerText = user.username;
+                        navName.classList.remove('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.warn('Session expired', err);
+                    localStorage.removeItem('access_token');
+                    window.location.reload();
+                });
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.reload();
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                document.body.style.overflow = '';
+            } else {
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    </script>
+</body>
+
+</html>

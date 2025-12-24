@@ -1,0 +1,257 @@
+/Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/langsmith/schemas.py:23: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import (
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-7.4.3, pluggy-1.6.0 -- /Users/sgpt/spidercob/spider-snoop/venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/sgpt/spidercob/spider-snoop
+plugins: anyio-4.12.0, asyncio-0.21.1, langsmith-0.5.0
+asyncio: mode=Mode.STRICT
+collecting ... collected 1 item
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware FAILED    [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_e2e_protection_flow_malware _______________________
+
+mock_storage = <MagicMock id='4504642832'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1091fec40>
+
+    @pytest.mark.asyncio
+    async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
+        # Import auth FIRST to ensure it initializes before main/routes try to use it
+        from app.utils import auth
+        # Import main after
+        from app.main import app
+        from fastapi.testclient import TestClient
+        from app.database import get_db
+    
+        get_current_active_user = auth.get_current_active_user
+        # Mock Deps
+        mock_db = MagicMock()
+    
+        def refresh_side_effect(obj):
+            obj.id = 123
+            from datetime import datetime
+            if not getattr(obj, 'created_at', None): obj.created_at = datetime.utcnow()
+            if not getattr(obj, 'completed_at', None): obj.completed_at = datetime.utcnow()
+    
+        mock_db.refresh.side_effect = refresh_side_effect
+    
+        mock_user = MagicMock()
+        mock_user.id = 1
+        mock_user.credits_remaining = 50
+        mock_user.role.value = "user"
+    
+        app.dependency_overrides[get_db] = lambda: mock_db
+        app.dependency_overrides[get_current_active_user] = lambda: mock_user
+    
+        # Mock FileGuard in app.state
+        mock_file_guard = MagicMock()
+        mock_file_guard.scan_file = AsyncMock(return_value=(False, ["ClamAV: Eicar-Test-Signature"]))
+        app.state.file_guard = mock_file_guard
+    
+        # Mock CDREngine
+        mock_cdr_instance = MagicMock()
+        mock_cdr_instance.disarm.return_value = True
+        monkeypatch.setattr("app.cdr_engine.CDREngine", lambda: mock_cdr_instance)
+    
+        # Mock Storage
+        monkeypatch.setattr("app.utils.storage.StorageManager", lambda: mock_storage)
+    
+        # Mock Rate Limiter? (Passes through if we use TestClient generally,
+        # but we might need to mock slowapi if it's strict on memory storage)
+        # Usually TestClient works fine with slowapi defaults.
+    
+        client = TestClient(app)
+    
+        # Create dummy file
+        with open("test.docx", "wb") as f: f.write(b"dummy malware content")
+        try:
+            with open("test.docx", "rb") as f:
+>               response = client.post(
+                    "/api/scans/upload_file?track=sentinel",
+                    files={"file": ("test.docx", f, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+                )
+
+tests/test_e2e_protection.py:81: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+venv/lib/python3.14/site-packages/starlette/testclient.py:546: in post
+    return super().post(
+venv/lib/python3.14/site-packages/httpx/_client.py:1132: in post
+    return self.request(
+venv/lib/python3.14/site-packages/starlette/testclient.py:445: in request
+    return super().request(
+venv/lib/python3.14/site-packages/httpx/_client.py:814: in request
+    return self.send(request, auth=auth, follow_redirects=follow_redirects)
+venv/lib/python3.14/site-packages/httpx/_client.py:901: in send
+    response = self._send_handling_auth(
+venv/lib/python3.14/site-packages/httpx/_client.py:929: in _send_handling_auth
+    response = self._send_handling_redirects(
+venv/lib/python3.14/site-packages/httpx/_client.py:966: in _send_handling_redirects
+    response = self._send_single_request(request)
+venv/lib/python3.14/site-packages/httpx/_client.py:1002: in _send_single_request
+    response = transport.handle_request(request)
+venv/lib/python3.14/site-packages/starlette/testclient.py:348: in handle_request
+    raise exc
+venv/lib/python3.14/site-packages/starlette/testclient.py:345: in handle_request
+    portal.call(self.app, scope, receive, send)
+venv/lib/python3.14/site-packages/anyio/from_thread.py:326: in call
+    return cast(T_Retval, self.start_task_soon(func, *args).result())
+/opt/homebrew/Cellar/python@3.14/3.14.0/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py:450: in result
+    return self.__get_result()
+/opt/homebrew/Cellar/python@3.14/3.14.0/Frameworks/Python.framework/Versions/3.14/lib/python3.14/concurrent/futures/_base.py:395: in __get_result
+    raise self._exception
+venv/lib/python3.14/site-packages/anyio/from_thread.py:257: in _call_func
+    retval = await retval_or_awaitable
+venv/lib/python3.14/site-packages/fastapi/applications.py:1139: in __call__
+    await super().__call__(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/applications.py:107: in __call__
+    await self.middleware_stack(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+venv/lib/python3.14/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+venv/lib/python3.14/site-packages/starlette/middleware/cors.py:85: in __call__
+    await self.app(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/middleware/base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+/opt/homebrew/Cellar/python@3.14/3.14.0/Frameworks/Python.framework/Versions/3.14/lib/python3.14/contextlib.py:162: in __exit__
+    self.gen.throw(value)
+venv/lib/python3.14/site-packages/starlette/_utils.py:85: in collapse_excgroups
+    raise exc
+venv/lib/python3.14/site-packages/starlette/middleware/base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+venv/lib/python3.14/site-packages/slowapi/middleware.py:128: in dispatch
+    return await call_next(request)
+venv/lib/python3.14/site-packages/starlette/middleware/base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+venv/lib/python3.14/site-packages/starlette/middleware/base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+venv/lib/python3.14/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+venv/lib/python3.14/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/routing.py:716: in __call__
+    await self.middleware_stack(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/routing.py:736: in app
+    await route.handle(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/routing.py:290: in handle
+    await self.app(scope, receive, send)
+venv/lib/python3.14/site-packages/fastapi/routing.py:120: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+venv/lib/python3.14/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+venv/lib/python3.14/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+venv/lib/python3.14/site-packages/fastapi/routing.py:106: in app
+    response = await f(request)
+venv/lib/python3.14/site-packages/fastapi/routing.py:452: in app
+    content = await serialize_response(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    async def serialize_response(
+        *,
+        field: Optional[ModelField] = None,
+        response_content: Any,
+        include: Optional[IncEx] = None,
+        exclude: Optional[IncEx] = None,
+        by_alias: bool = True,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        is_coroutine: bool = True,
+        endpoint_ctx: Optional[EndpointContext] = None,
+    ) -> Any:
+        if field:
+            errors = []
+            if not hasattr(field, "serialize"):
+                # pydantic v1
+                response_content = _prepare_response_content(
+                    response_content,
+                    exclude_unset=exclude_unset,
+                    exclude_defaults=exclude_defaults,
+                    exclude_none=exclude_none,
+                )
+            if is_coroutine:
+                value, errors_ = field.validate(response_content, {}, loc=("response",))
+            else:
+                value, errors_ = await run_in_threadpool(
+                    field.validate, response_content, {}, loc=("response",)
+                )
+            if isinstance(errors_, list):
+                errors.extend(errors_)
+            elif errors_:
+                errors.append(errors_)
+            if errors:
+                ctx = endpoint_ctx or EndpointContext()
+>               raise ResponseValidationError(
+                    errors=_normalize_errors(errors),
+                    body=response_content,
+                    endpoint_ctx=ctx,
+                )
+E               fastapi.exceptions.ResponseValidationError: 1 validation error:
+E                 {'type': 'enum', 'loc': ('response', 'risk_level'), 'msg': "Input should be 'low', 'medium', 'high' or 'critical'", 'input': 'CRITICAL', 'ctx': {'expected': "'low', 'medium', 'high' or 'critical'"}}
+E               
+E                 File "/Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/slowapi/extension.py", line 97, in upload_file
+E                   POST /api/scans/upload_file
+
+venv/lib/python3.14/site-packages/fastapi/routing.py:278: ResponseValidationError
+=============================== warnings summary ===============================
+app/config.py:6
+  /Users/sgpt/spidercob/spider-snoop/app/config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app/database.py:14
+  /Users/sgpt/spidercob/spider-snoop/app/database.py:14: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+app/schemas/user.py:22
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/user.py:22: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserResponse(UserBase):
+
+app/schemas/scan.py:20
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/scan.py:20: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ScanResponse(BaseModel):
+
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/slowapi/extension.py:717: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:156: 31 warnings
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:156: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj)
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:567: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:398: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:203: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.created_at = datetime.utcnow()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:204: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.completed_at = datetime.utcnow()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:444: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:465: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_e2e_protection.py::test_e2e_protection_flow_malware - fasta...
+======================== 1 failed, 44 warnings in 0.82s ========================

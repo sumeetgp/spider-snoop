@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpiderCob // ICAP Integration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        glass: 'rgba(22, 27, 34, 0.7)',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        success: '#238636',
+                        warning: '#D29922',
+                        alert: '#F85149',
+                        text: '#C9D1D9'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0D1117;
+            color: #C9D1D9;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
+        }
+
+        .code-block {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            overflow-x: auto;
+            color: #e2e8f0;
+        }
+
+        pre .comment {
+            color: #6e7681;
+        }
+
+        pre .keyword {
+            color: #ff7b72;
+        }
+
+        pre .string {
+            color: #a5d6ff;
+        }
+
+        pre .value {
+            color: #79c0ff;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans">
+
+    <!-- Navbar -->
+    <!-- Navbar removed for portal integration -->
+
+    <main class="flex-1 p-8 max-w-5xl mx-auto w-full space-y-12">
+
+        <!-- Header -->
+        <header>
+            <h1 class="text-4xl font-black text-white mb-2">ICAP Integration</h1>
+            <p class="text-lg text-gray-400">Internet Content Adaptation Protocol (RFC 3507) configuration and testing.
+            </p>
+        </header>
+
+        <!-- Connectivity Test -->
+        <section class="glass-panel p-6 rounded-2xl border-l-4 border-brand">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-1">Server Status</h2>
+                    <p class="text-sm text-gray-400 mb-4">Verify that the SpiderCob ICAP server is reachable and
+                        responding.</p>
+                    <div class="flex items-center gap-2">
+                        <span id="statusDot" class="w-3 h-3 rounded-full bg-gray-600"></span>
+                        <span id="statusText" class="font-mono text-sm text-gray-500">UNKNOWN</span>
+                    </div>
+                </div>
+                <button onclick="testConnection()" id="btnTest"
+                    class="bg-gray-800 hover:bg-white/10 text-white px-4 py-2 rounded text-sm font-bold transition border border-border">
+                    TEST CONNECTIVITY
+                </button>
+            </div>
+            <div id="testResult"
+                class="mt-4 hidden p-3 rounded bg-black/30 font-mono text-xs text-gray-300 whitespace-pre-wrap"></div>
+        </section>
+
+        <!-- Configuration Guides -->
+        <section class="space-y-6">
+            <h2 class="text-2xl font-bold text-white border-b border-border pb-2">Configuration Examples</h2>
+
+            <!-- Squid -->
+            <div class="glass-panel p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white">Squid Proxy</h3>
+                    <span class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">squid.conf</span>
+                </div>
+                <p class="text-sm text-gray-400 mb-4">Configure Squid to offload content to SpiderCob for DLP scanning.
+                </p>
+                <div class="code-block">
+                    <pre>
+<span class="comment"># Enable ICAP</span>
+icap_enable on
+icap_preview_enable on
+icap_preview_size 1024
+icap_service_failure_limit -1
+icap_send_client_ip on
+
+<span class="comment"># Define SpiderCob Service (Secure ICAP)</span>
+icap_service service_req reqmod_precache bypass=0 icaps://icap.spidercob.com:443/reqmod
+icap_service service_resp respmod_precache bypass=0 icaps://icap.spidercob.com:443/respmod
+
+<span class="comment"># Authentication (Add Header)</span>
+<span class="comment"># Note: Replace jwt_token with your long-lived token</span>
+request_header_add X-ICAP-Auth "Bearer &lt;your_jwt_token&gt;" all
+
+<span class="comment"># Apply to Traffic</span>
+adaptation_access service_req allow all
+adaptation_access service_resp allow all
+</pre>
+                </div>
+            </div>
+
+            <!-- Symantec / Bluecoat -->
+            <div class="glass-panel p-6 rounded-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-white">Symantec / BlueCoat ProxySG</h3>
+                    <span class="text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded">CPL / VPM</span>
+                </div>
+                <div class="code-block">
+                    <pre>
+<span class="comment">// Visual Policy Manager Configuration</span>
+1. Create a "Response Analysis" object.
+2. Select "ICAP" as the provider.
+3. Service URL: <span class="string">icaps://icap.spidercob.com:443/respmod</span>
+<span class="comment">// Note: Ensure "Secure ICAP" is enabled in ProxySG settings</span>
+
+<span class="comment">// CPL (Policy)</span>
+&lt;Content-Security-Policy&gt;
+    icap_server(spider_cob)
+    
+<span class="comment">// Header Injection for Auth</span>
+&lt;Proxy&gt;
+    brand.add_auth_header(yes)
+
+define brand add_auth_header
+    set(request.x_header.X-ICAP-Auth, "Bearer &lt;your_jwt_token&gt;")
+end
+</pre>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- Token Lifecycle -->
+        <section class="glass-panel p-6 rounded-xl border border-warning/20">
+            <div class="flex items-start gap-4">
+                <div class="p-2 bg-warning/10 rounded text-warning">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-2">Security & Token Lifecycle</h2>
+                    <p class="text-sm text-gray-400 mb-2 leading-relaxed">
+                        The ICAP server requires authentication for all connections. You must pass a valid JWT in the
+                        <span class="font-mono text-brand">Authorization</span> or <span
+                            class="font-mono text-brand">X-ICAP-Auth</span> header.
+                    </p>
+                    <ul class="list-disc list-inside text-sm text-gray-400 space-y-1 mb-4">
+                        <li>Tokens generated via login expire in <strong>60 minutes</strong>.</li>
+                        <li>For permanent infrastructure links (like Squid/Bluecoat), verify you have a Service Account
+                            or use the API to generate long-lived credentials (Coming Soon).</li>
+                    </ul>
+                    <div class="bg-black/30 p-3 rounded font-mono text-xs text-gray-500 break-all cursor-pointer hover:text-white transition"
+                        onclick="copyToken()" id="currentToken">
+                        [Login to view your current temporary token]
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-border p-8 text-center text-gray-600 text-xs">
+        <p>&copy; 2025 SPIDER-SNOOP DLP. SECURE DATA TRANSMISSION.</p>
+    </footer>
+
+    <script>
+        // Get Token from LocalStorage
+        const token = localStorage.getItem('access_token');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const display = document.getElementById('currentToken');
+            if (token) {
+                display.textContent = `Bearer ${token}`;
+                display.title = "Click to copy";
+            } else {
+                display.textContent = "Please login to Dashboard first to generate a token.";
+            }
+        });
+
+        async function testConnection() {
+            const btn = document.getElementById('btnTest');
+            const dot = document.getElementById('statusDot');
+            const text = document.getElementById('statusText');
+            const resBox = document.getElementById('testResult');
+
+            btn.disabled = true;
+            btn.textContent = "CONNECTING...";
+            resBox.classList.add('hidden');
+
+            try {
+                // Call Backend Proxy to Test ICAP
+                const res = await fetch('/api/icap/test', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.status === 'ok') {
+                    dot.classList.remove('bg-gray-600', 'bg-red-500');
+                    dot.classList.add('bg-green-500', 'animate-pulse');
+                    text.textContent = "OPERATIONAL";
+                    text.classList.add('text-green-500');
+                    resBox.textContent = `SUCCESS: ${data.message}\nLatency: ${data.latency_ms}ms\nISTag: ${data.istag}`;
+                } else {
+                    throw new Error(data.detail || "ICAP Server Unreachable");
+                }
+            } catch (e) {
+                dot.classList.remove('bg-gray-600', 'bg-green-500');
+                dot.classList.add('bg-red-500');
+                text.textContent = "OFFLINE / ERROR";
+                text.classList.add('text-red-500');
+                resBox.textContent = `FAILED: ${e.message}`;
+            } finally {
+                resBox.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = "TEST AGAIN";
+            }
+        }
+
+        function copyToken() {
+            if (token) {
+                navigator.clipboard.writeText(`Bearer ${token}`);
+                alert("Token copied to clipboard!");
+            }
+        }
+    </script>
+</body>
+
+</html>

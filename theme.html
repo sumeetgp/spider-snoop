@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0D1117;
+            color: #C9D1D9;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
+        }
+
+        .usage-bar {
+            transition: width 0.5s ease-in-out;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <nav class="border-b border-gray-800 p-4 flex justify-between items-center bg-[#0D1117] sticky top-0 z-50">
+        <div class="text-xl font-black tracking-tighter text-white">SPIDER<span class="text-blue-500">COB</span></div>
+        <div class="flex gap-4 items-center">
+            <span class="text-xs text-gray-500 mono">API_STATUS: <span class="text-green-500">OPTIMAL</span></span>
+            <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 border border-gray-700">
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-1">
+        <aside class="w-64 border-r border-gray-800 p-6 flex flex-col justify-between hidden md:flex">
+            <div class="space-y-6">
+                <nav class="space-y-2">
+                    <a href="#" class="block p-2 rounded bg-gray-800 text-white text-sm">Dashboard</a>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-800 text-gray-400 text-sm">Scan Archive</a>
+                    <a href="#" class="block p-2 rounded hover:bg-gray-800 text-gray-400 text-sm">Developer API</a>
+                </nav>
+            </div>
+
+            <div class="glass-panel p-4 rounded-lg">
+                <div class="flex justify-between text-[10px] uppercase font-bold text-gray-500 mb-2">
+                    <span>Hourly Credits</span>
+                    <span>34/50</span>
+                </div>
+                <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="usage-bar h-full bg-blue-500" style="width: 68%;"></div>
+                </div>
+                <p class="text-[9px] text-gray-600 mt-2 italic text-center">Resets in 22 mins</p>
+            </div>
+        </aside>
+
+        <main class="flex-1 p-8 overflow-y-auto">
+            <div class="max-w-5xl mx-auto space-y-6">
+
+                <div class="flex justify-between items-end">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Vision Scan Report</h1>
+                        <p class="text-sm text-gray-400 mono">ID: cob_vsn_88219x</p>
+                    </div>
+                    <button
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">Export
+                        JSON</button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-panel p-6 rounded-2xl col-span-1">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-1">Threat Score</p>
+                        <p class="text-5xl font-black text-red-500">82<span class="text-xl text-gray-600">/100</span>
+                        </p>
+                        <div class="mt-4 p-2 bg-red-900/20 border border-red-500/30 rounded text-[11px] text-red-400">
+                            CRITICAL: Potential Credential Leak detected at 00:42.
+                        </div>
+                    </div>
+
+                    <div class="glass-panel p-6 rounded-2xl col-span-2">
+                        <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-4">Video Leak Timeline
+                        </p>
+                        <div class="relative w-full h-12 bg-gray-900 border border-gray-700 rounded-md">
+                            <div class="absolute h-full w-1 bg-red-500 left-[15%] shadow-[0_0_10px_red]"></div>
+                            <div class="absolute h-full w-1 bg-red-500 left-[42%] shadow-[0_0_10px_red]"></div>
+                            <div class="absolute h-full w-1 bg-orange-500 left-[85%] shadow-[0_0_10px_orange]"></div>
+                        </div>
+                        <div class="flex justify-between mt-2 text-[10px] text-gray-500 mono">
+                            <span>00:00</span>
+                            <span>Total Duration: 04:22</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-panel rounded-2xl overflow-hidden">
+                    <div class="p-4 border-b border-gray-800 bg-gray-800/30">
+                        <h2 class="text-sm font-bold text-white">Engine Results</h2>
+                    </div>
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-gray-900/50 text-gray-500 uppercase">
+                            <tr>
+                                <th class="p-4">Service</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Evidence</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <tr>
+                                <td class="p-4 font-bold text-blue-400">VISION_OCR</td>
+                                <td class="p-4 text-red-400">Match Found</td>
+                                <td class="p-4 mono text-gray-400">"API_KEY: sk_live_..."</td>
+                            </tr>
+                            <tr>
+                                <td class="p-4 font-bold text-blue-400">GUARDIAN_DLP</td>
+                                <td class="p-4 text-orange-400">PII Warning</td>
+                                <td class="p-4 mono text-gray-400">Regex Match: Corporate_Email</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+</body>
+
+</html>

@@ -1,8 +1,10 @@
 """ICAP Protocol Server Implementation"""
 import asyncio
 import logging
-from typing import Optional
 from datetime import datetime
+from jose import JWTError, jwt
+from app.database import SessionLocal
+from app.models.user import User
 from app.config import settings
 from app.dlp_engine import DLPEngine
 
@@ -16,6 +18,46 @@ class ICAPServer:
         self.port = port or settings.ICAP_PORT
         self.dlp_engine = DLPEngine()
         self.server = None
+
+    def verify_auth(self, headers: dict) -> bool:
+        """Verify Authentication Token"""
+        token = None
+        
+        # Check standard Authorization header
+        auth_header = headers.get("Authorization") or headers.get("authorization")
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            
+        # Check X-ICAP-Auth header (for proxies that can't send Auth)
+        if not token:
+            token = headers.get("X-ICAP-Auth") or headers.get("x-icap-auth")
+            
+        if not token:
+            return False
+            
+        try:
+            # Decode Token
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            username: str = payload.get("sub")
+            if username is None:
+                return False
+                
+            # Allow valid tokens directly for performance, 
+            # but ideally we check DB for active status occasionally.
+            db = SessionLocal()
+            try:
+                user = db.query(User).filter(User.username == username).first()
+                if not user or not user.is_active:
+                    return False
+                return True
+            finally:
+                db.close()
+                
+        except JWTError:
+            return False
+        except Exception as e:
+            logger.error(f"Auth verification error: {e}")
+            return False
         
     async def handle_client(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
         """Handle ICAP client request"""
@@ -27,8 +69,11 @@ class ICAPServer:
             logger.info(f"ICAP Request: {request_str}")
             
             # Parse ICAP request
-            method, uri, version = request_str.split()
-            
+            try:
+                method, uri, version = request_str.split()
+            except ValueError:
+                return
+
             # Read headers
             headers = {}
             while True:
@@ -36,23 +81,31 @@ class ICAPServer:
                 if line == b'\r\n':
                     break
                 if line:
-                    key, value = line.decode('utf-8').strip().split(':', 1)
-                    headers[key.strip()] = value.strip()
+                    try:
+                        key, value = line.decode('utf-8').strip().split(':', 1)
+                        headers[key.strip()] = value.strip()
+                    except ValueError:
+                        continue
+            
+            # --- AUTHENTICATION CHECK ---
+            if not self.verify_auth(headers):
+                logger.warning(f"ICAP Unauthorized Access Attempt: {request_str}")
+                response = self.error_response(401, "Unauthorized - Invalid Token")
+                writer.write(response)
+                await writer.drain()
+                return
+            # ----------------------------
             
             if method == "RESPMOD":
-                # Response modification - scan content
                 response = await self.handle_respmod(reader, headers)
                 writer.write(response)
             elif method == "REQMOD":
-                # Request modification - scan content
                 response = await self.handle_reqmod(reader, headers)
                 writer.write(response)
             elif method == "OPTIONS":
-                # OPTIONS request
                 response = self.handle_options()
                 writer.write(response)
             else:
-                # Unsupported method
                 response = self.error_response(405, "Method Not Allowed")
                 writer.write(response)
             
@@ -67,33 +120,36 @@ class ICAPServer:
             await writer.wait_closed()
     
     async def handle_respmod(self, reader: asyncio.StreamReader, headers: dict) -> bytes:
-        """Handle RESPMOD request (response modification)"""
-        # Read the encapsulated HTTP response
+        """Handle RESPMOD request"""
         content = await self.read_encapsulated_content(reader, headers)
         
-        # Scan with DLP engine
         start_time = datetime.utcnow()
-        scan_result = await self.dlp_engine.scan(content.decode('utf-8', errors='ignore'))
+        try:
+            text_content = content.decode('utf-8')
+        except UnicodeDecodeError:
+             text_content = "[BINARY_DATA]" 
+        
+        scan_result = await self.dlp_engine.scan(text_content)
         scan_duration = (datetime.utcnow() - start_time).total_seconds() * 1000
         
         logger.info(f"Scan completed in {scan_duration}ms - Verdict: {scan_result['verdict']}")
         
-        # If content is blocked, return modified response
         if scan_result['risk_level'] in ['HIGH', 'CRITICAL']:
             return self.blocked_response(scan_result)
         
-        # Otherwise, return 204 No Modifications Needed
         return self.no_modification_response()
     
     async def handle_reqmod(self, reader: asyncio.StreamReader, headers: dict) -> bytes:
-        """Handle REQMOD request (request modification)"""
-        # Similar to RESPMOD but for requests
+        """Handle REQMOD request"""
         content = await self.read_encapsulated_content(reader, headers)
         
-        # Scan with DLP engine
-        scan_result = await self.dlp_engine.scan(content.decode('utf-8', errors='ignore'))
+        try:
+            text_content = content.decode('utf-8')
+        except UnicodeDecodeError:
+            text_content = "[BINARY_DATA]"
+            
+        scan_result = await self.dlp_engine.scan(text_content)
         
-        # If content is blocked, return modified response
         if scan_result['risk_level'] in ['HIGH', 'CRITICAL']:
             return self.blocked_response(scan_result)
         
@@ -107,10 +163,7 @@ class ICAPServer:
             "ISTag: \"spider-snoop-1.0\"",
             "Methods: RESPMOD, REQMOD",
             "Allow: 204",
-            "Preview: 0",
-            "Transfer-Preview: *",
             "Max-Connections: 100",
-            "Options-TTL: 3600",
             "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
             "Encapsulated: null-body=0",
             "\r\n"
@@ -136,7 +189,6 @@ class ICAPServer:
             <h1>Content Blocked by DLP</h1>
             <p>This content has been blocked due to policy violations.</p>
             <p><strong>Risk Level:</strong> {scan_result['risk_level']}</p>
-            <p><strong>Reason:</strong> {scan_result['verdict']}</p>
         </body>
         </html>
         """
@@ -174,34 +226,74 @@ class ICAPServer:
     
     async def read_encapsulated_content(self, reader: asyncio.StreamReader, headers: dict) -> bytes:
         """Read encapsulated HTTP content from ICAP request"""
-        # Parse Encapsulated header
         encapsulated = headers.get('Encapsulated', '')
         
-        # Read until end of stream or specified length
-        content = b''
-        while True:
-            chunk = await reader.read(4096)
-            if not chunk:
-                break
-            content += chunk
+        offsets = {}
+        for part in encapsulated.split(','):
+            part = part.strip()
+            if '=' in part:
+                key, val = part.split('=')
+                try:
+                    offsets[key] = int(val)
+                except ValueError:
+                    continue
         
-        return content
-    
+        body_offset = None
+        for key in ['req-body', 'res-body', 'opt-body']:
+            if key in offsets:
+                body_offset = offsets[key]
+                break
+                
+        if body_offset is None:
+            return b''
+            
+        if body_offset > 0:
+            try:
+                await reader.readexactly(body_offset)
+            except Exception as e:
+                logger.error(f"Error skipping encapsulated headers: {e}")
+                return b''
+            
+        return await self._read_chunked_body(reader)
+
+    async def _read_chunked_body(self, reader: asyncio.StreamReader) -> bytes:
+        """Read ICAP Chunked Body"""
+        content = bytearray()
+        
+        while True:
+            line = await reader.readline()
+            line = line.strip()
+            
+            if not line:
+                continue
+                
+            try:
+                chunk_size = int(line, 16)
+            except ValueError:
+                logger.warning(f"Invalid chunk size: {line}")
+                break
+                
+            if chunk_size == 0:
+                await reader.readline() # Trailing CRLF
+                break
+                
+            chunk = await reader.readexactly(chunk_size)
+            content.extend(chunk)
+            await reader.readexactly(2) # CRLF
+            
+        return bytes(content)
+
     async def start(self):
-        """Start the ICAP server"""
         self.server = await asyncio.start_server(
             self.handle_client,
             self.host,
             self.port
         )
-        
         logger.info(f"ICAP Server started on {self.host}:{self.port}")
-        
         async with self.server:
             await self.server.serve_forever()
     
     async def stop(self):
-        """Stop the ICAP server"""
         if self.server:
             self.server.close()
             await self.server.wait_closed()

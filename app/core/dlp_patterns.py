@@ -188,7 +188,7 @@ class DLPPatternMatcher:
             checksum += digit
         return checksum % 10 == 0
     
-    def scan(self, text: str) -> Dict[str, List[Dict]]:
+    def scan(self, text: str, secrets_only: bool = False) -> Dict[str, List[Dict]]:
         """
         Comprehensive scan of text for all DLP patterns
         Returns structured findings by severity
@@ -201,8 +201,19 @@ class DLPPatternMatcher:
             "INFO": []
         }
         
+        # Define Secret Patterns (TruffleHog style)
+        secret_types = {
+            "aws_access_key", "aws_secret_key", "github_token", "generic_api_key",
+            "bearer_token", "jwt_token", "private_key", "ssh_private_key", 
+            "pgp_private_key", "db_connection_string", "password_in_code"
+        }
+        
         # Scan for all patterns
         for pattern_name, pattern_info in self.patterns.items():
+            # If secrets_only mode, skip non-secret patterns
+            if secrets_only and pattern_name not in secret_types:
+                continue
+                
             matches = re.finditer(pattern_info["pattern"], text, re.IGNORECASE)
             for match in matches:
                 matched_text = match.group(0)
@@ -239,7 +250,6 @@ class DLPPatternMatcher:
                     results[severity].append(finding)
         
         return results
-    
     def _mask_value(self, value: str, pattern_type: str) -> str:
         """Mask sensitive values for safe logging"""
         if pattern_type in ["credit_card", "ssn", "bank_account"]:
@@ -251,3 +261,121 @@ class DLPPatternMatcher:
             if len(parts) == 2:
                 return f"{parts[0][:2]}***@{parts[1]}"
         return value[:10] + "..." if len(value) > 10 else value
+
+    def redact(self, text: str) -> str:
+        """
+        Redact sensitive data from text based on DLP patterns.
+        Replaces matches with [REDACTED: Description] to meet compliance.
+        """
+        all_matches = []
+        
+        # 1. Gather Regex Matches
+        for pattern_name, pattern_info in self.patterns.items():
+            for match in re.finditer(pattern_info["pattern"], text, re.IGNORECASE):
+                if "validator" in pattern_info and not pattern_info["validator"](match.group(0)):
+                    continue
+                
+                all_matches.append({
+                    "start": match.start(),
+                    "end": match.end(),
+                    "replacement": f"[REDACTED: {pattern_info['description']}]"
+                })
+
+        # 2. Gather Keyword Matches
+        for severity, keywords in self.sensitive_keywords.items():
+            for keyword in keywords:
+                for match in re.finditer(r'\b' + re.escape(keyword) + r'\b', text, re.IGNORECASE):
+                     all_matches.append({
+                        "start": match.start(),
+                        "end": match.end(),
+                        "replacement": f"[REDACTED: Sensitive Keyword]"
+                    })
+
+        # 3. Sort by Start Position (Ascending)
+        all_matches.sort(key=lambda x: x["start"])
+
+        # 4. Construct Redacted String (Handling Overlaps)
+        result = []
+        current_idx = 0
+        
+        for m in all_matches:
+            # Skip if this match overlaps with a previously processed one
+            if m["start"] < current_idx:
+                continue
+            
+            # Append clean text before this match
+            result.append(text[current_idx:m["start"]])
+            
+            # Append replacement
+            result.append(m["replacement"])
+            
+            # Update current index
+            current_idx = m["end"]
+            
+        # Append remaining text
+        result.append(text[current_idx:])
+        
+        return "".join(result)
+
+    def fuzz(self, text: str) -> str:
+        """
+        Replace sensitive data with realistic fake data (Fuzzing).
+        Useful for generating safe test datasets.
+        """
+        try:
+            from faker import Faker
+            fake = Faker()
+        except ImportError:
+            return self.redact(text)  # Fallback if Faker missing
+
+        all_matches = []
+        
+        # 1. Gather Regex Matches
+        for pattern_name, pattern_info in self.patterns.items():
+            for match in re.finditer(pattern_info["pattern"], text, re.IGNORECASE):
+                if "validator" in pattern_info and not pattern_info["validator"](match.group(0)):
+                    continue
+                
+                # Generate Fake Replacement based on type
+                replacement = f"[FAKE-{pattern_name.upper()}]"
+                if pattern_name == "credit_card": replacement = fake.credit_card_number()
+                elif pattern_name == "ssn": replacement = fake.ssn()
+                elif pattern_name == "bank_account": replacement = str(fake.random_int(min=100000000, max=9999999999))
+                elif pattern_name == "email": replacement = fake.email()
+                elif pattern_name == "phone_us": replacement = fake.phone_number()
+                elif pattern_name == "ipv4": replacement = fake.ipv4()
+                elif pattern_name == "name": replacement = fake.name()
+                elif pattern_name == "address": replacement = fake.address().replace('\n', ', ')
+                
+                all_matches.append({
+                    "start": match.start(),
+                    "end": match.end(),
+                    "replacement": replacement
+                })
+
+        # 2. Gather Keyword Matches (No specific faker for generic keywords, just mask)
+        for severity, keywords in self.sensitive_keywords.items():
+            for keyword in keywords:
+                for match in re.finditer(r'\b' + re.escape(keyword) + r'\b', text, re.IGNORECASE):
+                     all_matches.append({
+                        "start": match.start(),
+                        "end": match.end(),
+                        "replacement": f"[FAKE-SECRET]"
+                    })
+
+        # 3. Sort by Start Position
+        all_matches.sort(key=lambda x: x["start"])
+
+        # 4. Construct Fuzzed String
+        result = []
+        current_idx = 0
+        
+        for m in all_matches:
+            if m["start"] < current_idx: continue
+            
+            result.append(text[current_idx:m["start"]])
+            result.append(m["replacement"])
+            current_idx = m["end"]
+            
+        result.append(text[current_idx:])
+        return "".join(result)

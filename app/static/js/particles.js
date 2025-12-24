@@ -31,14 +31,14 @@ class ParticleNetwork {
 
     createParticles() {
         this.particles = [];
-        const numberOfParticles = (this.canvas.width * this.canvas.height) / 9000;
+        const numberOfParticles = (this.canvas.width * this.canvas.height) / 20000;
         for (let i = 0; i < numberOfParticles; i++) {
             const size = (Math.random() * 2) + 1;
             const x = (Math.random() * ((this.canvas.width - size * 2) - (size * 2)) + size * 2);
             const y = (Math.random() * ((this.canvas.height - size * 2) - (size * 2)) + size * 2);
             const directionX = (Math.random() * 0.4) - 0.2;
             const directionY = (Math.random() * 0.4) - 0.2;
-            const color = Math.random() > 0.5 ? '#a67fff' : '#007bff'; // Purple or Blue
+            const color = Math.random() > 0.5 ? '#88ffff' : '#00e5ff'; // Neon Blue or Cyan
 
             this.particles.push({
                 x, y, directionX, directionY, size, color
@@ -93,7 +93,7 @@ class ParticleNetwork {
             if (distance < (this.canvas.width / 9) * (this.canvas.height / 9)) {
                 let opacityValue = 1 - (distance / 15000);
                 if (opacityValue > 0) {
-                    this.ctx.strokeStyle = `rgba(100, 100, 255, ${opacityValue})`;
+                    this.ctx.strokeStyle = `rgba(136, 255, 255, ${opacityValue})`;
                     this.ctx.lineWidth = 1;
                     this.ctx.beginPath();
                     this.ctx.moveTo(p.x, p.y);

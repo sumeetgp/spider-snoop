@@ -1,0 +1,88 @@
+/Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/langsmith/schemas.py:23: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import (
+============================= test session starts ==============================
+platform darwin -- Python 3.14.0, pytest-7.4.3, pluggy-1.6.0
+rootdir: /Users/sgpt/spidercob/spider-snoop
+plugins: anyio-4.12.0, asyncio-0.21.1, langsmith-0.5.0
+asyncio: mode=Mode.STRICT
+collected 1 item
+
+tests/test_e2e_protection.py F
+
+=================================== FAILURES ===================================
+_______________________ test_e2e_protection_flow_malware _______________________
+
+mock_storage = <MagicMock id='4544077104'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x10ed2cb00>
+
+    @pytest.mark.asyncio
+    async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
+        # Import auth FIRST to ensure it initializes before main/routes try to use it
+        from app.utils import auth
+        # Import main after
+>       from app.main import app
+
+tests/test_e2e_protection.py:32: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+app/main.py:14: in <module>
+    from app.routes import auth, users, scans, dashboard, cdr
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+    from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+    from fastapi.responses import FileResponse
+    from app.cdr_engine import CDREngine
+    import shutil
+    import tempfile
+    import os
+    from pathlib import Path
+>   from app.routes.auth import get_current_active_user
+E   ImportError: cannot import name 'get_current_active_user' from 'app.routes.auth' (/Users/sgpt/spidercob/spider-snoop/app/routes/auth.py)
+
+app/routes/cdr.py:8: ImportError
+=============================== warnings summary ===============================
+app/config.py:6
+  /Users/sgpt/spidercob/spider-snoop/app/config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app/database.py:14
+  /Users/sgpt/spidercob/spider-snoop/app/database.py:14: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+app/schemas/user.py:22
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/user.py:22: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserResponse(UserBase):
+
+app/schemas/scan.py:20
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/scan.py:20: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ScanResponse(BaseModel):
+
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+venv/lib/python3.14/site-packages/slowapi/extension.py:717
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/slowapi/extension.py:717: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    if asyncio.iscoroutinefunction(func):
+
+venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:156: 31 warnings
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:156: DeprecationWarning: 'asyncio.iscoroutinefunction' is deprecated and slated for removal in Python 3.16; use inspect.iscoroutinefunction() instead
+    return asyncio.iscoroutinefunction(obj)
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:567: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:398: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:444: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+  /Users/sgpt/spidercob/spider-snoop/venv/lib/python3.14/site-packages/pytest_asyncio/plugin.py:465: DeprecationWarning: 'asyncio.get_event_loop_policy' is deprecated and slated for removal in Python 3.16
+    policy = asyncio.get_event_loop_policy()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_e2e_protection.py::test_e2e_protection_flow_malware - Impor...
+======================== 1 failed, 42 warnings in 0.66s ========================

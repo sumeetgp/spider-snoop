@@ -24,6 +24,7 @@ class UserResponse(UserBase):
     role: UserRole
     is_active: bool
     created_at: datetime
+    credits_remaining: int
     
     class Config:
         from_attributes = True

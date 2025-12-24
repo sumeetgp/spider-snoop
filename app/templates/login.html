@@ -5,57 +5,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACCESS CONTROL // SPIDERCOB</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="/static/js/particles.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        glass: 'rgba(22, 27, 34, 0.7)',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        accent: '#00E5FF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg-void: #050505;
-            --accent-cyan: #00F0FF;
-            --accent-purple: #BC13FE;
-            --text-main: #E0E0E0;
-            --text-dim: #888888;
-            --glass-bg: rgba(20, 20, 20, 0.6);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: var(--bg-void);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
+            background-color: #0D1117;
+            color: #C9D1D9;
+            overflow-x: hidden;
         }
 
-        /* Scanline Overlay */
-        body::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(to bottom,
-                    transparent 0%,
-                    rgba(0, 0, 0, 0.2) 50%,
-                    transparent 100%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.3;
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
         }
 
         #bgCanvas {
@@ -65,244 +50,98 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-        }
-
-        .login-card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            width: 100%;
-            max-width: 400px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-
-            /* Chamfered Edges */
-            clip-path: polygon(20px 0, 100% 0,
-                    100% calc(100% - 20px), calc(100% - 20px) 100%,
-                    0 100%, 0 20px);
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .login-card:hover {
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 10px var(--accent-cyan);
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            letter-spacing: 2px;
-            color: var(--text-main);
-            margin-bottom: 5px;
-        }
-
-        p {
-            color: var(--text-dim);
-            font-size: 0.8rem;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: var(--accent-cyan);
-            font-size: 0.8rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 12px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #333;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            transition: 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .btn-glitch {
-            width: 100%;
-            background: transparent;
-            color: var(--accent-cyan);
-            border: 1px solid var(--accent-cyan);
-            padding: 15px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-glitch:hover {
-            background: var(--accent-cyan);
-            color: #000;
-            box-shadow: 0 0 20px var(--accent-cyan);
-        }
-
-        .links {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-dim);
-        }
-
-        .links a {
-            color: var(--accent-purple);
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .links a:hover {
-            color: var(--accent-cyan);
-            text-shadow: 0 0 5px var(--accent-cyan);
-        }
-
-        .error-msg {
-            color: #ff3333;
-            font-size: 0.9rem;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-            border: 1px solid #ff3333;
-            padding: 5px;
-            background: rgba(255, 51, 51, 0.1);
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            color: var(--text-dim);
-            font-size: 1.5rem;
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .close-btn:hover {
-            color: var(--accent-cyan);
+            opacity: 0.3;
         }
     </style>
 </head>
 
-<body>
+<body class="h-screen flex items-center justify-center font-sans overflow-hidden relative">
     <canvas id="bgCanvas"></canvas>
 
-    <div class="login-card">
-        <a href="/" class="close-btn">&times;</a>
-        <div class="header">
-            <span class="logo">&lt;SpiderCob /&gt;</span>
-            <h1>ACCESS CONTROL</h1>
-            <p>// AUTHENTICATE_USER</p>
+    <div class="glass-panel p-8 rounded-xl w-full max-w-md relative z-10 shadow-2xl">
+        <a href="/" class="absolute top-4 right-4 text-gray-500 hover:text-white transition">&times;</a>
+
+        <div class="text-center mb-8">
+            <div class="flex items-center justify-center gap-1 text-2xl font-black tracking-tighter text-white">
+                <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <h1 class="text-sm font-bold tracking-widest text-gray-400 mt-2">ACCESS CONTROL</h1>
+            <p class="text-xs font-mono text-gray-600">// AUTHENTICATE_USER</p>
         </div>
 
-        <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="form-group">
-                <label>USERNAME</label>
-                <input type="text" id="username" class="form-control" required placeholder="enter_username">
+        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">USERNAME</label>
+                <input type="text" id="username"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="enter_username">
             </div>
-            <div class="form-group">
-                <label>PASSWORD</label>
-                <input type="password" id="password" class="form-control" required placeholder="enter_password">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">PASSWORD</label>
+                <input type="password" id="password"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="enter_password">
             </div>
 
-            <button type="submit" class="btn-glitch">INITIATE_SESSION</button>
-            <div id="errorMsg" class="error-msg">ACCESS_DENIED: Invalid Credentials</div>
+            <button type="submit"
+                class="w-full bg-transparent border border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-4 rounded transition mt-4">INITIATE_SESSION</button>
+            <div id="errorMsg"
+                class="hidden text-xs text-alert bg-alert/10 border border-alert/20 p-2 rounded text-center font-mono">
+                ACCESS_DENIED: Invalid Credentials
+            </div>
         </form>
 
-        <div class="links">
-            NO_CREDENTIALS? <a href="/register">[CREATE_IDENTITY]</a>
+        <div class="mt-6 text-center text-xs text-gray-500">
+            NO_CREDENTIALS? <a href="/register" class="text-brand hover:underline">[CREATE_IDENTITY]</a>
         </div>
     </div>
 
-    <script src="/static/js/particles.js"></script>
     <script>
-        // Particles Config
         if (window.particlesJS) {
             particlesJS("bgCanvas", {
-                "particles": {
-                    "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
-                    "color": { "value": "#00F0FF" },
-                    "shape": { "type": "circle" },
-                    "opacity": { "value": 0.5 },
-                    "size": { "value": 3 },
-                    "line_linked": { "enable": true, "distance": 150, "color": "#BC13FE", "opacity": 0.3, "width": 1 },
-                    "move": { "enable": true, "speed": 1 }
-                },
-                "interactivity": {
-                    "detect_on": "canvas",
-                    "events": { "onhover": { "enable": true, "mode": "grab" } },
-                    "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 1 } } }
-                },
-                "retina_detect": true
+                "particles": { "number": { "value": 40 }, "color": { "value": "#88FFFF" }, "opacity": { "value": 0.3 }, "size": { "value": 2 }, "line_linked": { "color": "#88FFFF", "opacity": 0.1 }, "move": { "speed": 1 } }
             });
         }
 
-        // Login Logic
         async function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('errorMsg');
-            const submitBtn = document.querySelector('button[type="submit"]');
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            const err = document.getElementById('errorMsg');
+            const btn = document.querySelector('button[type="submit"]');
 
-            errorMsg.style.display = 'none';
-            submitBtn.textContent = 'AUTHENTICATING...';
-            submitBtn.style.opacity = '0.7';
+            err.classList.add('hidden');
+            btn.textContent = 'AUTHENTICATING...';
+            btn.disabled = true;
 
             const formData = new URLSearchParams();
-            formData.append('username', username);
-            formData.append('password', password);
+            formData.append('username', u);
+            formData.append('password', p);
 
             try {
-                const response = await fetch('/api/auth/login', {
+                const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: formData
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
+                if (res.ok) {
+                    const data = await res.json();
                     localStorage.setItem('access_token', data.access_token);
-                    submitBtn.textContent = 'ACCESS_GRANTED';
-                    submitBtn.style.backgroundColor = 'var(--accent-cyan)';
-                    submitBtn.style.color = '#000';
-                    // Force redirect immediately
-                    setTimeout(() => window.location.replace('/'), 200);
+                    btn.textContent = 'ACCESS_GRANTED';
+                    btn.classList.add('bg-brand', 'text-white');
+                    // Direct redirect
+                    window.location.href = '/dashboard';
                 } else {
-                    throw new Error('Invalid credentials');
+                    const errData = await res.json();
+                    throw new Error(errData.detail || 'Invalid credentials');
                 }
-            } catch (err) {
-                console.error(err);
-                errorMsg.style.display = 'block';
-                errorMsg.textContent = '>> ACCESS_DENIED: CHECK_CREDENTIALS';
-                submitBtn.textContent = 'INITIATE_SESSION';
-                submitBtn.style.opacity = '1';
+            } catch (error) {
+                console.error("Login Error:", error);
+                err.textContent = `ACCESS_DENIED: ${error.message}`;
+                err.classList.remove('hidden');
+                btn.textContent = 'INITIATE_SESSION';
+                btn.disabled = false;
             }
         }
     </script>

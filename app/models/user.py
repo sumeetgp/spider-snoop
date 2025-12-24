@@ -23,3 +23,5 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    credits_remaining = Column(Integer, default=50, server_default='50', nullable=False)
+    last_credit_reset = Column(DateTime(timezone=True), server_default=func.now())

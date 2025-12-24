@@ -1,0 +1,25 @@
+{
+    "forbidden_upgrades": {
+        "log4j": {
+            "version_threshold": "2.17.0",
+            "reason": "Versions above 2.17 break our Legacy CRM. Use WAF mitigation instead."
+        },
+        "requests": {
+            "version_threshold": "2.32.0",
+            "reason": "Waiting for legal review of new license."
+        },
+        "pillow": {
+            "version_threshold": "10.0.0",
+            "reason": "Major breaking changes in image handling. Require extensive QA before upgrade."
+        }
+    },
+    "approved_base_images": [
+        "python:3.9-slim",
+        "python:3.11-slim",
+        "node:18-alpine"
+    ],
+    "compliance_requirements": {
+        "data_handling": "Must encrypt all PII at rest.",
+        "logging": "Do not log full API payloads."
+    }
+}

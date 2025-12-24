@@ -15,14 +15,26 @@ class DLPEngine:
     def __init__(self, mcp_session=None):
         from app.core.dlp_patterns import DLPPatternMatcher
         self.matcher = DLPPatternMatcher()
+        
+        # Initialize Presidio
+        from app.core.presidio_engine import PresidioEngine
+        self.presidio = PresidioEngine()
+        
         self.mcp_session = mcp_session
-    
-    async def scan(self, content: str, use_ai: bool = True) -> Dict[str, Any]:
+        # Simple LRU Cache for AI responses (Max 100 items)
+        from collections import OrderedDict
+        self._cache = OrderedDict()
+        self._max_cache_size = 100
+
+    async def scan(self, content: str, use_ai: bool = True, file_path: str = None, force_ai: bool = False, skip_regex: bool = False, secrets_only: bool = False, skip_presidio: bool = False, raw_prompt: bool = False) -> Dict[str, Any]:
         """Perform DLP scan on content"""
         start_time = datetime.utcnow()
         
-        # Use the shared matcher
-        scan_results = self.matcher.scan(content)
+        # 1. Regex Matcher
+        scan_results = {}
+        if not skip_regex:
+            # Pass secrets_only flag if enabled
+            scan_results = self.matcher.scan(content, secrets_only=secrets_only)
         
         findings = []
         risk_level = "low"
@@ -32,23 +44,47 @@ class DLPEngine:
             for item in items:
                 findings.append({
                     'type': item['type'],
-                    'matches': [item['value']], # Matcher masks values, but that's probably okay for findings list
+                    'matches': [item['value']],
                     'count': 1,
                     'severity': severity
                 })
                 
-                # Update overall risk level
+                # Update overall risk level for Regex
                 if severity == "CRITICAL":
                     risk_level = "critical"
                 elif severity == "HIGH" and risk_level != "critical":
                     risk_level = "high"
                 elif severity == "MEDIUM" and risk_level in ["low", "info"]:
                     risk_level = "medium"
-        
+
+        # 2. Presidio NER (Contextual)
+        if self.presidio.enabled and not skip_presidio:
+            presidio_findings = self.presidio.scan(content)
+            for pf in presidio_findings:
+                # Add to findings list
+                findings.append({
+                    'type': pf['type'],
+                    'matches': [pf['value']],
+                    'count': 1,
+                    'severity': pf['severity'],
+                    'metadata': {'score': pf['score']} 
+                })
+                
+                # Update risk level based on Presidio
+                if pf['severity'] == "CRITICAL":
+                    risk_level = "critical"
+                elif pf['severity'] == "HIGH" and risk_level != "critical":
+                    risk_level = "high"
+                elif pf['severity'] == "MEDIUM" and risk_level in ["low", "info"]:
+                     risk_level = "medium"
+
         # AI-based detection (optional)
         ai_verdict = None
-        if use_ai and settings.OPENAI_API_KEY and findings:
-            ai_verdict = await (self._ai_analyze_ciso_langchain(content) if getattr(settings, 'USE_LANGCHAIN_CISO', False) else self._ai_analyze(content, findings))
+        if use_ai and settings.OPENAI_API_KEY and (findings or force_ai or raw_prompt):
+            if getattr(settings, 'USE_LANGCHAIN_CISO', False) and not raw_prompt:
+                ai_verdict = await self._ai_analyze_ciso_langchain(content, file_path)
+            else:
+                ai_verdict = await self._ai_analyze(content, findings, raw_prompt=raw_prompt)
         
         # Calculate duration
         duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -64,26 +100,92 @@ class DLPEngine:
             'scan_duration_ms': duration_ms,
             'scanned_at': datetime.utcnow().isoformat()
         }
+
+    def redact(self, content: str) -> str:
+        """
+        Redact sensitive data using best available methods (Presidio + Regex)
+        """
+        # 1. Presidio (Contextual PII)
+        if self.presidio.enabled:
+            content = self.presidio.redact(content)
+            
+        # 2. Regex Pattern Matcher (Secrets / Technical PII)
+        # We run this second to catch things Presidio missed (like API keys)
+        # The matcher.redact method handles non-overlapping matches
+        content = self.matcher.redact(content)
+        
+        return content
     
-    async def _ai_analyze(self, content: str, findings: List[Dict]) -> str:
-        """Use AI to analyze content for context"""
+    async def scan_macros(self, file_path: str) -> str:
+        """
+        Directly invoke MCP tool for macro scanning.
+        Returns a string description of findings or None if safe/error.
+        """
+        if self.mcp_session is None:
+            pass
+
         try:
+            # We need to access the MCP session. 
+            if self.mcp_session:
+                 result = await self.mcp_session.call_tool("scan_office_macros", arguments={"file_path": file_path})
+                 text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                 return "".join(text_blocks)
+            else:
+                 return "MCP Session unavailable for macro scan."
+        except Exception as e:
+            return f"Macro scan failed: {str(e)}"
+        
+        return None
+
+    async def _ai_analyze(self, content: str, findings: List[Dict], raw_prompt: bool = False) -> str:
+        """Use AI to analyze content for context (Cached)"""
+        try:
+            # Generate Cache Key (Content hash + finding types)
+            import hashlib
+            import json
+            
+            # Create a deterministic key
+            finding_sig = sorted([f['type'] for f in findings])
+            content_hash = hashlib.md5(content.encode()).hexdigest()
+            cache_key = f"{content_hash}_{str(finding_sig)}_{raw_prompt}"
+            
+            # Check Cache
+            if cache_key in self._cache:
+                # Move to end (LRU)
+                self._cache.move_to_end(cache_key)
+                print(f"⚡ CACHE HIT: Reusing AI analysis for {cache_key[:8]}")
+                return self._cache[cache_key]
+
             finding_summary = ", ".join([f"{f['count']} {f['type']}(s)" for f in findings])
             
-            prompt = f"""
-            Analyze the following content for data sensitivity and provide a risk assessment with a score.
-            
-            Detected patterns: {finding_summary}
-            
-            Content preview: {content[:500]}...
-            
-            OUTPUT FORMAT:
-            Provide a JSON object with:
-            - verdict: "BLOCK" or "ALLOW" or "REVIEW"
-            - score: 0-100 (0=Safe, 100=Critical)
-            - reason: A concise explanation (2 sentences max)
-            - category: "Financial", "Personal", "Secrets", or "None"
-            """
+            prompt = ""
+            if raw_prompt:
+                # Direct Prompt Injection (e.g. for Code Security Agent)
+                prompt = content
+            else:
+                prompt = f"""
+                Analyze the following content for data sensitivity and provide a risk assessment with a score.
+                
+                Detected patterns: {finding_summary}
+                
+                Content preview: {content[:500]}...
+                
+                OUTPUT FORMAT:
+                Provide a JSON object with:
+                - verdict: "BLOCK" or "ALLOW" or "REVIEW"
+                - score: 0-100 (0=Safe, 100=Critical)
+                - reason: A concise explanation (2 sentences max)
+                - category: "Financial", "Personal", "Secrets", "Supply Chain", or "None"
+                - compliance_alerts: List of strings (e.g. ["HIPAA", "PCI-DSS", "SOC2"]) if applicable, else []
+                - remediation: List of objects [{{"package": "name", "current_version": "v1", "fixed_version": "v2", "cve": "CVE-..."}}] for any vulnerabilities found.
+                
+                CHECK FOR:
+                - HIPAA: Medical data, PHI
+                - PCI-DSS: Credit cards, detailed financial info
+                - SOC2: Secrets, keys, infrastructure data
+                - GDPR: EU Citizen PII
+                - Supply Chain: Vulnerable dependencies (extract from report)
+                """
             
             client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
             response = await asyncio.to_thread(
@@ -93,24 +195,34 @@ class DLPEngine:
                     {"role": "system", "content": "You are a data security analyst. Return strict JSON."},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=150,
+                max_tokens=1000,
                 temperature=0.1,
                 response_format={"type": "json_object"}
             )
             
             message_content = response.choices[0].message.content
-            import json
+            
+            result = None
             try:
                 if message_content:
-                    return json.loads(message_content)
-                return {"verdict": "REVIEW", "score": 50, "reason": "No content returned"}
+                    result = json.loads(message_content)
+                else:
+                    result = {"verdict": "REVIEW", "score": 50, "reason": "No content returned"}
             except:
-                return {"verdict": "REVIEW", "score": 50, "reason": message_content}
+                # If JSON parsing fails completely, do NOT return raw message content as reason
+                result = {"verdict": "REVIEW", "score": 50, "reason": "AI Analysis returned invalid format."}
+            
+            # Update Cache
+            self._cache[cache_key] = result
+            if len(self._cache) > self._max_cache_size:
+                self._cache.popitem(last=False) # Remove oldest
+                
+            return result
             
         except Exception as e:
             return f"AI analysis unavailable: {str(e)}"
     
-    async def _ai_analyze_ciso_langchain(self, text: str) -> dict:
+    async def _ai_analyze_ciso_langchain(self, text: str, file_path: str = None) -> dict:
         """LangChain CISO agent with TWO MCP tools: pattern scanner + risk assessment"""
         try:
             from langchain_openai import ChatOpenAI
@@ -160,82 +272,283 @@ class DLPEngine:
         except Exception:
             return {"verdict": "ALLOW", "category": "None", "reason": "OpenAI not configured."}
 
-        # Provide BOTH tools to the agent
-        tools = [pattern_scanner_tool, risk_assessment_tool]
+        @tool
+        async def policy_rag_tool(term: str) -> str:
+            """RAG KNOWLEDGE LOOKUP: Look up corporate security policies for specific terms, project names, or people.
+            USE THIS ALWAYS if you see proper nouns, codenames, or unfamiliar terms (e.g., 'Skylark', 'Bob', 'Titan').
+            Returns the official security classification and handling rules."""
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                    result = await self.mcp_session.call_tool("consult_policy_db", arguments={"query": term})  # type: ignore
+                    text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                    return "".join(text_blocks)
+            except Exception:
+                return "RAG/Knowledge Base Unavailable."
+
+        @tool
+        async def decode_obfuscation_skill(text: str) -> str:
+            """SKILL: Decodes obfuscated text (Base64/Hex).
+            Use this ANY TIME you see random-looking strings like 'eyJ...' or '4A6B...'."""
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("decode_obfuscation", arguments={"text": text}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def analyze_code_skill(code: str) -> str:
+            """SKILL: Analyzes source code.
+            Use this if input LOOKS like code.
+            Returns: PROPRIETARY (Block) or GENERIC (Allow)."""
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("analyze_code_snippet", arguments={"code": code}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def scan_metadata_skill() -> str:
+            """SKILL: Forensic metadata check (Author, GPS, Edit History) for the file.
+            Call this if you suspect hidden document history."""
+            if not file_path: return "SKILL_ERROR: No file path context available (Text-only scan)."
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("scan_metadata", arguments={"file_path": file_path}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def scan_macros_skill() -> str:
+            """SKILL: VBA Macro analysis for Office docs.
+            Call this for any .DOCM, .DOC, .XLSM files to check for malware/auto-exec."""
+            if not file_path: return "SKILL_ERROR: No file path context available."
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("scan_office_macros", arguments={"file_path": file_path}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def inspect_zip_skill() -> str:
+            """SKILL: Deep Zip inspection.
+            Call this for any .ZIP file to check for Zip Bombs or hidden executables."""
+            if not file_path: return "SKILL_ERROR: No file path context available."
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("inspect_zip_structure", arguments={"file_path": file_path}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+            
+        @tool
+        async def scan_ocr_skill() -> str:
+            """SKILL: OCR Text Extraction.
+            Call this for Images (PNG/JPG) to get readable text if the user didn't provide it."""
+            if not file_path: return "SKILL_ERROR: No file path context available."
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("scan_image_text", arguments={"image_path": file_path}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def scan_dependencies_skill(manifest_content: str, ecosystem: str = "PyPI") -> str:
+            """SKILL: Security Audit for Dependencies (OSV.dev).
+            Call this if you see a 'requirements.txt' (ecosystem='PyPI') or 'package.json' (ecosystem='npm').
+            Returns list of CVEs and Fixed Versions."""
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("scan_dependencies", arguments={"manifest_content": manifest_content, "ecosystem": ecosystem}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        @tool
+        async def scan_secrets_skill() -> str:
+            """SKILL: TruffleHog-style Secret Source Code Scan.
+            Call this if the file is a ZIP archive of source code.
+            Recursively finds API keys and Secrets."""
+            if not file_path: return "SKILL_ERROR: No file path context."
+            try:
+                if getattr(self, 'mcp_session', None) is not None:
+                     result = await self.mcp_session.call_tool("scan_secrets_codebase", arguments={"file_path": file_path}) # type: ignore
+                     text_blocks = [c.text for c in result.content if getattr(c, 'type', None) == "text"]
+                     return "".join(text_blocks)
+            except Exception:
+                pass
+            return "Skill unavailable."
+
+        # Provide ALL tools to the agent
+        tools = [pattern_scanner_tool, risk_assessment_tool, policy_rag_tool, decode_obfuscation_skill, analyze_code_skill, scan_metadata_skill, scan_macros_skill, inspect_zip_skill, scan_ocr_skill, scan_dependencies_skill, scan_secrets_skill]
         
         system_instruction = """
             You are the Chief Information Security Officer (CISO) AI.
             Your mission is to analyze text for ANY risk to the organization.
             
             AVAILABLE TOOLS:
-            1. 'pattern_scanner_tool' - Detailed forensic scan showing exact PII types and locations
-            2. 'risk_assessment_tool' - Quick risk level summary
+            1. 'pattern_scanner_tool' - Detailed forensic scan (PII, Credentials)
+            2. 'risk_assessment_tool' - Quick risk summary
+            3. 'policy_rag_tool' - RAG Knowledge Base for Project Names/People
+            4. 'decode_obfuscation_skill' - De-obfuscate Base64/Hex hidden payloads
+            5. 'analyze_code_skill' - Distinguish Proprietary vs Generic Code
+            6. 'scan_metadata_skill' - Extract hidden Author/GPS/Edit History
+            7. 'scan_macros_skill' - Detect malicious Macros in Office Docs
+            8. 'inspect_zip_skill' - Detect Zip Bombs & Nested Executables
+            9. 'scan_ocr_skill' - Extract text from Images
+            10. 'scan_dependencies_skill' - Audit package.json/requirements.txt for Vulnerabilities (OSV)
+            11. 'scan_secrets_skill' - Recursive TruffleHog scan for ZIP Codebases
             
             RECOMMENDED WORKFLOW:
-            - For most cases: Use pattern_scanner_tool to get detailed findings
-            - If you need quick overview first: Use risk_assessment_tool, then pattern_scanner_tool for details
-            - The tools call an enhanced DLP engine with 30+ pattern types
+            1. CHECK FILE FORENSICS (If file context exists):
+               - If ZIP -> 'inspect_zip_skill' AND 'scan_secrets_skill' (if code)
+               - If OFFICE DOC -> 'scan_macros_skill'
+               - If IMAGE -> 'scan_ocr_skill'
+               - If MANIFEST (package.json/requirements.txt) -> 'scan_dependencies_skill'
+               - ALWAYS check 'scan_metadata_skill' for hidden info.
+               - ALWAYS check 'scan_metadata_skill' for hidden info (Author, GPS).
+            2. CHECK OBFUSCATION: 'decode_obfuscation_skill'.
+            3. ANALYZE CONTENT:
+               - If text is CODE: Call 'analyze_code_skill'.
+               - If text is PLAINTEXT: Call 'pattern_scanner_tool'.
+            4. CONTEXT CHECK: Identify proper nouns (Projects, People) and check 'policy_rag_tool'.
+            5. VERDICT: Combine findings.
             
-            RISK CATEGORIES (You must enforce ALL of these):
+            RISK CATEGORIES:
             
             1. [CRITICAL] SECRETS & INFRASTRUCTURE:
                - API Keys (AWS, OpenAI, GitHub, Stripe), Private Keys, Tokens, JWT
                - Database credentials or connection strings (PostgreSQL, MySQL, MongoDB)
-               - Internal IP Addresses (10.x.x.x, 192.168.x.x) or internal domains
+               - Internal IP Addresses (10.x.x.x, 192.168.x.x)
                - SSH keys, PGP keys, Bearer tokens
 
+               - Decoded Payloads containing secrets (Verified by 'decode_obfuscation_skill')
+               - Malicious Macros (Verified by 'scan_macros_skill')
+               - Zip Bombs (Verified by 'inspect_zip_skill')
+               
             2. [CRITICAL] FINANCIAL & PII:
                - Credit Cards (Luhn validated), SSN, Bank Accounts, IBAN
                - Passport Numbers, Medical Records
                - Cryptocurrency wallet addresses
-
+               
             3. [HIGH] INTELLECTUAL PROPERTY (IP):
-               - Proprietary Source Code (specific logic, not generic examples)
-               - Unreleased Product Codenames (e.g., "Project Skylark")
-               - Patent applications or chemical formulas
+               - Proprietary Source Code (Verified by 'analyze_code_skill' to be PROPRIETARY)
+               - Unreleased Product Codenames (Verified by 'policy_rag_tool')
                - Trade secrets marked "confidential", "proprietary"
-
+               
             4. [HIGH] FINANCIAL & LEGAL:
                - Insider Trading signals ("buy stock", "merger talks")
                - Non-public earnings data ("Q4 revenue is up 20%")
                - Active Lawsuit strategy or Attorney-Client privileged info
-
-            5. [MEDIUM] HR & SENSITIVE PERSONNEL:
+               
+            5. [MEDIUM] SENSITIVE BUSINESS DATA:
                - Salary discussions ("Bob makes $150k")
                - Layoff rumors or termination lists
                - Private medical info (HIPAA) or employee home addresses
                - Driver's licenses, phone numbers, email addresses
 
-            DECISION LOGIC:
-            - If pattern_scanner_tool finds CRITICAL findings -> BLOCK immediately
-            - If pattern_scanner_tool finds HIGH findings -> BLOCK with detailed reason
-            - If pattern_scanner_tool finds MEDIUM findings -> BLOCK unless clearly public/necessary
-            - If text falls into CRITICAL/HIGH categories not caught by patterns -> BLOCK
-            - If text is generic conversation with no findings -> ALLOW
-
-            OUTPUT FORMAT (STRICT):
-            Your Final Answer MUST be exactly in this format:
-            "VERDICT: [BLOCK/ALLOW] | SCORE: [0-100] | CATEGORY: [Category Name] | REASON: [Brief explanation with specific findings]"
+            COMPLIANCE MAPPING:
+            - HIPAA: Any Medical/Health info -> Tag as [HIPAA] in reason.
+            - PCI-DSS: Credit Card numbers -> Tag as [PCI-DSS] in reason.
+            - SOC2/ISO27001: AWS Keys, DB Creds, Infra -> Tag as [SOC2] in reason.
+            - GDPR: European PII -> Tag as [GDPR] in reason.
             
-            Scoring Guide:
-            0-10: Safe / Public info
-            11-40: Low Risk / Internal but not sensitive
-            41-70: Medium Risk / Sensitive Personnel or Financial
-            71-90: High Risk / IP / Secrets
-            91-100: Critical / Immediate Data Exfiltration
+            OUTPUT FORMAT (STRICT):
+            "VERDICT: [BLOCK/ALLOW] | SCORE: [0-100] | CATEGORY: [Category Name] | REASON: [Brief explanation with specific findings and COMPLIANCE TAGS]"
             """
 
         agent = create_react_agent(llm, tools)
 
         try:
-            result = await agent.ainvoke({"input": text, "instructions": system_instruction})
-            questions = result["messages"][-1].content
-            output = questions if isinstance(questions, str) else str(questions)
+            # Contextualize input with filename if available
+            agent_input = text
+            if file_path:
+                import os
+                filename = os.path.basename(file_path)
+                agent_input = f"[FILE CONTEXT: {filename}]\n\n{text}"
+            
+            if raw_prompt:
+                # Direct Chain for Code Security (Bypass ReAct Agent overhead)
+                response = await llm.ainvoke(agent_input)
+                output = response.content
+            else:
+                # Standard Agent Loop
+                result = await agent.ainvoke({"input": agent_input, "instructions": system_instruction})
+                questions = result["messages"][-1].content
+                output = questions if isinstance(questions, str) else str(questions)
         except Exception as e:
             return {"verdict": "ALLOW", "score": 0, "category": "None", "reason": f"Agent error: {e}"}
 
         verdict, score, category, reason = "ALLOW", 0, "None", output
+        compliance_alerts = []
+        remediation = []
+
+        # 1. Try to parse strict JSON (Code Security / Dependencies often returns this)
         try:
+            import json
+            # Sanitize minimal markdown if present (e.g. ```json ... ```)
+            clean_output = output.strip()
+            
+            # Regex to find the main JSON object { ... }
+            import re
+            json_match = re.search(r'\{.*\}', clean_output, re.DOTALL)
+            if json_match:
+                clean_output = json_match.group(0)
+            elif "```" in clean_output:
+                # Fallback to fence splitting if regex failed (unlikely for valid JSON)
+                clean_output = clean_output.split("```")[-2] if "```json" in clean_output else clean_output.split("```")[1]
+            
+            if clean_output.strip().lower().startswith("json"):
+                 clean_output = clean_output.strip()[4:]
+            
+            try:
+                data = json.loads(clean_output.strip())
+            except json.JSONDecodeError:
+                # Try correcting single quotes to double quotes (common LLM error)
+                try:
+                    import ast
+                    data = ast.literal_eval(clean_output.strip())
+                except:
+                    raise ValueError("Failed to parse JSON")
+            
+                if isinstance(data, dict):
+                    verdict = data.get('verdict', verdict)
+                    score = data.get('score', score)
+                    category = data.get('category', category)
+                    reason = data.get('reason', reason)
+                    
+                    # Handle flat or nested remediation (Code Security uses nested)
+                    remediation = data.get('remediation', [])
+                    if not remediation and isinstance(data.get('ai_analysis'), dict):
+                        remediation = data['ai_analysis'].get('remediation', [])
+                        
+                    compliance_alerts = data.get('compliance_alerts', [])
+                    output = reason # For fallback if needed
+        except Exception:
+            # Not JSON, proceed to text parsing
+            pass
+
+        try:
+            # 2. Text Parsing (Fallback or if JSON failed)
+            # Only run if we didn't get a clean JSON reason yet, OR if output is still the raw string
             if "VERDICT:" in output:
                 parts = output.split("VERDICT:")[-1].strip()
                 segments = [s.strip() for s in parts.split("|")]
@@ -254,13 +567,51 @@ class DLPEngine:
                             score = 75 # Default high score if parsing fails but verdict found
                     elif up.startswith("REASON:"):
                         reason = seg.split(":",1)[1].strip()
+                        
+            # Extract Compliance Tags from Reason
+            # Pattern: [TAG] e.g. [GDPR], [PCI-DSS]
+            import re
+            tag_matches = re.findall(r'\[([A-Z0-9\-_]+)\]', reason)
+            known_tags = ['HIPAA', 'PCI', 'PCI-DSS', 'GDPR', 'SOC2', 'ISO27001', 'CCPA']
+            compliance_alerts = [tag for tag in tag_matches if tag in known_tags or any(k in tag for k in known_tags)]
+            
         except Exception:
             pass
 
-        return {"verdict": verdict, "score": score, "category": category, "reason": reason}
+        # Final Sanitization of Verdict
+        if isinstance(verdict, str):
+            clean_verdict = verdict.strip()
+            
+            # 1. Strip common prefixes
+            if clean_verdict.upper().startswith("VERDICT:"):
+                clean_verdict = clean_verdict[8:].strip()
+            
+            # 2. Aggressive Check for JSON or Complexity
+            if "{" in clean_verdict or "}" in clean_verdict or len(clean_verdict) > 40:
+                # Fallback based on content keywords
+                if "BLOCK" in clean_verdict.upper(): verdict = "BLOCK"
+                elif "MALWARE" in clean_verdict.upper(): verdict = "MALWARE DETECTED"
+                elif "SAFE" in clean_verdict.upper(): verdict = "SAFE"
+                else: verdict = "REVIEW" # Default
+            else:
+                verdict = clean_verdict
+
+            # 3. Canonicalize
+            if "SAFE" in verdict.upper(): verdict = "SAFE"
+            elif "BLOCK" in verdict.upper(): verdict = "BLOCK"
+            elif "REVIEW" in verdict.upper(): verdict = "REVIEW"
+            elif "MALWARE" in verdict.upper(): verdict = "MALWARE DETECTED"
+        
+        return {"verdict": verdict, "score": score, "category": category, "reason": reason, "compliance_alerts": compliance_alerts, "remediation": remediation}
 
     def _generate_verdict(self, findings: List[Dict], ai_verdict: Any = None) -> str:
         """Generate human-readable verdict"""
+        # If AI provided a verdict, prioritize it (especially for Code Security)
+        if ai_verdict and isinstance(ai_verdict, dict):
+            v = ai_verdict.get('verdict')
+            if v and v != "ALLOW":
+                 return f"{v}: {ai_verdict.get('reason', 'AI Analysis Flagged Content')[:50]}..."
+
         if not findings:
             return "SAFE: No sensitive data detected"
         

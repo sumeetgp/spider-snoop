@@ -1,0 +1,8 @@
+# This is a sample requirements.txt file with known vulnerable package versions.
+# DO NOT use this for production environments.
+
+Django==3.2.5           # Known vulnerabilities exist in this specific version
+requests==2.25.1        # Versions below 2.26.0 had potential security advisories
+urllib3==1.26.5         # Older versions of urllib3 had vulnerabilities
+Pillow==8.3.2           # Multiple CVEs in versions prior to 8.3.3
+Werkzeug==2.0.0         # Versions before 2.0.1 were vulnerable to certain attacks

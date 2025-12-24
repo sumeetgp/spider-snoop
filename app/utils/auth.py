@@ -1,5 +1,5 @@
 """Authentication utilities"""
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -55,10 +55,37 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
         raise credentials_exception
     return user
 
-async def get_current_active_user(current_user: User = Depends(get_current_user)) -> User:
-    """Ensure user is active"""
+async def get_current_active_user(
+    current_user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+) -> User:
+    """Ensure user is active and handle credit reset"""
     if not current_user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
+        
+    # Check for Credit Reset (Hourly)
+    # Use timezone-aware UTC
+    now = datetime.now(timezone.utc)
+    
+    # Initialize if None (migration support)
+    if current_user.last_credit_reset is None:
+        current_user.last_credit_reset = now
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+        
+    # Ensure last_credit_reset is aware (it should be due to Column type, but safety check)
+    last_reset = current_user.last_credit_reset
+    if last_reset.tzinfo is None:
+        last_reset = last_reset.replace(tzinfo=timezone.utc)
+
+    if now - last_reset > timedelta(hours=1):
+        current_user.credits_remaining = 50
+        current_user.last_credit_reset = now
+        db.add(current_user)
+        db.commit()
+        db.refresh(current_user)
+
     return current_user
 
 def require_role(required_roles: list):

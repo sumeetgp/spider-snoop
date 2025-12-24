@@ -1,0 +1,2448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <title>SpiderCob // Obsidian Glass</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <!-- Particles -->
+    <script src="/static/js/particles.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        card: '#161B22',
+                        glass: 'rgba(22, 27, 34, 0.7)',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        success: '#238636',
+                        warning: '#D29922',
+                        alert: '#F85149',
+                        text: '#C9D1D9'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0D1117;
+            color: #C9D1D9;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #88FFFF 0%, #00E5FF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .mesh-gradient {
+            background-image: radial-gradient(circle at 2px 2px, #30363d 1px, transparent 0);
+            background-size: 40px 40px;
+        }
+
+        /* Particles Layer */
+        #bgCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .active-tab {
+            background-color: #88FFFF;
+            color: white;
+            border-color: transparent;
+        }
+
+        .usage-bar {
+            transition: width 0.5s ease-in-out;
+        }
+
+        /* SpiderCob Code Security Report Styles */
+        .sc-container {
+            font-family: 'Inter', sans-serif;
+            background: #0f0f13;
+            color: #e0e0e0;
+            padding: 2rem;
+            border-radius: 1rem;
+            border: 1px solid #333;
+        }
+
+        .sc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #2a2a30;
+        }
+
+        .sc-brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .sc-meta {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .sc-tag {
+            background: #2a2a30;
+            padding: 0.25rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .sc-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .sc-card {
+            background: #1a1a20;
+            border: 1px solid #2a2a30;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sc-card .label {
+            font-size: 0.85rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .sc-card .value {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .sc-card .unit {
+            font-size: 1.2rem;
+            color: #555;
+            font-weight: 400;
+        }
+
+        .text-neon-red {
+            color: #ff3333;
+            text-shadow: 0 0 10px rgba(255, 51, 51, 0.3);
+        }
+
+        .badge-critical {
+            background: rgba(255, 51, 51, 0.15);
+            color: #ff3333;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 700;
+            display: inline-block;
+            border: 1px solid rgba(255, 51, 51, 0.3);
+            text-shadow: 0 0 5px rgba(255, 51, 51, 0.2);
+        }
+
+        .sc-stats-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .sc-stats-list li {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .sc-stats-list .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .dot.red {
+            background: #ff3333;
+            box-shadow: 0 0 5px #ff3333;
+        }
+
+        .dot.orange {
+            background: #ff9900;
+        }
+
+        .dot.green {
+            background: #00cc66;
+        }
+
+        .sc-section {
+            margin-bottom: 2.5rem;
+        }
+
+        .sc-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .sc-remediation-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        .sc-fix-box {
+            background: #1a1a20;
+            border: 1px solid #333;
+            border-left: 4px solid #00cc66;
+            /* Default fix color */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            transition: transform 0.2s;
+        }
+
+        .sc-fix-box:hover {
+            transform: translateY(-2px);
+            border-color: #444;
+            border-left-color: #00cc66;
+        }
+
+        .sc-fix-box.warning-border {
+            border-left-color: #ff9900;
+        }
+
+        .sc-fix-box.critical-border {
+            border-left-color: #ff3333;
+        }
+
+        .fix-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .pkg-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            color: #e0e0e0;
+        }
+
+        .arrow {
+            color: #555;
+        }
+
+        .version-badge {
+            font-size: 0.8rem;
+            padding: 0.2rem 0.5rem;
+            background: #00cc6620;
+            color: #00cc66;
+            border-radius: 4px;
+        }
+
+        .version-badge.warning {
+            background: #ff990020;
+            color: #ff9900;
+        }
+
+        .fix-reason {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+
+        .code-snippet {
+            font-family: 'JetBrains Mono', monospace;
+            background: #000;
+            padding: 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #00cc66;
+            border: 1px solid #222;
+            word-break: break-all;
+        }
+
+        .policy-alert {
+            background: #ff990010;
+            border: 1px solid #ff990030;
+            color: #ff9900;
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .sc-terminal-window {
+            background: #0a0a0c;
+            border-radius: 0.5rem;
+            border: 1px solid #333;
+            overflow: hidden;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .terminal-header {
+            background: #1a1a20;
+            padding: 0.5rem 1rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .terminal-header .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #333;
+        }
+
+        .terminal-header .dot:nth-child(1) {
+            background: #ff5f56;
+        }
+
+        .terminal-header .dot:nth-child(2) {
+            background: #ffbd2e;
+        }
+
+        .terminal-header .dot:nth-child(3) {
+            background: #27c93f;
+        }
+
+        .term-title {
+            margin-left: 1rem;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .terminal-content {
+            padding: 1rem;
+            color: #aaa;
+            font-size: 0.8rem;
+            line-height: 1.5;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-crit {
+            color: #ff3333;
+            font-weight: bold;
+        }
+
+        .log-high {
+            color: #ff9900;
+            font-weight: bold;
+        }
+
+        .log-med {
+            color: #e0e0e0;
+        }
+
+        /* Utility */
+        .sc-badge-counter {
+            background: #333;
+            color: #fff;
+            padding: 0.2rem 0.6rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            margin-left: auto;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col font-sans">
+    <canvas id="bgCanvas"></canvas>
+
+    <!-- Navbar -->
+    <nav class="border-b border-border p-4 flex justify-between items-center bg-bg sticky top-0 z-50">
+        <div class="flex items-center gap-1 text-xl font-black tracking-tighter text-white cursor-pointer"
+            onclick="window.location.href='/'">
+            <span class="text-2xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+        </div>
+        <div class="flex gap-4 items-center">
+            <span class="text-xs text-gray-500 font-mono hidden md:block">API_STATUS: <span
+                    class="text-brand">OPTIMAL</span></span>
+
+            <button onclick="showArchive()"
+                class="hidden md:flex items-center gap-2 px-5 py-2 rounded-lg border border-brand/30 bg-brand/10 text-brand text-xs font-bold tracking-widest hover:bg-brand hover:text-black hover:shadow-[0_0_10px_rgba(136,255,255,0.4)] transition-all duration-300 ml-4">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                    </path>
+                </svg>
+                REPORTS
+            </button>
+
+            <div id="authSection" class="flex gap-4 items-center">
+                <!-- Guest State -->
+                <a href="/login" class="text-sm text-gray-400 hover:text-white transition">[LOGIN]</a>
+                <a href="/register"
+                    class="bg-brand hover:bg-reg text-white px-3 py-1.5 rounded text-sm font-bold transition">REGISTER</a>
+            </div>
+
+            <div id="userSection" class="hidden flex gap-4 items-center">
+                <span id="usernameDisplay" class="text-sm font-bold text-white uppercase hidden md:inline"></span>
+                <!-- Avatar -->
+                <!-- Spider Logo -->
+                <div
+                    class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path
+                            d="M12 2C8.686 2 6 4.686 6 8v2H4a2 2 0 00-2 2v6a2 2 0 002 2h2v2a2 2 0 002 2h8a2 2 0 002-2v-2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8c0-3.314-2.686-6-6-6zm0 2c2.209 0 4 1.791 4 4v2H8V8c0-2.209 1.791-4 4-4zm-4 8v6h2v-6H8zm4 0v6h-2v-6h2zm4 0v6h-2v-6h2zm-8 8h8v-2h-8v2z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()"
+                class="md:hidden text-white p-2 flex items-center gap-2 border border-white/20 rounded hover:bg-white/10 transition">
+                <span class="text-[10px] font-bold tracking-widest uppercase text-brand">SELECT TRACK</span>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenu"
+        class="fixed inset-0 z-40 bg-bg/95 backdrop-blur-xl hidden md:hidden flex flex-col p-8 space-y-6">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-1 text-xl font-black tracking-tighter text-white">
+                <span class="text-2xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-4">
+            <button onclick="showTrack('sentinel'); toggleMobileMenu()"
+                class="p-4 rounded-xl bg-gray-800/50 text-white font-bold flex items-center gap-4">
+                <div class="p-2 bg-gray-700 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                        </path>
+                    </svg></div>
+                <div><span class="block text-lg uppercase">File Guard</span><span class="text-xs text-gray-400">Malware
+                        & Virus</span></div>
+            </button>
+            <button onclick="showTrack('guardian'); toggleMobileMenu()"
+                class="p-4 rounded-xl bg-gray-800/50 text-white font-bold flex items-center gap-4">
+                <div class="p-2 bg-gray-700 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                        </path>
+                    </svg></div>
+                <div><span class="block text-lg uppercase">Secret Scanner</span><span class="text-xs text-gray-400">PII,
+                        Keys & Safe Wash</span>
+                </div>
+            </button>
+            <button onclick="showTrack('security'); toggleMobileMenu()"
+                class="p-4 rounded-xl bg-gray-800/50 text-white font-bold flex items-center gap-4">
+                <div class="p-2 bg-gray-700 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                        </path>
+                    </svg></div>
+                <div><span class="block text-lg">CODE SECURITY</span><span class="text-xs text-gray-400">Supply
+                        Chain</span>
+                </div>
+            </button>
+            <button onclick="showTrack('vision'); toggleMobileMenu()"
+                class="p-4 rounded-xl bg-gray-800/50 text-white font-bold flex items-center gap-4">
+                <div class="p-2 bg-gray-700 rounded-lg"><svg class="w-6 h-6" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                        </path>
+                    </svg></div>
+                <div><span class="block text-lg">ECHOVISION</span><span class="text-xs text-gray-400">Audio/Video</span>
+                </div>
+            </button>
+
+            <div class="h-px bg-white/10 my-2"></div>
+
+            <button onclick="showArchive(); toggleMobileMenu()" class="p-3 text-left text-gray-300">Scan
+                Archive</button>
+            <a href="/api/docs" class="p-3 text-left text-gray-300">Developer API</a>
+
+            <div class="mt-auto pt-6 border-t border-white/10">
+                <button onclick="logout()"
+                    class="w-full text-center p-3 rounded-lg text-red-400 font-bold hover:bg-white/5 transition flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                        </path>
+                    </svg>
+                    LOGOUT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar -->
+        <aside class="w-64 border-r border-border p-6 flex-col justify-between hidden md:flex bg-bg/50">
+            <div class="space-y-6">
+                <nav class="space-y-2">
+                    <button onclick="showTrack('sentinel')" id="nav-sentinel"
+                        class="w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                            </path>
+                        </svg>
+                        <div>
+                            <span class="block">FILE GUARD</span>
+                            <span class="text-[10px] font-normal opacity-50 block">Malware Detection</span>
+                        </div>
+                    </button>
+                    <button onclick="showTrack('guardian')" id="nav-guardian"
+                        class="w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                            </path>
+                        </svg>
+                        <div>
+                            <span class="block">SECRET SCANNER</span>
+                            <span class="text-[10px] font-normal opacity-50 block">PII & Safe Wash</span>
+                        </div>
+                    </button>
+                    <button onclick="showTrack('vision')" id="nav-vision"
+                        class="w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z">
+                            </path>
+                        </svg>
+                        <div>
+                            <span class="block">MEDIA SCANNER</span>
+                            <span class="text-[10px] font-normal opacity-50 block">Video & Audio Leaks</span>
+                        </div>
+                    </button>
+
+                    <button onclick="showTrack('security')" id="nav-security"
+                        class="w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                            </path>
+                        </svg>
+                        <div>
+                            <span class="block">CODE SECURITY</span>
+                            <span class="text-[10px] font-normal opacity-50 block">Supply Chain & Secrets</span>
+                        </div>
+                    </button>
+
+
+                </nav>
+            </div>
+
+            <div class="mt-auto space-y-4">
+                <!-- Utility Links -->
+                <div class="space-y-1">
+                    <a href="/api/docs" target="_blank"
+                        class="w-full text-left block p-2 rounded hover:bg-gray-800 text-gray-400 text-xs flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                        </svg>
+                        API Documentation
+                    </a>
+                    <a href="/icap" target="_blank"
+                        class="w-full text-left block p-2 rounded hover:bg-gray-800 text-gray-400 text-xs flex items-center gap-2">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        ICAP Integration
+                    </a>
+                </div>
+                <!-- Credits Widget -->
+                <div id="creditsWidget" class="glass-panel p-4 rounded-lg opacity-50 pointer-events-none">
+                    <div class="flex justify-between text-[10px] uppercase font-bold text-gray-500 mb-2">
+                        <span>Hourly Credits</span>
+                        <span id="creditsText">--/50</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                        <div id="creditsBar" class="usage-bar h-full bg-brand" style="width: 0%;"></div>
+                    </div>
+                    <p id="creditsReset" class="text-[9px] text-gray-600 mt-2 italic text-center">Login to track usage
+                    </p>
+                </div>
+
+                <button onclick="logout()"
+                    class="w-full flex items-center gap-3 p-3 text-sm text-gray-500 hover:text-red-400 hover:bg-gray-800/50 rounded transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
+                        </path>
+                    </svg>
+                    <span class="font-bold">LOGOUT</span>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 overflow-y-auto relative">
+            <div class="max-w-5xl mx-auto space-y-6">
+
+                <!-- Welcome / Track Header -->
+                <div class="flex justify-between items-end border-b border-border pb-6">
+                    <div>
+                        <h1 id="trackTitle"
+                            class="text-3xl font-black text-white tracking-tight hero-gradient uppercase">SENTINEL TRACK
+                        </h1>
+                        <p id="trackDesc" class="text-sm text-gray-400 font-mono mt-1">Signature + Heuristic Malware
+                            Analysis</p>
+                    </div>
+                    <div class="hidden md:block text-right">
+                        <span class="text-xs text-gray-500 uppercase font-bold block">Current Session</span>
+                        <span id="sessionId" class="font-mono text-brand text-xs">IDLE</span>
+                    </div>
+                </div>
+
+                <!-- Input Zone -->
+                <div id="inputZone"
+                    class="glass-panel rounded-2xl p-10 text-center cursor-pointer hover:border-brand transition border-2 border-dashed border-border group"
+                    onclick="if(currentTrack === 'vision') document.getElementById('videoInput').click(); else document.getElementById('fileInput').click();">
+
+                    <div class="mb-4 text-gray-600 group-hover:text-brand transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-white mb-2">Initialize Scan Protocol</h3>
+                    <p class="text-sm text-gray-500 mb-6">Drop payload or click to inject.</p>
+
+                    <div id="uploadRequirements"
+                        class="text-xs font-mono text-gray-600 bg-black/20 inline-block px-3 py-1 rounded">
+                        SUPPORTED: EXE, ZIP, PDF (MAX 50MB)
+                    </div>
+
+                    <input type="file" id="fileInput" class="hidden" onchange="handleFileSelection(this)">
+                    <input type="file" id="videoInput" class="hidden" accept=".mp4,.mov,.avi,.mkv"
+                        onchange="handleVideoSelection(this)">
+                </div>
+
+                <!-- Staging View -->
+                <div id="stagingView"
+                    class="hidden glass-panel rounded-2xl p-6 text-center border-2 border-dashed border-gray-600">
+                    <div class="mb-6 flex flex-col items-center">
+                        <div class="w-16 h-16 bg-gray-800 rounded-lg flex items-center justify-center mb-4">
+                            <svg class="w-8 h-8 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                </path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-white mb-1" id="stagedFileName">file_name.ext</h3>
+                        <p class="text-sm text-gray-500" id="stagedFileSize">0 KB</p>
+                    </div>
+
+                    <!-- Redaction Option (Guardian Only + Supported Types) -->
+                    <div id="redactionOption" class="hidden mb-6 flex justify-center items-center gap-2">
+                        <label
+                            class="flex items-center space-x-2 cursor-pointer bg-gray-800/50 p-2 rounded-lg border border-gray-700 hover:border-brand/50 transition">
+                            <input type="checkbox" id="correctCheckbox"
+                                class="form-checkbox text-brand rounded focus:ring-brand bg-gray-900 border-gray-600 h-4 w-4">
+                            <span class="text-sm text-gray-300 font-bold">ENABLE SCAN & CORRECT (REDACT)</span>
+                        </label>
+                    </div>
+
+                    <div class="flex justify-center gap-4">
+                        <button onclick="cancelStaging()"
+                            class="px-6 py-2 rounded-lg border border-gray-600 text-gray-400 hover:text-white hover:border-gray-500 transition font-bold text-sm">CANCEL</button>
+                        <button onclick="startScan()"
+                            class="px-6 py-2 rounded-lg bg-brand hover:bg-reg text-white shadow-lg hover:shadow-brand/20 transition font-bold text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z">
+                                </path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            START SCAN
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Loader -->
+                <div id="loader" class="hidden text-center py-20">
+                    <div
+                        class="inline-block w-12 h-12 border-4 border-t-brand border-r-transparent border-b-brand border-l-transparent rounded-full animate-spin">
+                    </div>
+                    <p class="mt-4 text-brand font-mono text-sm animate-pulse">ANALYZING_PAYLOAD...</p>
+                </div>
+
+                <!-- Results View -->
+                <div id="resultsView" class="hidden space-y-6">
+                    <!-- Results Header / Actions -->
+                    <div class="flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <h2 class="text-lg font-bold text-white tracking-wide">SCAN COMPLETE</h2>
+                        </div>
+                        <div class="flex gap-2">
+                            <a id="btnDownloadSafe" href="#" target="_blank"
+                                class="hidden bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 shadow-lg hover:shadow-green-500/20">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
+                                    </path>
+                                </svg>
+                                DOWNLOAD SAFE COPY (CDR)
+                            </a>
+                            <button onclick="showTrack(currentTrack)"
+                                class="bg-brand hover:bg-reg text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2 shadow-lg hover:shadow-brand/20">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                                    </path>
+                                </svg>
+                                SCAN NEXT TARGET
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Protection Flow Visualization (MALWARE) -->
+                    <div id="standardResultsContent">
+                        <div id="flow-malware"
+                            class="glass-panel p-4 rounded-xl flex items-center justify-between border border-border hidden">
+                            <div class="flex items-center gap-4 text-xs font-mono w-full">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-av">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">AV_ENGINE</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-yara">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">YARA_RULES</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-macro">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.022.547l-2.387 4.774a1 1 0 001.205 1.405l4.774-2.387a2 2 0 011.51-.105l.318.158a2 2 0 001.51.105l4.774 2.387a1 1 0 001.205-1.405l-2.387-4.774z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">MACRO_SCAN</span>
+                                </div>
+
+                                <!-- Safe Wash Line and Step (Conditional) -->
+                                <div id="line-cdr-malware" class="h-0.5 flex-1 bg-gray-800 mx-2 relative hidden">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div id="container-cdr-malware" class="flex flex-col items-center gap-2 hidden">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-cdr-malware">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">SAFE_WASH</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Protection Flow Visualization (DLP) -->
+                        <div id="flow-dlp"
+                            class="glass-panel p-4 rounded-xl flex items-center justify-between border border-border hidden">
+                            <div class="flex items-center gap-4 text-xs font-mono w-full">
+
+                                <!-- Regex -->
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-regex">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">REGEX_ANALYSIS</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+
+                                <!-- AI Analysis -->
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-ai">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">AI_ANALYSIS</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+
+                                <!-- Context Scan -->
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-context">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z">
+                                            </path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">CONTEXT_SCAN</span>
+                                </div>
+
+                                <!-- Safe Wash Line and Step (Conditional) -->
+                                <div id="line-cdr-dlp" class="h-0.5 flex-1 bg-gray-800 mx-2 relative hidden">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div id="container-cdr-dlp" class="flex flex-col items-center gap-2 hidden">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-redact">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">SAFE_WASH</span>
+                                </div>
+
+                                <!-- Protection Flow Visualization (CODE SECURITY NEW) -->
+                                <div id="flow-code-sec"
+                                    class="glass-panel p-4 rounded-xl flex items-center justify-between border border-border hidden">
+                                    <div class="flex items-center gap-4 text-xs font-mono w-full">
+
+                                        <!-- Trivy Scan -->
+                                        <div class="flex flex-col items-center gap-2">
+                                            <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                                id="step-trivy">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <span class="text-gray-500">TRIVY_SCAN</span>
+                                        </div>
+                                        <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                            <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                        </div>
+
+                                        <!-- OSV Audit -->
+                                        <div class="flex flex-col items-center gap-2">
+                                            <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                                id="step-osv">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <span class="text-gray-500">OSV_AUDIT</span>
+                                        </div>
+                                        <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                            <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                        </div>
+
+                                        <!-- AI Remediation -->
+                                        <div class="flex flex-col items-center gap-2">
+                                            <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                                id="step-remediate">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.022.547l-2.387 4.774a1 1 0 001.205 1.405l4.774-2.387a2 2 0 011.51-.105l.318.158a2 2 0 001.51.105l4.774 2.387a1 1 0 001.205-1.405l-2.387-4.774z">
+                                                    </path>
+                                                </svg>
+                                            </div>
+                                            <span class="text-gray-500">AI_REMEDIATION</span>
+                                        </div>
+
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <div id="flow-dlp"
+                            class="glass-panel p-4 rounded-xl flex items-center justify-between border border-border hidden">
+                            <div class="flex items-center gap-4 text-xs font-mono w-full">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-regex">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">REGEX_ENGINE</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-ai">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">AI_ANALYSIS</span>
+                                </div>
+                                <div class="h-0.5 flex-1 bg-gray-800 mx-2 relative">
+                                    <div class="absolute inset-0 bg-brand/50 w-full animate-pulse"></div>
+                                </div>
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center border border-gray-600 text-gray-400"
+                                        id="step-cdr-dlp">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                    </div>
+                                    <span class="text-gray-500">SAFE_WASH</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Score Card -->
+                            <div class="glass-panel p-6 rounded-2xl col-span-1">
+                                <p class="text-xs text-gray-500 uppercase tracking-widest font-bold mb-1">Threat Score
+                                </p>
+                                <p class="text-5xl font-black" id="scoreValue">82<span
+                                        class="text-xl text-gray-600">/100</span></p>
+                                <div id="verdictBox" class="mt-4 p-2 rounded text-[11px] font-mono border">
+                                    VERDICT_PENDING
+                                </div>
+                            </div>
+
+                            <!-- Intelligence Hub Container -->
+                            <div class="glass-panel p-6 rounded-2xl col-span-2 relative overflow-hidden flex flex-col">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex gap-2">
+                                        <span
+                                            class="text-[10px] font-mono bg-gray-800 px-2 py-1 rounded text-gray-400">ID:
+                                            <span id="resScanId" class="text-white">--</span></span>
+                                        <span
+                                            class="text-[10px] font-mono bg-gray-800 px-2 py-1 rounded text-gray-400">TIME:
+                                            <span id="scanDuration" class="text-white">--</span>ms</span>
+                                    </div>
+                                </div>
+
+                                <div id="contextContent" class="h-full overflow-y-auto">
+                                    <!-- Compliance Tags -->
+                                    <div id="complianceAlerts" class="hidden mb-3 flex flex-wrap gap-2"></div>
+
+                                    <!-- Basic Summary -->
+                                    <p class="text-sm text-gray-300 mb-4 font-light leading-relaxed" id="scanSummary">
+                                        Waiting for input...</p>
+
+                                    <!-- AI Insight Block -->
+                                    <div id="aiInsightPanel"
+                                        class="hidden bg-gray-900/50 border border-gray-700/50 rounded-lg p-4 mb-4">
+                                        <div class="flex items-center gap-2 mb-2 text-brand">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            </svg>
+                                            <span class="text-xs font-bold uppercase tracking-wider">Security Analysis
+                                                Hub (v2)</span>
+                                        </div>
+                                        <p class="text-sm text-gray-400 font-mono leading-relaxed whitespace-pre-wrap"
+                                            id="aiSummaryText"></p>
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Security Analysis Hub - Full Width Remediation -->
+                        <div id="remediationPanel" class="hidden mt-6 col-span-3">
+                            <div class="glass-panel rounded-2xl p-6 border border-gray-700/50">
+                                <div class="flex items-center gap-2 mb-4 text-brand">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span class="text-sm font-bold uppercase tracking-wider">Recommended Remediation
+                                        Plan</span>
+                                </div>
+
+                                <div class="overflow-hidden rounded-xl border border-gray-700/50 bg-gray-900/30">
+                                    <table class="w-full text-left text-sm">
+                                        <thead class="bg-gray-800/80 text-gray-400 uppercase text-xs tracking-wider">
+                                            <tr>
+                                                <th class="p-4 font-semibold w-1/4">Package / Version</th>
+                                                <th class="p-4 font-semibold w-1/4">CVEs</th>
+                                                <th class="p-4 font-semibold w-1/6">Severity</th>
+                                                <th class="p-4 font-semibold w-1/6">Fixed In</th>
+                                                <th class="p-4 font-semibold w-1/6">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="remediationTableBody" class="divide-y divide-gray-800 text-gray-300">
+                                            <!-- Dynamic Rows -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Findings Table -->
+                        <div id="findingsPanelContainer" class="glass-panel rounded-2xl overflow-hidden">
+                            <div class="p-4 border-b border-border bg-gray-800/30 flex justify-between items-center">
+                                <h2 class="text-sm font-bold text-white">Engine Findings</h2>
+                                <button onclick="copyJSON()"
+                                    class="text-xs text-brand hover:underline font-mono">[COPY_JSON]</button>
+                            </div>
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-gray-900/50 text-gray-500 uppercase">
+                                    <tr>
+                                        <th class="p-4">Type</th>
+                                        <th class="p-4">Severity</th>
+                                        <th class="p-4">Detail</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="findingsBody" class="divide-y divide-border">
+                                    <!-- Rows injected here -->
+                                </tbody>
+                            </table>
+                            <div id="noFindings" class="text-center p-8 text-gray-500 hidden">
+                                >> NO THREATS DETECTED. SYSTEM CLEAN.
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- End Standard Results Content -->
+
+                <!-- Archive View -->
+                <div id="archiveView" class="hidden glass-panel rounded-2xl overflow-hidden p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-white">Scan Archive</h2>
+                        <button onclick="showArchive()" class="text-xs text-brand hover:underline">[REFRESH]</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm text-gray-400">
+                            <thead class="text-gray-500 uppercase font-mono text-xs border-b border-border">
+                                <tr>
+                                    <th class="p-4">ID</th>
+                                    <th class="p-4">Date</th>
+                                    <th class="p-4">Source</th>
+                                    <th class="p-4">Risk</th>
+                                    <th class="p-4">Verdict</th>
+                                    <th class="p-4">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody id="archiveBody" class="divide-y divide-border">
+                                <!-- Rows -->
+                            </tbody>
+                        </table>
+                        <div id="archiveLoading" class="hidden text-center py-8 text-gray-600 font-mono">
+                            LOADING_ARCHIVE...
+                        </div>
+                        <div id="archiveEmpty" class="hidden text-center py-8 text-gray-600 font-mono">
+                            NO RECORDS FOUND
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleMobileMenu() {
+            document.getElementById('mobileMenu').classList.toggle('hidden');
+        }
+
+        // --- State Management ---
+        let currentTrack = 'sentinel';
+        let authToken = localStorage.getItem('access_token');
+        let currentScanResult = null;
+
+        if (!authToken) {
+            window.location.replace('/login');
+        }
+
+        // --- Init ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initParticles();
+            setupAuth();
+            showTrack('sentinel'); // Default
+        });
+
+        function initParticles() {
+            if (window.particlesJS) {
+                particlesJS("bgCanvas", {
+                    "particles": {
+                        "number": { "value": 40, "density": { "enable": true, "value_area": 800 } },
+                        "color": { "value": "#88FFFF" },
+                        "shape": { "type": "circle" },
+                        "opacity": { "value": 0.3 },
+                        "size": { "value": 2 },
+                        "line_linked": { "enable": true, "distance": 150, "color": "#88FFFF", "opacity": 0.1, "width": 1 },
+                        "move": { "enable": true, "speed": 1 }
+                    },
+                    "retina_detect": true
+                });
+            }
+        }
+
+        async function setupAuth() {
+            if (authToken) {
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('userSection').classList.remove('hidden');
+
+                // Fetch User Info
+                try {
+                    const res = await fetch('/api/users/me', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                    if (res.ok) {
+                        const user = await res.json();
+                        document.getElementById('usernameDisplay').textContent = user.username.toUpperCase();
+
+                        // Enable Credits Widget
+                        const w = document.getElementById('creditsWidget');
+                        w.classList.remove('opacity-50', 'pointer-events-none');
+                        document.getElementById('creditsReset').textContent = "Resets in 60 mins";
+                        updateCredits(user.credits_remaining || 50); // Mock/Real
+                    } else {
+                        logout();
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('access_token');
+            window.location.href = '/';
+        }
+
+        function updateCredits(remaining) {
+            // Assuming 50 is max
+            const used = 50 - remaining;
+            const pct = (used / 50) * 100;
+            document.getElementById('creditsBar').style.width = `${pct}%`;
+            document.getElementById('creditsText').textContent = `${used}/50`;
+        }
+
+        // --- Track Logic ---
+        const tracks = {
+            'sentinel': {
+                title: 'FILE GUARD',
+                desc: 'Intelligent Malware & Virus Detection',
+                req: 'SUPPORTED: All Files (MAX 50MB)',
+                icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z'
+            },
+            'guardian': {
+                title: 'SECRET SCANNER',
+                desc: 'PII, Secret Data (DLP) & Safe Wash',
+                req: 'SUPPORTED: TXT, DOCX, XLSM, PDF, ZIP, PNG (MAX 10MB)',
+                icon: 'M15 12a3 3 0 11-6 0 3 3 0 016 0z M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'
+            },
+            'vision': {
+                title: 'VIDEO SCANNER',
+                desc: 'Video & Audio Data Forensic',
+                req: 'SUPPORTED: MP4, AVI, MKV, MP3, WAV (MAX 50MB)',
+                icon: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z'
+            },
+            'security': {
+                title: 'CODE SECURITY',
+                desc: 'Dependency & Secret Scanning (Supply Chain)',
+                req: 'SUPPORTED: requirements.txt, package.json, .zip (MAX 50MB)',
+                icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+            }
+        };
+
+        function showTrack(trackId) {
+            currentTrack = trackId;
+
+            // Handle Input Attributes (Dynamic Accept)
+            const videoInput = document.getElementById('videoInput');
+            const fileInput = document.getElementById('fileInput');
+
+            if (trackId === 'vision') { // effectively omnisense
+                videoInput.accept = ".mp4,.mov,.avi,.mkv,.webm,.mp3,.wav,.m4a,.flac";
+                document.getElementById('redactionOption').classList.add('hidden');
+            } else if (trackId === 'guardian') {
+                fileInput.accept = ".txt,.json,.md,.csv,.log,.xml,.yaml,.yml,.pdf,.docx,.docm,.xlsx,.xlsm,.zip,.png,.jpg,.jpeg,.tiff,.bmp";
+                document.getElementById('redactionOption').classList.remove('hidden');
+            } else if (trackId === 'security') {
+                fileInput.accept = ".txt,.json,.zip"; // Simplified for requirements.txt/package.json/zip
+                document.getElementById('redactionOption').classList.add('hidden');
+            } else {
+                // Sentinel (Anything goes, usually Executables/Zips)
+                fileInput.removeAttribute('accept');
+                document.getElementById('redactionOption').classList.add('hidden');
+            }
+
+            currentTrack = trackId;
+
+            // Update UI Text
+            document.getElementById('trackTitle').textContent = tracks[trackId].title;
+            document.getElementById('trackDesc').textContent = tracks[trackId].desc;
+            document.getElementById('uploadRequirements').textContent = tracks[trackId].req;
+
+            // Update Icon
+            const iconPath = document.querySelector('#inputZone svg path');
+            if (iconPath && tracks[trackId].icon) {
+                iconPath.setAttribute('d', tracks[trackId].icon);
+            }
+
+            // Highlight Nav
+            document.querySelectorAll('aside nav button').forEach(b => {
+                const isTarget = b.id === `nav-${trackId}`;
+                if (isTarget) {
+                    b.classList.add('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+                    b.classList.remove('text-gray-400');
+                } else {
+                    b.classList.remove('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+                    b.classList.add('text-gray-400');
+                }
+            });
+
+            // Reset View
+            document.getElementById('resultsView').classList.add('hidden');
+            document.getElementById('archiveView').classList.add('hidden');
+            document.getElementById('inputZone').classList.remove('hidden');
+
+
+
+        }
+
+        async function showArchive() {
+            currentTrack = 'archive';
+
+            // Update Nav
+            document.querySelectorAll('aside nav button').forEach(b => {
+                b.classList.remove('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+                b.classList.add('text-gray-400');
+            });
+
+
+            // Update Header
+            document.getElementById('trackTitle').textContent = "SCAN REPORTS";
+            document.getElementById('trackDesc').textContent = "Historical Scan Data & Reporting";
+
+            // Toggle Views
+            document.getElementById('inputZone').classList.add('hidden');
+            document.getElementById('resultsView').classList.add('hidden');
+            document.getElementById('archiveView').classList.remove('hidden');
+
+            // Fetch Data
+            const tbody = document.getElementById('archiveBody');
+            tbody.innerHTML = '';
+            document.getElementById('archiveLoading').classList.remove('hidden');
+            document.getElementById('archiveEmpty').classList.add('hidden');
+
+            try {
+                const res = await fetch('/api/scans/', { headers: { 'Authorization': `Bearer ${authToken}` } });
+                if (res.ok) {
+                    const scans = await res.json();
+                    document.getElementById('archiveLoading').classList.add('hidden');
+
+                    if (scans.length === 0) {
+                        document.getElementById('archiveEmpty').classList.remove('hidden');
+                        return;
+                    }
+
+                    // Add Header if not present
+                    const thead = document.querySelector('#archiveView table thead tr');
+                    if (thead && !thead.innerHTML.includes('TYPE')) {
+                        thead.innerHTML = `
+                           <th class="text-left p-4 text-gray-400 font-normal">ID</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">DATE</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">TYPE</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">SOURCE</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">RISK</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">VERDICT</th>
+                           <th class="text-left p-4 text-gray-400 font-normal">SCORE</th>
+                       `;
+                    }
+
+                    scans.forEach(s => {
+                        const searchDate = new Date(s.created_at).toLocaleString();
+                        let riskClass = "text-gray-400";
+                        if (s.risk_level === 'CRITICAL') riskClass = "text-alert font-bold";
+                        if (s.risk_level === 'HIGH') riskClass = "text-alert";
+                        if (s.risk_level === 'MEDIUM') riskClass = "text-warning";
+                        if (s.risk_level === 'LOW') riskClass = "text-success";
+
+                        // Use Backend Scan Type
+                        let scanType = s.scan_type || "DLP";
+                        let typeClass = "bg-blue-900/30 text-blue-400 border-blue-500/30";
+
+                        if (scanType === "VISION" || scanType === "OMNISENSE" || scanType === "ECHOVISION") {
+                            typeClass = "bg-cyan-900/30 text-cyan-400 border-cyan-500/30";
+                        } else if (scanType === "MALWARE") {
+                            typeClass = "bg-red-900/30 text-red-400 border-red-500/30";
+                        } else if (scanType === "CODE_SECURITY") {
+                            typeClass = "bg-purple-900/30 text-purple-400 border-purple-500/30";
+                        }
+
+                        const rowId = `scan-${s.id}`;
+                        const detailId = `detail-${s.id}`;
+
+                        const row = document.createElement('tr');
+                        row.className = "hover:bg-white/5 transition cursor-pointer border-b border-white/5";
+                        row.onclick = () => {
+                            const d = document.getElementById(detailId);
+                            if (d) d.classList.toggle('hidden');
+                        };
+
+                        row.innerHTML = `
+                           <td class="p-4 font-mono text-xs text-gray-500">COB-${s.id}</td>
+                           <td class="p-4 text-xs">${searchDate}</td>
+                           <td class="p-4 text-xs">
+                               <span class="px-2 py-1 rounded border text-[10px] font-bold ${typeClass}">
+                                   ${scanType}
+                               </span>
+                           </td>
+                           <td class="p-4 text-xs font-mono max-w-[150px] truncate" title="${s.source}">${s.source.replace(/^(CODE_SECURITY|SUPPLY_CHAIN|OMNISENSE|ECHOVISION|VIDEO): ?/i, '')}</td>
+                           <td class="p-4 text-xs ${riskClass}">${s.risk_level || 'UNKNOWN'}</td>
+                           <td class="p-4 text-xs max-w-[200px] truncate" title="${s.verdict || ''}">${s.verdict || '--'}</td>
+                           <td class="p-4 font-mono font-bold">${s.threat_score}</td>
+                        `;
+                        tbody.appendChild(row);
+
+                        // Detail Row
+                        const detailRow = document.createElement('tr');
+                        detailRow.id = detailId;
+                        detailRow.className = "hidden bg-gray-900/50";
+
+                        // Prepare AI Analysis Text
+                        let aiReason = "";
+                        if (s.ai_analysis) {
+                            try {
+                                let parsed = typeof s.ai_analysis === 'string' ? JSON.parse(s.ai_analysis) : s.ai_analysis;
+                                if (parsed.reason) aiReason = parsed.reason;
+                            } catch (e) { }
+                        }
+
+                        // Prepare Findings HTML
+                        let findingsHtml = '<span class="text-gray-500 italic">No findings detected.</span>';
+                        if (s.findings && s.findings.length > 0) {
+                            findingsHtml = `<ul class="list-disc list-inside text-gray-400 space-y-1">`;
+                            s.findings.forEach(f => {
+                                const sev = f.severity ? f.severity.toUpperCase() : 'UNKNOWN';
+                                let safeDetail = f.detail || 'Match found';
+                                if (safeDetail.startsWith('{')) {
+                                    try {
+                                        // If detail is just a score {"score": 0.85}, ignore it or show simplified
+                                        const parsed = JSON.parse(safeDetail);
+                                        safeDetail = parsed.score ? `Confidence: ${Math.round(parsed.score * 100)}%` : 'Match found';
+                                    } catch (e) { }
+                                }
+                                findingsHtml += `<li><span class="text-xs font-bold ${sev === 'HIGH' || sev === 'CRITICAL' ? 'text-alert' : 'text-gray-500'}">[${sev}]</span> ${f.type}: <span class="font-mono text-xs">${safeDetail}</span></li>`;
+                            });
+                            findingsHtml += `</ul>`;
+                        }
+
+                        detailRow.innerHTML = `
+                           <td colspan="7" class="p-6 border-b border-white/10 shadow-inner">
+                               <div class="grid grid-cols-2 gap-6">
+                                   <div>
+                                       ${(s.source && s.source.startsWith('CODE_SECURITY')) || s.scan_type === 'CODE_SECURITY' ? '' : `
+                                           <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Analysis Summary</h4>
+                                           <p class="text-sm text-gray-300 mb-4">${s.summary || s.verdict || 'No summary available.'}</p>
+                                       `}
+                                       
+                                       ${aiReason && (!s.source || !s.source.startsWith('CODE_SECURITY')) ? `
+                                        <div class="mt-4 p-3 bg-blue-900/10 border border-blue-500/20 rounded">
+                                            <h5 class="text-[10px] font-bold text-blue-400 mb-1 uppercase">AI Analysis</h5>
+                                            <p class="text-xs text-blue-200">${aiReason}</p>
+                                        </div>` : ''}
+                                   </div>
+                                   <div>
+                                       <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Detailed Findings</h4>
+                                       <div class="text-xs">
+                                           ${findingsHtml}
+                                       </div>
+                                   </div>
+                               </div>
+                               
+                               ${(() => {
+                                let remediation = [];
+                                let remediationHtml = '';
+                                let contentHtml = '';
+                                try {
+                                    // AI Remediation Plan (Flat Table)
+                                    remediation = [];
+                                    if (s.ai_analysis) {
+                                        try {
+                                            const aiObj = (typeof s.ai_analysis === 'string') ? JSON.parse(s.ai_analysis) : s.ai_analysis;
+                                            if (aiObj && aiObj.remediation) {
+                                                remediation = aiObj.remediation;
+                                            }
+                                        } catch (e) { }
+                                    }
+
+                                    remediationHtml = '';
+                                    if (remediation.length > 0) {
+                                        remediationHtml = `
+                                            <div class="mt-6 border-t border-white/10 pt-4">
+                                                <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">AI Remediation Plan</h4>
+                                                <div class="max-h-[300px] overflow-y-auto border border-white/5 rounded bg-black/20 mt-2">
+                                                    <table class="w-full text-xs text-left">
+                                                        <thead class="bg-gray-800/50 sticky top-0">
+                                                            <tr>
+                                                                <th class="py-2 px-3 text-gray-400 font-normal">Package</th>
+                                                                <th class="py-2 px-3 text-gray-400 font-normal">CVE / Issue</th>
+                                                                <th class="py-2 px-3 text-gray-400 font-normal">Current</th>
+                                                                <th class="py-2 px-3 text-gray-400 font-normal">Recommended Action</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody class="divide-y divide-white/5">
+                                                            ${remediation.map(item => `
+                                                                <tr class="hover:bg-white/5 transition-colors">
+                                                                    <td class="py-2 px-3 text-sm text-white font-medium align-top">${item.package || 'Unknown'}</td>
+                                                                    <td class="py-2 px-3 text-sm text-rose-400 font-mono align-top">${item.cve || item.vulnerability || 'N/A'}</td>
+                                                                    <td class="py-2 px-3 text-sm text-gray-400 align-top">${item.current_version || '?'}</td>
+                                                                    <td class="py-2 px-3 text-sm text-emerald-400 align-top">
+                                                                        <div class="font-bold flex items-center gap-1">
+                                                                            ${item.fixed_version || 'Update'}
+                                                                            ${item.action ? '' : '<svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'}
+                                                                        </div>
+                                                                        ${item.action ? `<div class="text-[10px] mt-1 opacity-80">${item.action}</div>` : ''}
+                                                                    </td>
+                                                                </tr>
+                                                            `).join('')}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }
+
+                                    contentHtml = '';
+                                    if (s.content && (s.content.startsWith('{') || s.content.startsWith('['))) {
+                                        const data = JSON.parse(s.content);
+                                        if (data.segments) {
+                                            contentHtml = `
+                                               <div class="mt-6 border-t border-white/10 pt-4">
+                                                   <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex justify-between">
+                                                       <span>Timestamped Transcript</span>
+                                                       <span class="text-[10px] text-cyan-400">Media source stored locally</span>
+                                                   </h4>
+                                                   <div class="max-h-[300px] overflow-y-auto border border-white/5 rounded bg-black/20 mt-2">
+                                                       <table class="w-full text-xs text-left">
+                                                           <tbody class="divide-y divide-white/5">
+                                                               ${data.segments.map(seg => `
+                                                                   <tr class="hover:bg-white/5 transition-colors group">
+                                                                       <td class="p-2 font-mono text-[10px] text-cyan-400 whitespace-nowrap align-top w-20 opacity-70 group-hover:opacity-100">
+                                                                           ${new Date(seg.start * 1000).toISOString().substr(14, 5)}
+                                                                       </td>
+                                                                       <td class="p-2 text-gray-300 align-top leading-relaxed">${seg.text}</td>
+                                                                   </tr>
+                                                               `).join('')}
+                                                           </tbody>
+                                                       </table>
+                                                   </div>
+                                               </div>`;
+                                        } else if (data.text) {
+                                            // Check if this is a structured Text Report from Code Security
+                                            if (data.text.includes('📦') || data.text.includes('VULNERABILITIES')) {
+                                                const lines = data.text.split('\n');
+                                                let rows = '';
+                                                let currentPkg = '';
+
+                                                lines.forEach(line => {
+                                                    line = line.trim();
+                                                    if (!line) return;
+
+                                                    if (line.startsWith('📦')) {
+                                                        currentPkg = line.substring(1).trim(); // Remove '📦'
+                                                    } else if (line.startsWith('- [')) {
+                                                        // - [CVE] Desc
+                                                        // format: - [CVE-XXX] Description
+                                                        const parts = line.split(']');
+                                                        const cve = parts[0].replace('- [', '').trim();
+                                                        const desc = parts.slice(1).join(']').trim();
+
+                                                        rows += `
+                                                            <tr class="hover:bg-white/5 transition-colors text-xs border-b border-white/5">
+                                                                <td class="p-2 text-white font-medium align-top whitespace-nowrap">${currentPkg}</td>
+                                                                <td class="p-2 text-rose-400 font-mono align-top whitespace-nowrap">${cve}</td>
+                                                                <td class="p-2 text-gray-300 align-top">${desc}</td>
+                                                            </tr>
+                                                         `;
+                                                    } else if (line.startsWith('Fixed in:')) {
+                                                        // Append to previous row if possible, but for simplicity let's just make it its own mini-row or handled in parsing
+                                                        // Actually, simpler to just append nicely.
+                                                        // Let's attach it to the description of the *last* row added? 
+                                                        // Complex with string concatenation.
+                                                        // Alternative: Let's just treat it as a finding detail.
+                                                        rows += `
+                                                            <tr class="bg-black/20 text-[10px] border-b border-white/5">
+                                                                <td class="p-1 text-right text-emerald-500 font-bold" colspan="3">➤ ${line}</td>
+                                                            </tr>
+                                                         `;
+                                                    }
+                                                });
+
+                                                return `
+                                                <div class="mt-6 border-t border-white/10 pt-4">
+                                                     <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider flex justify-between">
+                                                         <span>Vulnerability Report</span>
+                                                         <span class="text-[10px] text-cyan-400">Parsed from Scan</span>
+                                                     </h4>
+                                                     <div class="max-h-[300px] overflow-y-auto border border-white/5 rounded bg-black/20 mt-2">
+                                                         <table class="w-full text-left">
+                                                             <thead class="bg-gray-800/50 sticky top-0">
+                                                                 <tr class="text-[10px] text-gray-400 font-normal">
+                                                                     <th class="p-2">Package</th>
+                                                                     <th class="p-2">CVE/ID</th>
+                                                                     <th class="p-2">Description</th>
+                                                                 </tr>
+                                                             </thead>
+                                                             <tbody class="divide-y divide-white/5">
+                                                                 ${rows}
+                                                             </tbody>
+                                                         </table>
+                                                     </div>
+                                                </div>`;
+                                            }
+
+                                            return `
+                                                <div class="mt-6 border-t border-white/10 pt-4">
+                                                     <h4 class="text-xs font-bold text-gray-500 mb-2 uppercase tracking-wider">Transcript / Report</h4>
+                                                     <pre class="whitespace-pre-wrap font-mono text-xs text-gray-400 bg-black/20 p-2 rounded">${data.text}</pre>
+                                                </div>`;
+                                        }
+                                    }
+                                } catch (e) { }
+                                return contentHtml + remediationHtml;
+                            })()}
+                        </td>
+                    `;
+                        tbody.appendChild(detailRow);
+                    });
+
+                } else {
+                    throw new Error('Failed to fetch scans');
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('archiveLoading').textContent = "ERROR_FETCHING_DATA";
+            }
+        }
+
+        // --- Staging Logic ---
+        let stagedFile = null;
+        let stagedEndpoint = null;
+
+        function handleFileSelection(input) {
+            let endpoint = `/api/scans/upload_file?track=${currentTrack}`;
+            if (currentTrack === 'security') {
+                endpoint = '/api/security/scan';
+            }
+            stageUpload(input, endpoint);
+        }
+
+        function handleVideoSelection(input) {
+            stageUpload(input, '/api/scans/upload_video');
+        }
+
+        function stageUpload(input, endpoint) {
+            const file = input.files[0];
+            if (!file) return;
+
+            stagedFile = file;
+            stagedEndpoint = endpoint;
+
+            // Show Staging View
+            document.getElementById('inputZone').classList.add('hidden');
+            document.getElementById('stagingView').classList.remove('hidden');
+
+            // Metadata
+            document.getElementById('stagedFileName').textContent = file.name;
+            document.getElementById('stagedFileSize').textContent = formatBytes(file.size);
+
+            // Redaction Check (Only for Guardian and text/doc types)
+            const ext = file.name.split('.').pop().toLowerCase();
+            const supportedRedaction = ['txt', 'json', 'md', 'csv', 'log', 'xml', 'yaml', 'yml', 'pdf', 'docx', 'docm', 'xlsx', 'xlsm'];
+
+            const redOpt = document.getElementById('redactionOption');
+            // DISABLED BY USER REQUEST: Always hide redaction option
+            redOpt.classList.add('hidden');
+            /*
+            if (currentTrack === 'guardian' && supportedRedaction.includes(ext)) {
+                redOpt.classList.remove('hidden');
+                document.getElementById('correctCheckbox').checked = false; // Reset
+            } else {
+                redOpt.classList.add('hidden');
+            }
+            */
+        }
+
+        function cancelStaging() {
+            stagedFile = null;
+            stagedEndpoint = null;
+            document.getElementById('stagingView').classList.add('hidden');
+            document.getElementById('inputZone').classList.remove('hidden');
+            document.getElementById('fileInput').value = '';
+            document.getElementById('videoInput').value = '';
+        }
+
+        async function startScan() {
+            if (!stagedFile || !stagedEndpoint) return;
+            await processUpload(stagedFile, stagedEndpoint);
+        }
+
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        // --- Upload Logic ---
+        async function processUpload(file, endpoint) {
+            if (!file) return;
+
+            // Update UI
+            document.getElementById('stagingView').classList.add('hidden');
+            document.getElementById('loader').classList.remove('hidden');
+
+            // Hide previous results
+            document.getElementById('resultsView').classList.add('hidden');
+            document.getElementById('btnDownloadSafe').classList.add('hidden');
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const headers = {};
+            if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+            // Handle URL params
+            let url = new URL(endpoint, window.location.origin);
+
+            // Append correct=true if checked AND visible
+            const redOpt = document.getElementById('redactionOption');
+            if (!redOpt.classList.contains('hidden') && document.getElementById('correctCheckbox').checked) {
+                url.searchParams.append('correct', 'true');
+            }
+
+            try {
+                // Ensure track param is present if needed (endpoint usually has it constructed)
+                const res = await fetch(url.toString(), {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Upload Failed');
+
+                renderResults(data);
+
+                // Refresh User Data (Credits)
+                await setupAuth();
+
+            } catch (e) {
+                alert(`SCAN_FAILED: ${e.message} `);
+                window.location.reload(); // Simple reset
+            } finally {
+                document.getElementById('loader').classList.add('hidden');
+                // Reset Staging
+                stagedFile = null;
+                document.getElementById('fileInput').value = '';
+                document.getElementById('videoInput').value = '';
+            }
+        }
+
+        // Removed old handlers that directly processed input
+        /*
+        async function handleFileUpload(input) { ... }
+        async function handleVideoUpload(input) { ... }
+        */
+
+        async function performSafeWash() {
+            const btn = document.getElementById('btnSafeWash');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `< svg class="w-4 h-4 animate-spin" fill = "none" viewBox = "0 0 24 24" stroke = "currentColor" > <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg > SCRUBBING...`;
+
+            // Simulate CDR Logic
+            await new Promise(r => setTimeout(r, 2000));
+
+            btn.innerHTML = `< svg class="w-4 h-4" fill = "none" stroke = "currentColor" viewBox = "0 0 24 24" > <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg > WASH COMPLETE`;
+            btn.classList.remove('bg-green-600');
+            btn.classList.add('bg-blue-600');
+
+            // Add a "Sanitized" badge to findings
+            const findingsDiv = document.getElementById('scanFindings');
+            const washBanner = document.createElement('div');
+            washBanner.className = "col-span-full bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-400 text-sm flex items-center gap-3 animate-bounce";
+            washBanner.innerHTML = `< svg class="w-6 h-6" fill = "none" stroke = "currentColor" viewBox = "0 0 24 24" > <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg >
+                    <span><strong>SAFE WASH SUCCESSFUL:</strong> All active threats, PII, and suspicious macros have been disarmed. A clean copy of this file has been archived.</span>`;
+            findingsDiv.prepend(washBanner);
+        }
+
+
+
+        function renderResults(data) {
+            currentScanResult = data;
+
+            const resultsDiv = document.getElementById('resultsView');
+            resultsDiv.classList.remove('hidden');
+
+            resultsDiv.classList.remove('hidden');
+
+            // --- VIEW TOGGLING ---
+            const isCodeSecurity = currentTrack === 'security';
+            /*
+            // const isCodeSecurity = currentTrack === 'security'; // Moved up
+            const standardView = document.getElementById('standardResultsContent');
+            const codeSecurityView = document.getElementById('codeSecurityView');
+ 
+            if (isCodeSecurity && codeSecurityView) {
+                if (standardView) standardView.classList.add('hidden');
+                codeSecurityView.classList.remove('hidden');
+ 
+                // Prepare AI Result
+                let aiResult = {};
+                try {
+                    if (data.ai_analysis) {
+                        aiResult = typeof data.ai_analysis === 'string' ? JSON.parse(data.ai_analysis) : data.ai_analysis;
+                    }
+                } catch (e) { }
+ 
+                renderCodeSecurityView(data, aiResult);
+                return; // Stop standard rendering
+            } else {
+                // Standard View
+                if (standardView) standardView.classList.remove('hidden');
+                if (codeSecurityView) codeSecurityView.classList.add('hidden');
+            }
+            */
+
+            const standardView = document.getElementById('standardResultsContent');
+            if (standardView) standardView.classList.remove('hidden');
+
+            // --- STANDARD RENDERING ---
+
+
+            // Score
+            const score = data.threat_score || 0;
+            const scoreEl = document.getElementById('scoreValue');
+            scoreEl.innerHTML = `${score} <span class="text-xl text-gray-600">/100</span>`;
+            if (score > 80) scoreEl.className = "text-5xl font-black text-alert";
+            else if (score > 50) scoreEl.className = "text-5xl font-black text-warning";
+            else scoreEl.className = "text-5xl font-black text-success";
+
+            // Verdict
+            const vBox = document.getElementById('verdictBox');
+            let vText = data.verdict || 'UNKNOWN';
+
+            // DEBUG: Inject diagnostic info
+            const dSrc = data.source || 'null';
+            const dType = data.scan_type || 'null';
+            const dVer = data.verdict || 'null';
+            const dIsCode = (dSrc.startsWith && dSrc.startsWith('CODE_SECURITY')) ||
+                (dType === 'CODE_SECURITY') ||
+                (dVer.includes && dVer.includes("Scan complete."));
+
+            vText += ` [DBG: IsCol=${dIsCode}, Src=${dSrc}, Type=${dType}]`;
+
+            vBox.textContent = `VERDICT: ${vText} `;
+
+            if (data.risk_level === 'CRITICAL' || data.risk_level === 'HIGH') {
+                vBox.className = "mt-4 p-2 rounded text-[11px] font-mono border bg-red-900/20 border-alert/30 text-alert";
+            } else if (data.risk_level === 'LOW') {
+                vBox.className = "mt-4 p-2 rounded text-[11px] font-mono border bg-green-900/20 border-success/30 text-success";
+            } else {
+                vBox.className = "mt-4 p-2 rounded text-[11px] font-mono border bg-orange-900/20 border-warning/30 text-warning";
+            }
+
+            // Context
+            document.getElementById('scanDuration').textContent = data.scan_duration_ms || 0;
+            document.getElementById('resScanId').textContent = data.id || '--';
+
+            // 1. Basic Summary
+            // Sanitize: If summary looks like JSON, use verdict instead.
+            let summaryText = data.summary || "Scan completed successfully.";
+            if (summaryText.trim().startsWith('{')) {
+                summaryText = data.verdict || "Scan complete.";
+            }
+            document.getElementById('scanSummary').innerText = summaryText;
+
+            // 2. AI Analysis & Remediation
+            const aiInsightPanel = document.getElementById('aiInsightPanel');
+            const aiSummaryText = document.getElementById('aiSummaryText');
+            const remediationPanel = document.getElementById('remediationPanel');
+            const remediationTable = document.getElementById('remediationTableBody');
+            const findingsPanel = document.getElementById('findingsPanelContainer');
+
+            // Reset
+            if (aiInsightPanel) aiInsightPanel.classList.add('hidden');
+            if (remediationPanel) remediationPanel.classList.add('hidden');
+            if (remediationTable) remediationTable.innerHTML = '';
+
+            // Check Scan Type logic (using source, scan_type, AND verdict heuristic)
+            const isCodeSec = (data.source && data.source.startsWith('CODE_SECURITY')) ||
+                (data.scan_type === 'CODE_SECURITY') ||
+                (data.verdict && data.verdict.includes("Scan complete."));
+
+            if (isCodeSec) {
+                // FORCE CLEAR SUMMARY
+                if (document.getElementById('scanSummary')) document.getElementById('scanSummary').innerText = data.verdict;
+                if (aiSummaryText) aiSummaryText.innerText = "";
+
+                // Keep the JSON dump hidden
+                if (findingsPanel) findingsPanel.classList.add('hidden');
+            } else {
+                if (findingsPanel) findingsPanel.classList.remove('hidden');
+            }
+
+            let aiResult = null;
+            if (data.ai_analysis) {
+                try {
+                    // Initial Parse
+                    let parsed = typeof data.ai_analysis === 'string' ? JSON.parse(data.ai_analysis) : data.ai_analysis;
+
+                    // AGGRESSIVE UNWRAP SEARCH
+                    // We look for an object that has 'remediation' or 'summary'
+                    let candidates = [parsed];
+
+                    if (parsed.ai_analysis) {
+                        candidates.push(parsed.ai_analysis);
+                        // Handle simplified double-string-encoding case
+                        if (typeof parsed.ai_analysis === 'string') {
+                            try { candidates.push(JSON.parse(parsed.ai_analysis)); } catch (e) { }
+                        }
+                    }
+
+                    // Priority 1: Has Remediation Array (This is what builds the table)
+                    const hasRemediation = (obj) => obj && Array.isArray(obj.remediation) && obj.remediation.length > 0;
+
+                    // Priority 2: Has Summary (Fallback)
+                    const hasSummary = (obj) => obj && obj.summary;
+
+                    // Select best candidate
+                    aiResult = candidates.find(hasRemediation) || candidates.find(hasSummary) || parsed;
+
+                } catch (e) {
+                    console.error("Failed to parse AI analysis", e);
+                }
+            }
+
+            if (aiResult) {
+                // Populate AI Insight Block
+                // Logic: 
+                // - If Code Security: Show Clean Summary (result.summary), Hide Raw JSON.
+                // - If Other: Show standard reason/verdict.
+
+                if (isCodeSec) {
+                    // Show Clean Summary only
+                    if (aiResult.summary) {
+                        aiInsightPanel.classList.remove('hidden');
+                        aiSummaryText.innerText = aiResult.summary;
+                    } else if (aiResult.verdict) {
+                        aiInsightPanel.classList.remove('hidden');
+                        aiSummaryText.innerText = aiResult.verdict;
+                    } else {
+                        aiInsightPanel.classList.add('hidden');
+                    }
+                } else {
+                    // Standard Logic
+                    if (aiResult.reason || aiResult.verdict) {
+                        aiInsightPanel.classList.remove('hidden');
+                        aiSummaryText.innerText = aiResult.reason || `Verdict: ${aiResult.verdict} `;
+                    }
+                }
+
+                // Populate Remediation Plan (Handles nested structure)
+                let remediationList = aiResult.remediation || (aiResult.ai_analysis && aiResult.ai_analysis.remediation) || [];
+
+
+                if (remediationList && Array.isArray(remediationList) && remediationList.length > 0) {
+                    remediationPanel.classList.remove('hidden');
+                    remediationList.forEach(item => {
+                        const tr = document.createElement('tr');
+                        tr.className = "border-b border-gray-800 hover:bg-white/5";
+
+                        // Parse Package/CVE
+                        let pkg = item.package || "Unknown";
+                        let cve = item.cve || "";
+
+                        // Severity Color
+                        // Try to find severity from findings if possible, or just use generic
+                        // Severity Color Map
+                        let sevClass = "text-gray-400";
+                        const s = (item.severity || "").toUpperCase();
+                        if (s === "CRITICAL") sevClass = "text-red-500 font-bold";
+                        else if (s === "HIGH") sevClass = "text-orange-500 font-bold";
+                        else if (s === "MEDIUM") sevClass = "text-yellow-500";
+                        else if (s === "LOW") sevClass = "text-blue-400";
+
+                        // Action Link Logic
+                        let actionHtml = `<span class="italic text-gray-500">${item.action || 'Upgrade'}</span>`;
+                        if (item.link) {
+                            actionHtml = `<a href="${item.link}" target="_blank" class="text-brand hover:text-white underline decoration-dotted underline-offset-4 flex items-center gap-1">
+                                ${item.action || 'View Fix'}
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>`;
+                        }
+
+                        tr.innerHTML = `
+                            <td class="p-4 align-top">
+                                <div class="font-bold text-gray-200">${pkg}</div>
+                                <div class="text-xs text-gray-500 font-mono mt-1">Current: <span class="text-gray-400">${item.current_version || 'Unknown'}</span></div>
+                            </td>
+                            <td class="p-4 align-top">
+                                <div class="text-xs text-brand font-mono leading-relaxed max-w-xs break-words">${cve}</div>
+                            </td>
+                            <td class="p-4 align-top whitespace-nowrap">
+                                <span class="${sevClass} text-xs uppercase tracking-wide px-2 py-1 rounded bg-gray-800/50 border border-gray-700">${item.severity || 'Unknown'}</span>
+                            </td>
+                            <td class="p-4 align-top whitespace-nowrap">
+                                <div class="font-bold text-success text-sm">${item.fixed_version || 'Check Report'}</div>
+                            </td>
+                            <td class="p-4 align-top text-xs">
+                                ${actionHtml}
+                            </td>
+                        `;
+                        remediationTable.appendChild(tr);
+                    });
+                }
+            }
+
+            // Display Report if available (Fallback/Append)
+            if (data.report && summaryText.length < 50) {
+                // If summary is short/empty, maybe show a bit of report
+                // But better to leave it clean.
+            }
+
+            // Handle CDR / Redaction URL
+            const btnDownload = document.getElementById('btnDownloadSafe');
+            btnDownload.classList.add('hidden');
+
+            // Check for Safe Wash (CDR) or Redaction
+            let downloadUrl = null;
+            let downloadLabel = "DOWNLOAD SAFE COPY";
+
+            if (aiResult) {
+                if (aiResult.cdr && aiResult.cdr.url) {
+                    downloadUrl = aiResult.cdr.url;
+                    downloadLabel = "DOWNLOAD SAFE COPY (CDR)";
+                }
+                if (aiResult.redaction && aiResult.redaction.url) {
+                    downloadUrl = aiResult.redaction.url;
+                    downloadLabel = "DOWNLOAD REDACTED COPY";
+                }
+            }
+
+            if (downloadUrl) {
+                btnDownload.href = downloadUrl;
+                btnDownload.innerHTML = `
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4">
+                        </path>
+                    </svg>
+                    ${downloadLabel}`;
+                btnDownload.classList.remove('hidden');
+            }
+
+            // Summary Update
+            document.getElementById('scanSummary').innerText = summaryText;
+
+            // Compliance Alerts
+            const complianceDiv = document.getElementById('complianceAlerts');
+            let alerts = [];
+
+            // AI Result Object (Reuse existing aiResult from above)
+
+            if (aiResult) {
+                // 1. From explicit alerts field
+                if (aiResult.compliance_alerts && Array.isArray(aiResult.compliance_alerts)) {
+                    alerts = aiResult.compliance_alerts;
+                }
+
+                // 2. From Tags in Reason (Legacy/LangChain)
+                if (aiResult.reason) {
+                    const tagRegex = /\[(HIPAA|PCI|SOC2|GDPR|ISO27001)[^\]]*\]/gi;
+                    const matches = aiResult.reason.match(tagRegex);
+                    if (matches) {
+                        matches.forEach(m => {
+                            const tag = m.replace(/[\[\]]/g, '').toUpperCase();
+                            if (!alerts.includes(tag)) alerts.push(tag);
+                        });
+                    }
+                }
+            }
+
+            if (complianceDiv) {
+                complianceDiv.innerHTML = '';
+                if (alerts.length > 0) {
+                    complianceDiv.classList.remove('hidden');
+                    alerts.forEach(alert => {
+                        const span = document.createElement('span');
+                        span.className = 'px-2 py-1 bg-red-900/50 text-red-200 text-xs rounded border border-red-700 font-mono mr-2 mb-2 inline-block';
+                        span.innerText = alert;
+                        complianceDiv.appendChild(span);
+                    });
+                } else {
+                    complianceDiv.classList.add('hidden');
+                }
+            }
+
+            // --- NEW: Code Security View Switcher ---
+
+
+
+            // Visualize Flow
+            const findings = data.findings || [];
+
+            // Flow Containers
+            const flowMalware = document.getElementById('flow-malware');
+            const flowDLP = document.getElementById('flow-dlp');
+            const flowCodeSec = document.getElementById('flow-code-sec');
+
+            // Determine Flow Type
+            const scanType = (data.scan_type || 'SENTINEL').toUpperCase();
+
+            // Code Security Flow
+            if (isCodeSecurity) {
+                if (flowMalware) flowMalware.classList.add('hidden');
+                if (flowDLP) flowDLP.classList.add('hidden');
+                if (flowCodeSec) flowCodeSec.classList.remove('hidden');
+
+                // Animate Steps (Trivy -> OSV -> Remediation)
+                setTimeout(() => {
+                    document.getElementById('step-trivy').classList.replace('text-gray-400', 'text-brand');
+                    document.getElementById('step-trivy').classList.replace('border-gray-600', 'border-brand');
+                }, 500);
+
+                setTimeout(() => {
+                    document.getElementById('step-osv').classList.replace('text-gray-400', 'text-brand');
+                    document.getElementById('step-osv').classList.replace('border-gray-600', 'border-brand');
+                }, 1200);
+
+                setTimeout(() => {
+                    document.getElementById('step-remediate').classList.replace('text-gray-400', 'text-brand');
+                    document.getElementById('step-remediate').classList.replace('border-gray-600', 'border-brand');
+                }, 1800);
+
+            }
+            // DLP Flow
+            else if (['GUARDIAN', 'DLP', 'VISION', 'OMNISENSE', 'ECHOVISION'].includes(scanType)) {
+                if (flowMalware) flowMalware.classList.add('hidden');
+                if (flowCodeSec) flowCodeSec.classList.add('hidden');
+                if (flowDLP) flowDLP.classList.remove('hidden');
+
+
+                const steps = {
+                    regex: document.getElementById('step-regex'),
+                    ai: document.getElementById('step-ai'),
+                    context: document.getElementById('step-context'),
+                    redact: document.getElementById('step-redact')
+                };
+
+                // Reset DLP Steps
+                if (steps.regex && steps.ai && steps.context) {
+                    Object.values(steps).forEach(el => {
+                        if (!el) return;
+                        el.classList.remove('text-brand', 'text-alert', 'text-success', 'border-brand', 'border-alert', 'border-success', 'border-gray-600', 'text-gray-400');
+                        el.classList.add('border-gray-600', 'text-gray-400');
+                    });
+
+                    // 1. Regex Engine (Always runs)
+                    steps.regex.classList.remove('border-gray-600', 'text-gray-400');
+                    steps.regex.classList.add('border-brand', 'text-brand');
+
+                    // 2. AI Analysis
+                    if (data.ai_analysis) {
+                        steps.ai.classList.remove('border-gray-600', 'text-gray-400');
+                        steps.ai.classList.add('border-brand', 'text-brand');
+                    }
+
+                    // 3. Context Scan (Final Analysis)
+                    // If we have AI analysis, we did context scan
+                    if (data.ai_analysis) {
+                        steps.context.classList.remove('border-gray-600', 'text-gray-400');
+                        steps.context.classList.add('border-brand', 'text-brand');
+                    }
+
+                    // 4. Safe Wash (Conditional)
+                    const line = document.getElementById('line-cdr-dlp');
+                    const container = document.getElementById('container-cdr-dlp');
+                    let hasRedaction = false;
+
+                    if (data.ai_analysis) {
+                        try {
+                            const ai = typeof data.ai_analysis === 'string' ? JSON.parse(data.ai_analysis) : data.ai_analysis;
+                            if (ai.redaction) hasRedaction = true;
+                        } catch (e) { }
+                    }
+
+                    if (hasRedaction) {
+                        if (line) line.classList.remove('hidden');
+                        if (container) container.classList.remove('hidden');
+                        if (steps.redact) {
+                            steps.redact.classList.remove('border-gray-600', 'text-gray-400');
+                            steps.redact.classList.add('border-success', 'text-success');
+                        }
+                    } else {
+                        // Hide if not present
+                        if (line) line.classList.add('hidden');
+                        if (container) container.classList.add('hidden');
+                    }
+                }
+
+            } else {
+                // Show Malware Flow (Default)
+                if (flowDLP) flowDLP.classList.add('hidden');
+                if (flowCodeSec) flowCodeSec.classList.add('hidden');
+                if (flowMalware) flowMalware.classList.remove('hidden');
+
+                const isMalware = findings.some(f => f.type.toLowerCase().includes('malware') || f.type.toLowerCase().includes('clamav') || f.type.toLowerCase().includes('yara'));
+                const steps = {
+                    av: document.getElementById('step-av'),
+                    yara: document.getElementById('step-yara'),
+                    macro: document.getElementById('step-macro'),
+                    cdr: document.getElementById('step-cdr-malware')
+                };
+
+                // Reset Malware Steps
+                if (steps.av && steps.yara && steps.macro) {
+                    Object.values(steps).forEach(el => {
+                        if (!el) return;
+                        el.classList.remove('text-brand', 'text-alert', 'text-success', 'border-brand', 'border-alert', 'border-success', 'border-gray-600', 'text-gray-400');
+                        el.classList.add('border-gray-600', 'text-gray-400');
+                    });
+
+                    // AV & YARA Status
+                    if (isMalware) {
+                        if (steps.av) { steps.av.classList.remove('border-gray-600', 'text-gray-400'); steps.av.classList.add('border-alert', 'text-alert'); }
+                        if (steps.yara) { steps.yara.classList.remove('border-gray-600', 'text-gray-400'); steps.yara.classList.add('border-alert', 'text-alert'); }
+                        if (steps.macro) { steps.macro.classList.remove('border-gray-600', 'text-gray-400'); steps.macro.classList.add('border-alert', 'text-alert'); }
+
+                    } else {
+                        if (steps.av) { steps.av.classList.remove('border-gray-600', 'text-gray-400'); steps.av.classList.add('border-brand', 'text-brand'); }
+                        if (steps.yara) { steps.yara.classList.remove('border-gray-600', 'text-gray-400'); steps.yara.classList.add('border-brand', 'text-brand'); }
+                        if (steps.macro) { steps.macro.classList.remove('border-gray-600', 'text-gray-400'); steps.macro.classList.add('border-brand', 'text-brand'); }
+                    }
+
+                    // Safe Wash (CDR) - Conditional
+                    const cdrInfo = data.cdr_info;
+                    const line = document.getElementById('line-cdr-malware');
+                    const container = document.getElementById('container-cdr-malware');
+
+                    if (cdrInfo) {
+                        if (line) line.classList.remove('hidden');
+                        if (container) container.classList.remove('hidden');
+
+                        if (cdrInfo.status === 'success' || cdrInfo.status === 'local_only') {
+                            if (steps.cdr) {
+                                steps.cdr.classList.remove('border-gray-600', 'text-gray-400');
+                                steps.cdr.classList.add('border-success', 'text-success'); // Green for Clean
+                            }
+                        } else {
+                            if (steps.cdr) {
+                                steps.cdr.classList.remove('border-gray-600', 'text-gray-400');
+                                steps.cdr.classList.add('border-warning', 'text-warning'); // Warning if failed
+                            }
+                        }
+                    } else {
+                        // Hide if not run
+                        if (line) line.classList.add('hidden');
+                        if (container) container.classList.add('hidden');
+                    }
+                }
+            }
+
+            // Findings Table
+            const tbody = document.getElementById('findingsBody');
+            tbody.innerHTML = '';
+
+            if (data.findings && data.findings.length > 0) {
+                document.getElementById('noFindings').classList.add('hidden');
+
+                // 0. Compliance Impact Row (Top Priority)
+                let impacts = [];
+                if (aiResult && aiResult.compliance_alerts && Array.isArray(aiResult.compliance_alerts)) {
+                    impacts = aiResult.compliance_alerts;
+                }
+
+                if (impacts.length > 0) {
+                    const row = document.createElement('tr');
+                    row.classList.add('bg-red-900/10', 'border-l-4', 'border-alert');
+                    row.innerHTML = `
+                        <td class="p-4 font-bold text-alert font-mono">COMPLIANCE IMPACT</td>
+                        <td class="p-4 text-alert font-bold uppercase">CRITICAL</td>
+                        <td class="p-4 font-mono text-gray-300">
+                            Potential violation of: ${impacts.map(i => `<span class="px-2 py-0.5 bg-red-500/20 text-red-200 rounded border border-red-500/50 mx-1">${i}</span>`).join('')}
+                        </td>
+                `;
+                    tbody.appendChild(row);
+                }
+
+                // Aggregate Findings
+                const aggregated = {};
+                data.findings.forEach(f => {
+                    const metaStr = typeof f.metadata === 'object' ? JSON.stringify(f.metadata) : (f.detail || '');
+                    const key = `${f.type}| ${f.severity}| ${metaStr} `;
+
+                    if (!aggregated[key]) {
+                        aggregated[key] = {
+                            type: f.type,
+                            severity: f.severity,
+                            meta: metaStr,
+                            count: 0
+                        };
+                    }
+
+
+                    aggregated[key].count += 1;
+                });
+
+                // Render Aggregated Findings
+                Object.values(aggregated).forEach(item => {
+                    const row = document.createElement('tr');
+
+                    let sevClass = "text-gray-400";
+                    if (item.severity === 'high' || item.severity === 'HIGH') sevClass = "text-alert font-bold";
+                    if (item.severity === 'medium' || item.severity === 'MEDIUM') sevClass = "text-warning";
+                    if (item.severity === 'critical' || item.severity === 'CRITICAL') sevClass = "text-red-500 font-black";
+
+                    const countBadge = item.count > 1 ? `<span class="ml-2 px-2 py-0.5 bg-gray-700 rounded text-xs text-white">x${item.count}</span>` : '';
+
+                    row.innerHTML = `
+                <td class="p-4 font-bold text-gray-300 font-mono flex items-center">
+                    ${item.type} ${countBadge}
+                </td>
+                <td class="p-4 ${sevClass} uppercase">${item.severity}</td>
+                <td class="p-4 font-mono text-gray-500 break-all text-xs">${item.meta}</td>
+            `;
+                    tbody.appendChild(row);
+                });
+            } else {
+                document.getElementById('noFindings').classList.remove('hidden');
+            }
+
+            // Append Report Text if available (Security Track)
+            if (data.report) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="p-4 font-bold text-gray-300 font-mono" colspan="3">
+                        <div class="font-bold text-brand mb-2">FULL SCAN REPORT</div>
+                        <pre class="whitespace-pre-wrap font-mono text-xs text-gray-400 bg-black/20 p-4 rounded overflow-auto max-h-[300px]">${data.report}</pre>
+                    </td>
+                     `;
+                if (document.getElementById('noFindings').classList.contains('hidden')) {
+                    tbody.appendChild(row);
+                } else {
+                    document.getElementById('noFindings').classList.add('hidden');
+                    tbody.appendChild(row);
+                }
+            }
+
+            // Update Credits if returned
+            if (data.credits_remaining !== undefined) {
+                updateCredits(data.credits_remaining);
+            }
+        }
+
+        function copyJSON() {
+            if (!currentScanResult) return;
+            navigator.clipboard.writeText(JSON.stringify(currentScanResult, null, 2));
+            alert('JSON copied to clipboard');
+        }
+
+        function renderCodeSecurityView(data, aiResult) {
+            // 1. Meta
+            document.getElementById('scReportId').innerText = `#${data.id} `;
+            document.getElementById('scDuration').innerText = `${((data.scan_duration_ms || 0) / 1000).toFixed(2)} s`;
+
+            // 2. Score
+            const score = data.threat_score || 0;
+            const scoreEl = document.getElementById('scThreatScore');
+            scoreEl.innerHTML = `${score} <span class="unit">/100</span>`;
+
+            // Color Logic for Score
+            scoreEl.className = "value"; // Reset
+            if (score > 80) scoreEl.classList.add("text-neon-red");
+            else if (score > 50) scoreEl.classList.add("text-orange-400");
+            else scoreEl.classList.add("text-green-400");
+
+            // 3. Risk Badge
+            // Note: If no risk level, default to UNKNOWN
+            const risk = data.risk_level || 'UNKNOWN';
+            const badge = document.getElementById('scRiskBadge');
+            badge.innerText = risk;
+
+            // Reset styles
+            badge.className = "badge-critical"; // Default class
+            badge.style.color = "";
+            badge.style.background = "";
+            badge.style.borderColor = "";
+
+            if (risk === 'CRITICAL' || risk === 'HIGH') {
+                // Keep default red style
+            } else if (risk === 'MEDIUM') {
+                badge.style.color = "#ff9900";
+                badge.style.background = "rgba(255, 153, 0, 0.15)";
+                badge.style.borderColor = "rgba(255, 153, 0, 0.3)";
+            } else {
+                badge.style.color = "#00cc66";
+                badge.style.background = "rgba(0, 204, 102, 0.15)";
+                badge.style.borderColor = "rgba(0, 204, 102, 0.3)";
+            }
+
+            // 4. Stats
+            const statsList = document.getElementById('scStatsList');
+            let crit = 0, high = 0, med = 0;
+            if (data.findings) {
+                data.findings.forEach(f => {
+                    const sev = (f.severity || '').toUpperCase();
+                    if (sev === 'CRITICAL') crit++;
+                    if (sev === 'HIGH') high++;
+                    if (sev === 'MEDIUM') med++;
+                });
+            }
+            statsList.innerHTML = `
+                    < li ><span class="dot red"></span> <strong>${crit}</strong> Critical Threats</li >
+                <li><span class="dot orange"></span> <strong>${high}</strong> High Threats</li>
+                <li><span class="dot green"></span> <strong>${med}</strong> Medium Threats</li>
+                `;
+
+            // 5. Remediation Grid
+            const grid = document.getElementById('scRemediationGrid');
+            grid.innerHTML = '';
+
+            if (aiResult && aiResult.remediation && Array.isArray(aiResult.remediation)) {
+                aiResult.remediation.forEach(item => {
+                    const box = document.createElement('div');
+                    box.className = "sc-fix-box";
+
+                    // Interactive click to copy fix
+                    box.onclick = () => {
+                        navigator.clipboard.writeText(`pip install ${item.package}== ${item.fixed_version} `);
+                        alert('Fix command copied!');
+                    };
+                    box.style.cursor = "pointer";
+
+                    box.innerHTML = `
+                    < div class="fix-header" >
+                            <span class="pkg-name">${item.package}</span>
+                            <span class="arrow">➜</span>
+                            <span class="version-badge">${item.fixed_version || 'Update'}</span>
+                        </div >
+                        <p class="fix-reason">${item.cve ? '<strong>' + item.cve + '</strong>: ' : ''} ${item.strategy || 'Vulnerability detected.'}</p>
+                        <div class="code-snippet">pip install ${item.package}==${item.fixed_version || 'latest'}</div>
+                `;
+                    grid.appendChild(box);
+                });
+            } else {
+                grid.innerHTML = '<div class="text-gray-500 italic p-4">No specific remediation plan generated.</div>';
+            }
+
+            // 6. Terminal Log
+            const term = document.getElementById('scTerminalContent');
+            const counter = document.getElementById('scFindingsCount');
+
+            counter.innerText = `${data.findings ? data.findings.length : 0} Issues`;
+
+            if (data.report) {
+                // Colorize the log
+                let safeReport = data.report
+                    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;") // sanitize HTML
+                    .replace(/\[CRITICAL\]/g, '<span class="log-crit">[CRITICAL]</span>')
+                    .replace(/\[HIGH\]/g, '<span class="log-high">[HIGH]</span>')
+                    .replace(/\[MEDIUM\]/g, '<span class="log-med">[MEDIUM]</span>');
+
+                term.innerHTML = safeReport;
+            } else {
+                term.innerText = "No raw log available.";
+            }
+        }
+    </script>
+</body>
+
+</html>

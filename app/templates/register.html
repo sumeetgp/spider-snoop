@@ -5,57 +5,42 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEW IDENTITY // SPIDERCOB</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Particles -->
+    <script src="/static/js/particles.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        glass: 'rgba(22, 27, 34, 0.7)',
+                        border: '#30363d',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        brand: '#88FFFF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg-void: #050505;
-            --accent-cyan: #00F0FF;
-            --accent-purple: #BC13FE;
-            --text-main: #E0E0E0;
-            --text-dim: #888888;
-            --glass-bg: rgba(20, 20, 20, 0.6);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: var(--bg-void);
-            color: var(--text-main);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            position: relative;
+            background-color: #0D1117;
+            color: #C9D1D9;
+            overflow-x: hidden;
         }
 
-        /* Scanline Overlay */
-        body::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: repeating-linear-gradient(to bottom,
-                    transparent 0%,
-                    rgba(0, 0, 0, 0.2) 50%,
-                    transparent 100%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.3;
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
         }
 
         #bgCanvas {
@@ -65,243 +50,106 @@
             width: 100%;
             height: 100%;
             z-index: -1;
-        }
-
-        .card {
-            background: var(--glass-bg);
-            backdrop-filter: blur(10px);
-            padding: 30px 40px;
-            width: 100%;
-            max-width: 450px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-
-            /* Chamfered Edges */
-            clip-path: polygon(20px 0, 100% 0,
-                    100% calc(100% - 20px), calc(100% - 20px) 100%,
-                    0 100%, 0 20px);
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-
-        .card:hover {
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 20px rgba(188, 19, 254, 0.2);
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 10px var(--accent-cyan);
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.2rem;
-            letter-spacing: 2px;
-            color: var(--text-main);
-        }
-
-        p {
-            color: var(--text-dim);
-            font-size: 0.8rem;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 6px;
-            color: var(--accent-purple);
-            /* Purple for Register to diff */
-            font-size: 0.8rem;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid #333;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1rem;
-            transition: 0.3s;
-        }
-
-        .form-control:focus {
-            outline: none;
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 10px rgba(188, 19, 254, 0.3);
-            background: rgba(0, 0, 0, 0.8);
-        }
-
-        .btn-glitch {
-            width: 100%;
-            background: transparent;
-            color: var(--accent-purple);
-            border: 1px solid var(--accent-purple);
-            padding: 15px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 10px;
-        }
-
-        .btn-glitch:hover {
-            background: var(--accent-purple);
-            color: #000;
-            box-shadow: 0 0 20px var(--accent-purple);
-        }
-
-        .links {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 0.8rem;
-            color: var(--text-dim);
-        }
-
-        .links a {
-            color: var(--accent-cyan);
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .links a:hover {
-            color: #fff;
-            text-shadow: 0 0 5px var(--accent-cyan);
-        }
-
-        .error-msg {
-            color: #ff3333;
-            font-size: 0.9rem;
-            margin-top: 15px;
-            text-align: center;
-            display: none;
-            border: 1px solid #ff3333;
-            padding: 5px;
-            background: rgba(255, 51, 51, 0.1);
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            color: var(--text-dim);
-            font-size: 1.5rem;
-            text-decoration: none;
-            transition: 0.3s;
-        }
-
-        .close-btn:hover {
-            color: var(--accent-purple);
+            opacity: 0.3;
         }
     </style>
 </head>
 
-<body>
+<body class="h-screen flex items-center justify-center font-sans overflow-hidden relative">
     <canvas id="bgCanvas"></canvas>
-    <div class="card">
-        <a href="/" class="close-btn">&times;</a>
-        <div class="header">
-            <span class="logo">&lt;SpiderCob /&gt;</span>
-            <h1>INITIALIZE_IDENTITY</h1>
-            <p>// CREATE_NEW_RECORD</p>
+
+    <div
+        class="glass-panel p-8 rounded-xl w-full max-w-md relative z-10 shadow-2xl hover:border-brand transition duration-500">
+        <a href="/" class="absolute top-4 right-4 text-gray-500 hover:text-white transition">&times;</a>
+
+        <div class="text-center mb-6">
+            <div class="flex items-center justify-center gap-1 text-2xl font-black tracking-tighter text-white">
+                <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <h1 class="text-sm font-bold tracking-widest text-gray-400 mt-2">INITIALIZE_IDENTITY</h1>
+            <p class="text-xs font-mono text-gray-600">// CREATE_NEW_RECORD</p>
         </div>
-        <form id="registerForm" onsubmit="handleRegister(event)">
-            <div class="form-group">
-                <label>FULL_NAME</label>
-                <input type="text" id="fullname" class="form-control" required placeholder="John Doe">
+
+        <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">FULL_NAME</label>
+                <input type="text" id="fullname"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="John Doe">
             </div>
-            <div class="form-group">
-                <label>USERNAME</label>
-                <input type="text" id="username" class="form-control" required placeholder="user_handle">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">USERNAME</label>
+                <input type="text" id="username"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="user_handle">
             </div>
-            <div class="form-group">
-                <label>EMAIL</label>
-                <input type="email" id="email" class="form-control" required placeholder="contact@domain.com">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">EMAIL</label>
+                <input type="email" id="email"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="user@domain.com">
             </div>
-            <div class="form-group">
-                <label>PASSWORD</label>
-                <input type="password" id="password" class="form-control" required placeholder="********">
+            <div>
+                <label class="block text-xs font-bold text-brand mb-1">PASSWORD</label>
+                <input type="password" id="password"
+                    class="w-full bg-black/30 border border-border rounded p-2 text-white font-mono focus:border-brand focus:outline-none transition"
+                    required placeholder="********">
             </div>
-            <button type="submit" class="btn-glitch">REGISTER_USER</button>
-            <div id="errorMsg" class="error-msg"></div>
+
+            <button type="submit"
+                class="w-full bg-transparent border border-brand text-brand hover:bg-brand hover:text-white font-bold py-3 px-4 rounded transition mt-4">REGISTER_USER</button>
+            <div id="errorMsg"
+                class="hidden text-xs text-alert bg-alert/10 border border-alert/20 p-2 rounded text-center font-mono">
+            </div>
         </form>
-        <div class="links">
-            EXISTING_RECORD? <a href="/login">[AUTHENTICATE]</a>
+
+        <div class="mt-6 text-center text-xs text-gray-500">
+            EXISTING_RECORD? <a href="/login" class="text-brand hover:underline">[AUTHENTICATE]</a>
         </div>
     </div>
 
-    <script src="/static/js/particles.js"></script>
     <script>
         if (window.particlesJS) {
             particlesJS("bgCanvas", {
-                "particles": {
-                    "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
-                    "color": { "value": "#BC13FE" },
-                    "shape": { "type": "circle" },
-                    "opacity": { "value": 0.5 },
-                    "size": { "value": 3 },
-                    "line_linked": { "enable": true, "distance": 150, "color": "#00F0FF", "opacity": 0.3, "width": 1 },
-                    "move": { "enable": true, "speed": 1 }
-                },
-                "retina_detect": true
+                "particles": { "number": { "value": 40 }, "color": { "value": "#88FFFF" }, "opacity": { "value": 0.3 }, "size": { "value": 2 }, "line_linked": { "color": "#88FFFF", "opacity": 0.1 }, "move": { "speed": 1 } }
             });
         }
 
-        async function handleRegister(event) {
-            event.preventDefault();
-            const fullname = document.getElementById('fullname').value;
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const errorMsg = document.getElementById('errorMsg');
+        async function handleRegister(e) {
+            e.preventDefault();
+            const full = document.getElementById('fullname').value;
+            const u = document.getElementById('username').value;
+            const em = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            const err = document.getElementById('errorMsg');
             const btn = document.querySelector('button[type="submit"]');
 
-            errorMsg.style.display = 'none';
+            err.classList.add('hidden');
             btn.textContent = 'CREATING_RECORD...';
+            btn.disabled = true;
 
             try {
-                const response = await fetch('/api/auth/register', {
+                const res = await fetch('/api/auth/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        full_name: fullname,
-                        username: username,
-                        email: email,
-                        password: password
-                    })
+                    body: JSON.stringify({ full_name: full, username: u, email: em, password: p })
                 });
 
-                const data = await response.json();
+                const data = await res.json();
 
-                if (response.ok) {
+                if (res.ok) {
                     localStorage.setItem('access_token', data.access_token);
                     btn.textContent = 'SUCCESS // REDIRECTING';
-                    btn.style.background = 'var(--accent-purple)';
-                    setTimeout(() => window.location.href = '/', 800);
+                    btn.classList.add('bg-brand', 'text-white');
+                    setTimeout(() => window.location.href = '/dashboard', 800);
                 } else {
-                    errorMsg.style.display = 'block';
-                    errorMsg.textContent = `>> ERROR: ${data.detail || 'Registration failed'}`;
-                    btn.textContent = 'REGISTER_USER';
+                    throw new Error(data.detail || 'Registration Failed');
                 }
-            } catch (err) {
-                console.error(err);
-                errorMsg.style.display = 'block';
-                errorMsg.textContent = '>> SYSTEM_ERROR: CONNECTION_FAILED';
+            } catch (error) {
+                err.classList.remove('hidden');
+                err.textContent = `>> ERROR: ${error.message}`;
                 btn.textContent = 'REGISTER_USER';
+                btn.disabled = false;
             }
         }
     </script>

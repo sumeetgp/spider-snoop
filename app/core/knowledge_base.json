@@ -1,0 +1,143 @@
+{
+    "terms": {
+        "Project Skylark": {
+            "risk": "CRITICAL",
+            "category": "Intellectual Property",
+            "description": "Next-gen quantum encryption protocol. Release date 2026.",
+            "action": "BLOCK",
+            "compliance": [
+                "ISO27001",
+                "Trade Secret"
+            ],
+            "owner": "ciso@spidercob.com",
+            "positive_context": [
+                "quantum",
+                "latency",
+                "protocol",
+                "encryption",
+                "v2"
+            ],
+            "negative_context": [
+                "bird",
+                "species",
+                "migration",
+                "feathers",
+                "nature"
+            ]
+        },
+        "Titan Alloy": {
+            "risk": "HIGH",
+            "category": "Trade Secret",
+            "description": "Proprietary lightweight metal composite.",
+            "action": "ALERT",
+            "compliance": [
+                "ITAR",
+                "Export Control"
+            ],
+            "owner": "r_and_d@spidercob.com",
+            "positive_context": [
+                "formula",
+                "melt",
+                "tensile",
+                "composite",
+                "mix"
+            ]
+        },
+        "Omega Key": {
+            "risk": "CRITICAL",
+            "category": "Infrastructure",
+            "description": "Master administrative access key for AWS Production.",
+            "action": "BLOCK_AND_REVOKE",
+            "compliance": [
+                "SOC2",
+                "Access Control"
+            ],
+            "positive_context": [
+                "aws",
+                "admin",
+                "root",
+                "access",
+                "secret"
+            ]
+        },
+        "Bob Vance": {
+            "risk": "MEDIUM",
+            "category": "Personnel",
+            "description": "External Auditor. Authorized for Financials ONLY.",
+            "action": "LOG",
+            "compliance": [
+                "Internal Policy"
+            ],
+            "owner": "finance@spidercob.com"
+        },
+        "SpiderCob Term Sheet": {
+            "risk": "HIGH",
+            "category": "Legal",
+            "description": "Investment details and valuation cap for Series A.",
+            "action": "BLOCK",
+            "positive_context": [
+                "valuation",
+                "investor",
+                "equity",
+                "cap table",
+                "pre-money"
+            ]
+        },
+        ".corp": {
+            "risk": "MEDIUM",
+            "category": "Infrastructure",
+            "description": "Internal Network TLD detected. Leakage maps network topology.",
+            "action": "ALERT",
+            "owner": "netsec@spidercob.com"
+        },
+        ".int": {
+            "risk": "MEDIUM",
+            "category": "Infrastructure",
+            "description": "Internal Network TLD detected.",
+            "action": "ALERT"
+        },
+        "jenkins.internal": {
+            "risk": "MEDIUM",
+            "category": "Infrastructure",
+            "description": "Internal CI/CD Server address.",
+            "action": "BLOCK",
+            "owner": "devops@spidercob.com"
+        },
+        "canarytokens.com": {
+            "risk": "INFO",
+            "category": "Security Tool",
+            "description": "Canary token (Honeypot) detected. Do not block, but log usage.",
+            "action": "LOG",
+            "owner": "security@spidercob.com"
+        },
+        "4242 4242 4242 4242": {
+            "risk": "LOW",
+            "category": "Test Data",
+            "description": "Stripe Test Credit Card (Safe).",
+            "action": "ALLOW"
+        }
+    },
+    "regex_patterns": {
+        "SKY-\\d{4}": {
+            "desc": "Skylark Prototype Serial Number",
+            "risk": "HIGH",
+            "action": "REDACT"
+        },
+        "AKIA[0-9A-Z]{16}": {
+            "desc": "AWS Access Key ID",
+            "risk": "CRITICAL",
+            "action": "BLOCK"
+        },
+        "eyJ[a-zA-Z0-9-_]+\\.eyJ[a-zA-Z0-9-_]+\\.[a-zA-Z0-9-_]+": {
+            "desc": "JWT (JSON Web Token)",
+            "risk": "HIGH",
+            "action": "ALERT",
+            "note": "Check if token is expired before blocking"
+        },
+        "https://hooks\\.slack\\.com/services/T[0-9A-Z]+/B[0-9A-Z]+/[0-9A-Za-z]+": {
+            "desc": "Slack Incoming Webhook (Critical Integration Secret)",
+            "risk": "HIGH",
+            "action": "BLOCK"
+        }
+    }
+}

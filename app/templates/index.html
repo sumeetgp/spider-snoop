@@ -4,59 +4,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpiderCob // Digital Hive</title>
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@400;500;700;900&display=swap"
+    <title>SpiderCob // Stop Data Leaks Before They Cost Millions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-
+    <script src="/static/js/particles.js" defer></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        card: '#161B22',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        accent: '#00E5FF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg-void: #050505;
-            --accent-cyan: #00F0FF;
-            --accent-purple: #BC13FE;
-            --text-main: #E0E0E0;
-            --text-dim: #888888;
-            --glass-bg: rgba(20, 20, 20, 0.6);
-            --border-glow: rgba(0, 240, 255, 0.3);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
         body {
-            font-family: 'JetBrains Mono', monospace;
-            background-color: var(--bg-void);
-            color: var(--text-main);
-            min-height: 100vh;
+            background-color: #0D1117;
+            color: #C9D1D9;
             overflow-x: hidden;
-            position: relative;
         }
 
-        /* Scanline Overlay */
-        body::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: repeating-linear-gradient(to bottom,
-                    transparent 0%,
-                    rgba(0, 0, 0, 0.2) 50%,
-                    transparent 100%);
-            background-size: 100% 4px;
-            pointer-events: none;
-            z-index: 999;
-            opacity: 0.3;
+        .glass-panel {
+            background: rgba(22, 27, 34, 0.7);
+            border: 1px solid #30363d;
+            backdrop-filter: blur(12px);
         }
 
-        /* Background Canvas */
         #bgCanvas {
             position: fixed;
             top: 0;
@@ -64,517 +50,501 @@
             width: 100%;
             height: 100%;
             z-index: -1;
+            opacity: 0.4;
         }
 
-        /* Typography Defaults */
-        h1,
-        h2,
-        h3 {
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        a {
-            text-decoration: none;
-            color: var(--accent-cyan);
-            transition: 0.3s;
-        }
-
-        /* HUD Header */
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 40px;
-            border-bottom: 1px solid var(--border-glow);
-            background: rgba(5, 5, 5, 0.9);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            backdrop-filter: blur(5px);
-        }
-
-        .logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: var(--accent-cyan);
-            text-shadow: 0 0 10px var(--accent-cyan);
-        }
-
-        .nav-icons {
-            display: flex;
-            gap: 20px;
-        }
-
-        .nav-link {
-            font-size: 0.9rem;
-            color: var(--text-dim);
-            border: 1px solid transparent;
-            padding: 5px 10px;
-        }
-
-        .nav-link:hover {
-            color: var(--accent-cyan);
-            border: 1px solid var(--accent-cyan);
-            box-shadow: 0 0 10px var(--accent-cyan);
-        }
-
-        /* Hero Section */
-        .hero {
-            height: 80vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            position: relative;
-        }
-
-        .hero h1 {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            background: linear-gradient(to right, var(--accent-cyan), var(--accent-purple));
+        .hero-gradient {
+            background: linear-gradient(135deg, #88FFFF 0%, #00E5FF 100%);
             -webkit-background-clip: text;
+            background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
         }
 
-        .hero p {
-            max-width: 600px;
-            margin-bottom: 40px;
-            color: var(--text-dim);
-            font-size: 1.1rem;
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 120px;
         }
 
-        /* Glitch Button */
-        .btn-glitch {
-            background: transparent;
-            color: var(--accent-cyan);
-            border: 1px solid var(--accent-cyan);
-            padding: 15px 30px;
-            font-family: 'Orbitron', sans-serif;
-            font-weight: 700;
-            font-size: 1rem;
-            cursor: pointer;
-            position: relative;
-            overflow: hidden;
-            transition: 0.3s;
+        .mesh-gradient {
+            background-image: radial-gradient(circle at 2px 2px, #88FFFF 1px, transparent 0);
+            background-size: 40px 40px;
+            transform: translateZ(0);
+            /* Hardware accelerate */
+            opacity: 0.15;
         }
 
-        .btn-glitch:hover {
-            background: var(--accent-cyan);
-            color: #000;
-            box-shadow: 0 0 20px var(--accent-cyan);
+        .btn-outline {
+            border: 1px solid #88FFFF;
+            color: #88FFFF;
+            transition: all 0.3s ease;
         }
 
-        /* Bento Grid */
-        .bento-container {
-            max-width: 1200px;
-            margin: 0 auto 100px auto;
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, auto);
-            gap: 20px;
-            padding: 0 20px;
+        .btn-outline:hover {
+            background: rgba(136, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(136, 255, 255, 0.3);
         }
 
-        .bento-box {
-            background: var(--glass-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            position: relative;
-            /* Chamfered Edges */
-            clip-path: polygon(10px 0, 100% 0,
-                    100% calc(100% - 10px), calc(100% - 10px) 100%,
-                    0 100%, 0 10px);
-            transition: transform 0.3s, border-color 0.3s;
-        }
-
-        .bento-box:hover {
-            transform: translateY(-5px);
-            border-color: var(--accent-purple);
-            box-shadow: 0 0 15px rgba(188, 19, 254, 0.2);
-        }
-
-        /* Grid Spans */
-        .box-large {
-            grid-column: span 2;
-        }
-
-        .box-tall {
-            grid-row: span 2;
-        }
-
-        /* Specific Bento Styles */
-        .status-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: var(--accent-cyan);
-            border-radius: 50%;
-            margin-right: 10px;
-            box-shadow: 0 0 5px var(--accent-cyan);
-        }
-
-        .upload-area {
-            border: 1px dashed var(--text-dim);
-            padding: 40px;
-            text-align: center;
-            cursor: pointer;
-            transition: 0.3s;
-            margin-top: 20px;
-            color: var(--text-dim);
-        }
-
-        .upload-area:hover {
-            border-color: var(--accent-cyan);
-            color: var(--accent-cyan);
-            background: rgba(0, 240, 255, 0.05);
-        }
-
-        .scan-result {
-            margin-top: 15px;
-            padding: 10px;
-            background: rgba(0, 0, 0, 0.5);
-            border-left: 3px solid var(--accent-cyan);
-            display: none;
-            font-size: 0.9rem;
-        }
-
-        .scan-result.danger {
-            border-left-color: #ff3333;
-            color: #ffcccc;
-        }
-
-        /* Blink Animation */
-        @keyframes blink {
-            50% {
-                opacity: 0;
-            }
-        }
-
-        .blink {
-            animation: blink 1s infinite;
-        }
-
-        /* Footer Terminal */
-        footer {
-            background: #000;
-            padding: 40px 0;
+        .pill {
+            background: rgba(136, 255, 255, 0.1);
+            border: 1px solid rgba(136, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 99px;
+            font-size: 0.75rem;
             font-family: 'JetBrains Mono', monospace;
-            border-top: 1px solid #333;
-            text-align: center;
-            color: var(--text-dim);
-        }
-
-        /* Utility */
-        .hidden {
-            display: none !important;
-        }
-
-        .system-text {
-            color: var(--accent-cyan);
-            font-size: 0.8rem;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        /* Mobile Adjustments */
-        @media (max-width: 768px) {
-            header {
-                padding: 15px 20px;
-            }
-
-            .logo {
-                font-size: 1.2rem;
-                white-space: nowrap;
-            }
-
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .bento-container {
-                grid-template-columns: 1fr;
-            }
-
-            .box-large,
-            .box-tall {
-                grid-column: span 1;
-                grid-row: span 1;
-            }
-        }
-
-        /* --- Archives Tab Styles --- */
-        .tab-nav {
-            display: flex;
-            justify-content: center;
-            margin-bottom: 20px;
-            gap: 15px;
-        }
-
-        .tab-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--text-dim);
-            color: var(--text-dim);
-            padding: 10px 20px;
-            font-family: 'Orbitron', sans-serif;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-
-        .tab-btn.active {
-            background: rgba(0, 240, 255, 0.1);
-            border-color: var(--accent-cyan);
-            color: var(--accent-cyan);
-            box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);
-        }
-
-        .archive-list {
-            max-width: 1000px;
-            margin: 0 auto 100px auto;
-        }
-
-        .archive-item {
-            background: var(--glass-bg);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            margin-bottom: 15px;
-            overflow: hidden;
-            /* Chamfered Box for item */
-            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
-        }
-
-        .archive-header {
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            background: rgba(0, 0, 0, 0.3);
-            transition: 0.2s;
-        }
-
-        .archive-header:hover {
-            background: rgba(0, 240, 255, 0.05);
-        }
-
-        .archive-details {
-            display: none;
-            padding: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.6);
-        }
-
-        .ai-analysis-box {
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px dashed var(--accent-cyan);
-            padding: 15px;
-            color: #fff;
-            margin-top: 15px;
-            position: relative;
-        }
-
-        .ai-analysis-box::before {
-            content: "AI_ANALYSIS_PROTOCOL";
-            position: absolute;
-            top: -10px;
-            left: 10px;
-            background: #000;
-            padding: 0 5px;
-            color: var(--accent-cyan);
-            font-size: 0.7rem;
         }
     </style>
 </head>
 
-<body>
-    <canvas id="bgCanvas"></canvas>
+<body class="min-h-screen flex flex-col font-sans selection:bg-brand/30">
+    <canvas id="bgCanvas" class="opacity-30"></canvas>
 
-    <!-- Header HUD -->
-    <header>
-        <div class="logo">&lt;SpiderCob /&gt;</div>
-        <div class="nav-icons">
-            <div id="userInfo" style="display:none; text-align:right; margin-right:20px;">
-                <span id="userName" style="color:var(--accent-cyan);">User</span>
-                <small id="userRole" style="display:block; font-size:0.7em; color:var(--text-dim);">[ANALYST]</small>
+    <!-- Navbar -->
+    <nav class="border-b border-border p-4 flex justify-between items-center bg-bg/80 backdrop-blur sticky top-0 z-50">
+        <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+            <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+        </div>
+        <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
+            <a href="#features" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" class="hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="hover:text-white transition">About Us</a>
+        </div>
+        <div class="flex gap-4 items-center">
+            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
+            <a href="/login" id="btn-login"
+                class="hidden sm:block btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                Launch Console
+            </a>
+            <a href="/dashboard" id="btn-dashboard"
+                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                Scan Portal
+            </a>
+            <button id="btn-logout" onclick="logout()"
+                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
+                LOGOUT
+            </button>
+            <!-- Mobile Menu Button -->
+            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenu"
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        <div class="flex justify-between items-center mb-8">
+            <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+                <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
+            </div>
+            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
+                    </path>
+                </svg>
+            </button>
+        </div>
+        <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
+            <a href="#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
+            <div class="h-px bg-border my-4"></div>
+            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+        </div>
+    </div>
+
+    <!-- Hero Section -->
+    <header class="relative pt-24 pb-32 px-4 overflow-hidden">
+        <div class="max-w-5xl mx-auto text-center relative z-10">
+            <div class="inline-block pill text-brand mb-8 animate-pulse">
+                SCALING SECURITY WITH AI
+            </div>
+            <h1
+                class="text-5xl md:text-7xl font-black tracking-tighter text-white mb-8 leading-[0.95] overflow-wrap-anywhere hyphens-auto">
+                Stop Data Leaks <br>
+                <span class="hero-gradient italic">Before They Cost Millions.</span>
+            </h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
+                The intelligent security engine for the AI era. Scan files for Malware, Redact PII, and Disarm threats
+                instantly. Powered by AI.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <a href="/register" id="btn-hero-cta"
+                    class="w-full sm:w-auto bg-brand hover:bg-opacity-90 text-black px-10 py-5 rounded-xl font-black text-lg transition shadow-xl shadow-brand/20">
+                    Start Scanning - Free
+                </a>
+                <a href="/api/docs"
+                    class="w-full sm:w-auto btn-outline px-10 py-5 rounded-xl font-black text-lg transition">
+                    Read API Docs
+                </a>
             </div>
 
-            <div id="authButtons">
-                <a href="/login" class="nav-link">[01_LOGIN]</a>
-            </div>
-
-            <div id="authNav" class="hidden">
-                <a href="/api/docs" target="_blank" class="nav-link">[DOCS]</a>
-                <button onclick="logout()" class="nav-link" style="background:none; cursor:pointer;">[LOGOUT]</button>
+            <!-- Trust Badges -->
+            <div class="mt-20 pt-10 border-t border-border/50">
+                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-6">Trusted by developers
+                    securing:</p>
+                <div
+                    class="flex flex-wrap justify-center gap-6 opacity-40 grayscale hover:opacity-100 transition duration-500">
+                    <span class="font-mono font-bold text-xl">Node.js</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">Python</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">AWS</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">Docker</span>
+                </div>
             </div>
         </div>
     </header>
 
-    <!-- Content Wrapper -->
-    <div id="guestContent">
-        <section class="hero">
-            <span class="system-text">SYSTEM STATUS: ONLINE // V1.1</span>
-            <h1>WEAVE YOUR<br>DIGITAL FUTURE</h1>
-            <p>Unified Threat Detection. Malware Guard. DLP Scanning.<br>The trap is set for malicious actors.</p>
-            <button class="btn-glitch" onclick="window.location.href='/register'">INITIALIZE_PROTOCOL</button>
-        </section>
-    </div>
+    <!-- The Problem Section -->
+    <section class="bg-[#161B22]/50 py-24 px-4 border-y border-border">
+        <div class="max-w-6xl mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-black text-white mb-4">You Are One "Oops" Away From Disaster.</h2>
+            <p class="text-gray-500 mb-16 max-w-2xl mx-auto font-mono text-sm">Modern security isn't just about viruses.
+                It's about data.</p>
 
-    <div id="dashboardContent" class="hidden">
-        <div style="padding: 40px 20px; text-align: center;">
-            <h2>// DASHBOARD_ACCESS_GRANTED</h2>
-            <p style="color:var(--text-dim); margin-bottom:20px;">Select a module to begin scanning.</p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Malware -->
+                <div class="glass-panel p-8 rounded-2xl text-left border-l-4 border-alert/30">
+                    <div class="text-alert mb-6">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z">
+                            </path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4">The Hidden Threat</h3>
+                    <p class="text-xs text-gray-500 mb-4 font-mono uppercase tracking-widest">Ransomware & Zero-Day</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        A vendor sends an invoice that silently executes ransomware when opened. Traditional AV misses
+                        it. We don't.
+                    </p>
+                </div>
 
-            <div class="tab-nav">
-                <button class="tab-btn active" onclick="switchTab('active')">[ ACTIVE_SCAN ]</button>
-                <button class="tab-btn" onclick="switchTab('archives')">[ SCAN_ARCHIVES ]</button>
+                <!-- PII -->
+                <div class="glass-panel p-8 rounded-2xl text-left border-l-4 border-warning/30">
+                    <div class="text-warning mb-6">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4">The Accidental Leak</h3>
+                    <p class="text-xs text-gray-500 mb-4 font-mono uppercase tracking-widest">PII & Compliance</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        An employee uploads a spreadsheet with customer SSNs to a public folder. Now you have a GDPR
+                        fine.
+                    </p>
+                </div>
+
+                <!-- Dev Error -->
+                <div class="glass-panel p-8 rounded-2xl text-left border-l-4 border-brand/30">
+                    <div class="text-brand mb-6">
+                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-white mb-4">The Dev Error</h3>
+                    <p class="text-xs text-gray-500 mb-4 font-mono uppercase tracking-widest">Secrets & Supply Chain</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        A junior dev commits an AWS Secret Key or a vulnerable library (npm). Hackers are in your cloud
+                        within minutes.
+                    </p>
+                </div>
             </div>
         </div>
+    </section>
 
-        <!-- TAB 1: ACTIVE -->
-        <div id="tab-active" class="bento-container">
-            <!-- Box 1: File Scanner -->
-            <div class="bento-box box-large">
-                <span class="system-text">MODULE: FILE_GUARD</span>
-                <h3>Target Upload</h3>
-                <p style="color:var(--text-dim); font-size:0.9rem;">Upload files for Malware + YARA pattern matching +
-                    DLP analysis.</p>
+    <!-- The Solution: 4 Pillars -->
+    <section id="features" class="py-32 px-4 space-y-32"
+        style="content-visibility: auto; contain-intrinsic-size: 1000px;">
+        <div class="max-w-6xl mx-auto">
+            <h2 class="text-center text-4xl font-black text-white mb-24">The Solution: The 4 Pillars</h2>
 
-                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-                    [CLICK TO UPLOAD TARGET]
-                    <input type="file" id="fileInput" style="display:none;" onchange="handleFileUpload(this)">
+            <!-- Pillar 1 -->
+            <div class="flex flex-col md:flex-row items-center gap-16">
+                <div class="md:w-1/2 space-y-6">
+                    <div class="text-brand font-mono font-bold tracking-[0.3em]">PILLAR_01</div>
+                    <h3 class="text-4xl font-black text-white">Intelligent File Guard 🛡️</h3>
+                    <p class="text-xl text-gray-300 font-bold">Don't just scan. Understand.</p>
+                    <p class="text-gray-400 leading-relaxed">
+                        We combine the raw power of ClamAV with the intelligence of AI. SpiderCob doesn't just
+                        look for virus signatures; it reads the context.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-4">
+                            <span class="text-brand">✔</span>
+                            <p class="text-sm text-gray-400"><strong>Smart Risk:</strong> Distinguishes between a
+                                "Stripe Test Card" (Safe) and a real customer credit card (Blocked).</p>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <span class="text-brand">✔</span>
+                            <p class="text-sm text-gray-400"><strong>Metadata Forensics:</strong> Detects hidden author
+                                names and GPS data inside PDFs before you publish them.</p>
+                        </li>
+                    </ul>
                 </div>
-                <div id="scanResult" class="scan-result"></div>
-            </div>
-
-            <!-- Box 2: System Stats (Tall) -->
-            <div class="bento-box box-tall">
-                <span class="system-text">SYSTEM_METRICS</span>
-                <h3>Protocols</h3>
-                <ul style="list-style:none; margin-top:20px; line-height:2;">
-                    <li><span class="status-indicator"></span>Malware Signature Engine</li>
-                    <li><span class="status-indicator"></span>Pattern Matching Grid</li>
-                    <li><span class="status-indicator"></span>DLP Regex Analysis</li>
-                    <li><span class="status-indicator"></span>Semantic Context AI</li>
-                </ul>
-                <div style="margin-top:40px; border-top:1px solid rgba(255,255,255,0.1); padding-top:20px;">
-                    <span class="system-text">RECENT ACTIVITY</span>
-                    <div id="scanList" style="font-size:0.8rem; color:var(--text-dim);">
-                        Loading...
+                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
+                    <div
+                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-brand/30 transition">
+                        <!-- Visual representation of file scanning -->
+                        <div class="text-gray-700 font-mono text-xs overflow-hidden w-full p-6">
+                            <div class="text-green-500">>> [INITIATING_DEEP_SCAN]</div>
+                            <div class="text-white mt-1">Found: Invoice_v2.pdf</div>
+                            <div class="mt-2">Scanning signature... [CLEAN]</div>
+                            <div class="mt-1">Analyzing context via AI...</div>
+                            <div class="text-alert mt-1 font-bold">WARNING: Found SSN pattern "455-XX-XXXX" in hidden
+                                layer [CLEANING_RECOMMENDED]</div>
+                            <div class="animate-pulse mt-1 ml-4 ring-1 ring-brand w-2 h-4 inline-block"></div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Box 3: Video Scanner -->
-            <div class="bento-box box-large">
-                <span class="system-text">MODULE: A/V_INTERCEPT</span>
-                <h3>Video Analysis</h3>
-                <p style="color:var(--text-dim); font-size:0.9rem;">Extract audio from video feeds for transcribed DLP
-                    scanning.</p>
-                <div class="upload-area" onclick="document.getElementById('videoInput').click()"
-                    style="border-color:var(--accent-purple);">
-                    [UPLOAD VIDEO FEED]
-                    <input type="file" id="videoInput" accept=".mp4,.mov,.avi,.mkv" style="display:none;"
-                        onchange="handleVideoUpload(this)">
+            <!-- Pillar 2 -->
+            <div class="flex flex-col md:flex-row-reverse items-center gap-16">
+                <div class="md:w-1/2 space-y-6">
+                    <div class="text-green-500 font-mono font-bold tracking-[0.3em]">PILLAR_02</div>
+                    <h3 class="text-4xl font-black text-white">Safe Wash (CDR) 🧼</h3>
+                    <p class="text-xl text-gray-300 font-bold">Malware hides in the macros. We scrub it out.</p>
+                    <p class="text-gray-400 leading-relaxed">
+                        Stop blocking files your team needs. Our Content Disarm & Reconstruction engine converts risky
+                        files (like Word Docs with Macros) into harmless formats, cleans the code, and rebuilds a
+                        safe copy.
+                    </p>
+                    <div
+                        class="bg-green-500/10 border border-green-500/20 p-4 rounded-xl text-green-400 text-sm italic">
+                        "Result: You get the document. The malware gets the trash."
+                    </div>
                 </div>
-                <div id="videoScanResult" class="scan-result"></div>
+                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
+                    <div
+                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-green-500/30 transition overflow-hidden">
+                        <div class="relative w-full h-full flex items-center justify-center">
+                            <div class="absolute inset-0 bg-green-500/5 mesh-gradient"></div>
+                            <div class="text-center space-y-4 z-10">
+                                <span class="block text-4xl">🧼</span>
+                                <div class="font-mono text-[10px] text-green-500">RECONSTRUCTING_INTERNAL_DOM</div>
+                                <div class="w-48 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto">
+                                    <div class="h-full bg-green-500 w-3/4 animate-pulse"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Box 4: Token -->
-            <div class="bento-box">
-                <span class="system-text">ACCESS_KEY</span>
-                <button onclick="toggleToken()"
-                    style="background:none; border:1px solid var(--text-dim); color:var(--text-dim); padding:5px 10px; cursor:pointer; font-family:inherit;">[SHOW_TOKEN]</button>
-                <div id="tokenDisplay"
-                    style="display:none; margin-top:10px; word-break:break-all; font-size:0.8em; color:var(--accent-cyan);">
+            <!-- Pillar 3 -->
+            <div class="flex flex-col md:flex-row items-center gap-16">
+                <div class="md:w-1/2 space-y-6">
+                    <div class="text-warning font-mono font-bold tracking-[0.3em]">PILLAR_03</div>
+                    <h3 class="text-4xl font-black text-white">Secret & Supply Chain 🔑</h3>
+                    <p class="text-xl text-gray-300 font-bold">Secure your code, not just your files.</p>
+                    <p class="text-gray-400 leading-relaxed">
+                        Developers are the new frontline. We integrate TruffleHog and OSV directly into your upload
+                        pipeline to find vulnerabilities and secrets before they reach the cloud.
+                    </p>
+                    <ul class="space-y-4">
+                        <li class="flex items-start gap-4">
+                            <span class="text-warning">✔</span>
+                            <p class="text-sm text-gray-400"><strong>Secrets:</strong> Instantly block commits
+                                containing API Keys, Tokens, or Passwords.</p>
+                        </li>
+                        <li class="flex items-start gap-4">
+                            <span class="text-warning">✔</span>
+                            <p class="text-sm text-gray-400"><strong>Dependencies:</strong> Upload package.json or
+                                requirements.txt and get a full vulnerability report.</p>
+                        </li>
+                    </ul>
+                </div>
+                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
+                    <div
+                        class="bg-bg rounded-2xl h-80 p-6 border border-border group-hover:border-warning/30 transition font-mono text-[10px]">
+                        <div class="text-gray-500 mb-2">trufflehog --json --file app.js</div>
+                        <div class="text-alert">{ "type": "PRIVATE_KEY", "file": "app.js", "line": 45, "risk":
+                            "CRITICAL" }</div>
+                        <div class="mt-4 text-gray-500">pip-audit -r requirements.txt</div>
+                        <div class="text-warning">Found Dependency: Django==3.2.1 [CVE-2022-XXXXX] HIGH RISK</div>
+                    </div>
                 </div>
             </div>
-        </div> <!-- End Tab Active -->
 
-        <!-- TAB 2: ARCHIVES -->
-        <div id="tab-archives" class="archive-list" style="display:none;">
-            <div id="archivesContainer">
-                <p style="text-align:center; color:var(--text-dim);">LOADING_ARCHIVES...</p>
+            <!-- Pillar 4 -->
+            <div class="flex flex-col md:flex-row-reverse items-center gap-16">
+                <div class="md:w-1/2 space-y-6">
+                    <div class="text-brand font-mono font-bold tracking-[0.3em]">PILLAR_04</div>
+                    <h3 class="text-4xl font-black text-white">ICAP Enterprise Gateway 🌐</h3>
+                    <p class="text-xl text-gray-300 font-bold">Zero-Trust Network Traffic Scanning.</p>
+                    <p class="text-gray-400 leading-relaxed">
+                        Multiplex your high-performance security scanning into any enterprise proxy using standard RFC
+                        3507 ICAP. Zero latency, full visibility over all corporate traffic.
+                    </p>
+                </div>
+                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
+                    <div
+                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-brand/30 transition">
+                        <div class="text-center">
+                            <div class="text-6xl mb-4">🌐</div>
+                            <div class="font-mono text-xs text-brand">icaps://icap.spidercob.com:443</div>
+                            <p class="text-[10px] text-gray-600 mt-2 italic">Standard SNI Multiplexing Enabled</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- Footer -->
-    <footer>
-        <p>root@spidercob:~$ Copyright 2025. System distinct. End of line.<span class="blink">_</span></p>
+    <!-- Developer Experience Section -->
+    <section class="bg-bg py-32 px-4">
+        <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12">
+            <div class="lg:w-1/2 space-y-6 text-left">
+                <h2 class="text-4xl font-black text-white leading-tight">Security integrated <br> in 3 lines of code.
+                </h2>
+                <p class="text-gray-400 font-bold text-lg">Built for developers, by developers. Drop SpiderCob into your
+                    Python, Node, or Go backend today.</p>
+                <div class="flex gap-4">
+                    <div class="pill bg-brand/20 text-brand">PYTHON</div>
+                    <div class="pill bg-gray-800 text-gray-500">NODE.JS</div>
+                    <div class="pill bg-gray-800 text-gray-500">GO</div>
+                </div>
+            </div>
+            <div class="lg:w-1/2 w-full">
+                <div class="glass-panel rounded-2xl overflow-hidden border-2 border-border shadow-2xl">
+                    <div class="bg-gray-800 px-4 py-2 flex items-center gap-2 border-b border-border">
+                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                        <span class="ml-auto text-[10px] font-mono text-gray-500">spider_scan.py</span>
+                    </div>
+                    <div class="p-6 font-mono text-sm overflow-x-auto text-gray-300">
+                        <pre>
+<span class="text-gray-500"># The SpiderCob Way: Simple. Powerful.</span>
+<span class="text-brand">import</span> requests
+
+response = requests.post(
+    <span class="text-brand">"https://api.spidercob.com/v1/scan"</span>,
+    headers={<span class="text-brand">"Authorization"</span>: <span class="text-brand">"Bearer YOUR_API_KEY"</span>},
+    files={<span class="text-brand">"file"</span>: open(<span class="text-brand">"invoice_v2.pdf"</span>, <span class="text-brand">"rb"</span>)}
+)
+
+<span class="text-brand">if</span> response.json()[<span class="text-brand">'status'</span>] == <span class="text-brand">"BLOCKED"</span>:
+    <span class="text-brand">print</span>(f<span class="text-brand">"Threat Detected: {response.json()['threat_type']}"</span>)
+    <span class="text-brand">print</span>(f<span class="text-brand">"Action Taken: {response.json()['action']}"</span>)</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Future Vision -->
+    <section class="py-32 px-4">
+        <div
+            class="max-w-4xl mx-auto glass-panel p-16 rounded-[3rem] bg-gradient-to-br from-cyan-900/20 to-cyan-900/40 text-center border-brand/20 overflow-hidden relative">
+            <div class="absolute inset-0 mesh-gradient opacity-10"></div>
+            <div class="relative z-10">
+                <span class="text-xs font-mono font-bold tracking-[0.4em] text-brand mb-6 block">COMING SOON</span>
+                <h2 class="text-4xl md:text-5xl font-black text-white mb-8">Autonomous Red Teaming</h2>
+                <p class="text-gray-400 text-lg mb-10 max-w-2xl mx-auto">
+                    We are integrating Stanford’s ARTEMIS agent. Soon, you won't just scan files—you'll legally "hack"
+                    your own infrastructure to find holes before the bad guys do.
+                </p>
+                <a href="#" class="text-white font-bold border-b-2 border-brand pb-1 hover:text-brand transition">
+                    Join the Waitlist for SpiderCob Red Team &rarr;
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-black py-20 px-8 border-t border-border">
+        <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
+            <div class="space-y-4 col-span-1 md:col-span-2">
+                <div class="text-2xl font-black text-white">Spider<span class="text-brand">Cob</span></div>
+                <p class="text-gray-500 text-sm max-w-xs">SpiderCob Inc. — Securing the Digital Web. Protecting
+                    enterprise
+                    data through intelligent orchestration.</p>
+            </div>
+            <div class="space-y-4">
+                <h4 class="text-white font-bold uppercase text-[10px] tracking-widest">Product</h4>
+                <ul class="text-gray-500 text-sm space-y-2">
+                    <li><a href="#" class="hover:text-brand transition">File Guard</a></li>
+                    <li><a href="#" class="hover:text-brand transition">Safe Wash</a></li>
+                    <li><a href="#" class="hover:text-brand transition">Secret Scanner</a></li>
+                    <li><a href="/about" class="hover:text-brand transition">About Us</a></li>
+                </ul>
+            </div>
+            <div class="space-y-4">
+                <h4 class="text-white font-bold uppercase text-[10px] tracking-widest">Resources</h4>
+                <ul class="text-gray-500 text-sm space-y-2">
+                    <li><a href="/api/docs" class="hover:text-brand transition">Documentation</a></li>
+                    <li><a href="#" class="hover:text-brand transition">Status</a></li>
+                    <li><a href="#" class="hover:text-brand transition">GitHub</a></li>
+                </ul>
+            </div>
+        </div>
+        <div
+            class="max-w-6xl mx-auto mt-20 pt-8 border-t border-border/30 flex justify-between items-center text-[10px] text-gray-700 font-mono">
+            <div>&copy; 2025 ALL RIGHTS RESERVED.</div>
+            <div>STAY_SECURED_BY_COB</div>
+        </div>
     </footer>
 
-    <!-- Particles.js -->
-    <script src="/static/js/particles.js"></script>
     <script>
-        // Init Particles in "Spider Web" configuration
-        /* particlesJS.load(@dom-id, @path-json, @callback (optional)); */
-        // We will inline configuration for the specific "Digital Hive" network look
-        if (window.particlesJS) {
-            particlesJS("bgCanvas", {
-                "particles": {
-                    "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
-                    "color": { "value": "#00F0FF" },
-                    "shape": { "type": "circle" },
-                    "opacity": { "value": 0.5, "random": false },
-                    "size": { "value": 3, "random": true },
-                    "line_linked": { "enable": true, "distance": 150, "color": "#BC13FE", "opacity": 0.4, "width": 1 },
-                    "move": { "enable": true, "speed": 2, "direction": "none", "random": false, "straight": false, "out_mode": "out", "bounce": false }
-                },
-                "interactivity": {
-                    "detect_on": "canvas",
-                    "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" }, "resize": true },
-                    "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 1 } } }
-                },
-                "retina_detect": true
-            });
-        }
-
-        // --- APPLICATION LOGIC (Preserved) ---
+        // Check Auth - Toggle Buttons & Fetch User
         const token = localStorage.getItem('access_token');
+        if (token) {
+            // User is logged in - Update Nav
+            const btnLogin = document.getElementById('btn-login');
+            const btnDash = document.getElementById('btn-dashboard');
 
-        async function init() {
-            if (token) {
-                document.getElementById('authButtons').classList.add('hidden');
-                document.getElementById('authNav').classList.remove('hidden');
-
-                // Show Dashboard, Hide Guest
-                document.getElementById('dashboardContent').classList.remove('hidden');
-                document.getElementById('guestContent').classList.add('hidden');
-
-                document.getElementById('tokenDisplay').textContent = token;
-
-                try {
-                    const userRes = await fetch('/api/users/me', {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-
-                    if (userRes.ok) {
-                        const user = await userRes.json();
-                        document.getElementById('userName').textContent = user.full_name.toUpperCase();
-                        document.getElementById('userRole').textContent = `[${user.role.toUpperCase()}]`;
-                        document.getElementById('userInfo').style.display = 'block';
-                        loadRecentScans();
-                    } else {
-                        if (userRes.status === 401 || userRes.status === 403) {
-                            logout();
-                        } else {
-                            console.error('API Error:', userRes.status);
-                            // Don't logout, just show offline state or retry?
-                            // For now, let's just keep the dashboard visible but maybe show an error
-                        }
-                    }
-                } catch (e) {
-                    console.error('Auth Check Failed:', e);
-                    // Network error - do NOT logout.
-                }
-            } else {
-                // Initialize particles only if guest (saves performance) or strictly for visuals
+            if (btnLogin) {
+                btnLogin.classList.add('hidden');
+                btnLogin.classList.remove('sm:block');
             }
+            if (btnDash) {
+                btnDash.classList.remove('hidden');
+                btnDash.classList.add('sm:block');
+            }
+
+            // Update Hero CTA
+            const heroCta = document.getElementById('btn-hero-cta');
+            if (heroCta) {
+                heroCta.href = "/dashboard";
+                heroCta.innerText = "Go to Dashboard";
+            }
+
+            // Toggle Logout Button
+            const btnLogout = document.getElementById('btn-logout');
+            if (btnLogout) btnLogout.classList.remove('hidden');
+
+            // Fetch Username
+            fetch('/api/users/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => {
+                    if (!res.ok) throw new Error('Unauthorized');
+                    return res.json();
+                })
+                .then(user => {
+                    const navName = document.getElementById('nav-username');
+                    if (navName) {
+                        navName.innerText = user.username;
+                        navName.classList.remove('hidden');
+                    }
+                })
+                .catch(err => {
+                    console.warn('Session expired', err);
+                    localStorage.removeItem('access_token');
+                    window.location.reload();
+                });
         }
 
         function logout() {
@@ -582,315 +552,19 @@
             window.location.reload();
         }
 
-        function toggleToken() {
-            const el = document.getElementById('tokenDisplay');
-            el.style.display = el.style.display === 'none' ? 'block' : 'none';
-        }
 
-        // --- UPLOAD HANDLERS (With Progress UI) ---
+        // Particle system is initialized automatically by /static/js/particles.js
+        // No redundant initialization needed here.
 
-        async function handleFileUpload(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const resultDiv = document.getElementById('scanResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'scan-result';
-
-            // Progressive UI
-            resultDiv.innerHTML = `
-                <div style="text-align:left;">
-                    <div style="margin-bottom:8px; color:var(--accent-cyan);">>> INITIATING_SCAN_PROTOCOL...</div>
-                    <div id="step-guard" style="opacity:0.7;">[ ] GUARD_CHECK (Malware/YARA) <span class="blink">...</span></div>
-                    <div id="step-dlp" style="opacity:0.4;">[ ] DLP_ANALYSIS</div>
-                </div>
-            `;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const res = await fetch('/api/scans/upload_file', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-
-                const guardEl = document.getElementById('step-guard');
-                const dlpEl = document.getElementById('step-dlp');
-
-                // Error / Block Handling
-                if (res.status === 400 || res.status === 413) {
-                    const errData = await res.json();
-                    const msg = errData.detail || 'Upload failed';
-
-                    if (msg.includes("Security Threat")) {
-                        if (guardEl) guardEl.innerHTML = `[!] GUARD_CHECK: <span style="color:#ff3333; font-weight:bold;">THREAT_DETECTED</span>`;
-                        resultDiv.className = 'scan-result danger';
-                        resultDiv.innerHTML += `<div style="margin-top:10px; color:#ff3333;">>> BLOCKING_FILE.<br>REASON: ${msg}</div>`;
-                        return;
-                    }
-
-                    if (res.status === 413) {
-                        if (guardEl) guardEl.innerHTML = `[!] SIZE_LIMIT_EXCEEDED`;
-                        resultDiv.className = 'scan-result danger';
-                        return;
-                    }
-
-                    resultDiv.innerHTML = `>> ERROR: ${msg}`;
-                    return;
-                }
-
-                // Success
-                if (guardEl) {
-                    guardEl.innerHTML = `[x] GUARD_CHECK: <span style="color:var(--accent-cyan);">CLEAN</span>`;
-                    guardEl.style.opacity = '1';
-                }
-                if (dlpEl) {
-                    dlpEl.innerHTML = `[>] DLP_ANALYSIS: <span class="blink">PROCESSING</span>`;
-                    dlpEl.style.opacity = '1';
-                }
-
-                const data = await res.json();
-
-                setTimeout(() => {
-                    renderScanResult(data, resultDiv, true);
-                }, 800);
-
-                loadRecentScans();
-            } catch (e) {
-                console.error(e);
-                resultDiv.textContent = '>> SYSTEM ERROR: CONNECTION_FAILED';
-            }
-        }
-
-        async function handleVideoUpload(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const resultDiv = document.getElementById('videoScanResult');
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'scan-result';
-
-            resultDiv.innerHTML = `
-                <div style="text-align:left;">
-                    <div style="margin-bottom:8px; color:var(--accent-purple);">>> INITIATING_AV_INTERCEPT...</div>
-                    <div id="v-step-guard" style="opacity:0.7;">[ ] GUARD_CHECK <span class="blink">...</span></div>
-                    <div id="v-step-dlp" style="opacity:0.4;">[ ] AUDIO_TRANSCRIPTION</div>
-                </div>
-            `;
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const res = await fetch('/api/scans/upload_video', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
-                });
-
-                const guardEl = document.getElementById('v-step-guard');
-                const dlpEl = document.getElementById('v-step-dlp');
-
-                if (res.status === 400 || res.status === 413) {
-                    // ... same error handling logic simplified ...
-                    const errData = await res.json();
-                    if (errData.detail.includes("Security Threat")) {
-                        if (guardEl) guardEl.innerHTML = `[!] GUARD_CHECK: <span style="color:#ff3333;">THREAT_DETECTED</span>`;
-                        resultDiv.className = 'scan-result danger';
-                        return;
-                    }
-                    resultDiv.innerHTML = `>> ERROR: ${errData.detail}`;
-                    return;
-                }
-
-                if (guardEl) guardEl.innerHTML = `[x] GUARD_CHECK: <span style="color:var(--accent-cyan);">CLEAN</span>`;
-                if (dlpEl) {
-                    dlpEl.innerHTML = `[>] AUDIO_TRANSCRIPTION: <span class="blink">PROCESSING</span>`;
-                    dlpEl.style.opacity = '1';
-                }
-
-                const data = await res.json();
-                setTimeout(() => { renderScanResult(data, resultDiv, true); }, 800);
-                loadRecentScans();
-
-            } catch (e) {
-                resultDiv.textContent = '>> SYSTEM ERROR: UPLOAD_FAILED';
-            }
-        }
-
-        function renderScanResult(data, resultDiv, isUpdate = false) {
-            const risk = data.risk_level ? data.risk_level.toLowerCase() : 'low';
-            let color = risk === 'low' ? 'var(--accent-cyan)' : '#ff3333';
-            let status = risk === 'low' ? 'SAFE' : 'RISK_DETECTED';
-
-            let html = `<div style="border-top:1px solid rgba(255,255,255,0.1); margin-top:10px; padding-top:10px;">
-                <div>>> ANALYSIS_COMPLETE</div>
-                <div>VERDICT: <span style="color:${color}; font-weight:bold;">${status}</span></div>
-             `;
-
-            if (data.findings && data.findings.length > 0) {
-                html += `<ul style="margin-top:10px; padding-left:20px; color:var(--text-dim);">`;
-                data.findings.forEach(f => {
-                    html += `<li>${f.type}: ${f.severity}</li>`;
-                });
-                html += `</ul>`;
-            }
-
-            if (data.ai_analysis) {
-                const score = data.ai_analysis.score || 0;
-                html += `<div style="margin-top:10px; font-size:0.8rem; color: #fff;">AI_SCORE: ${score}/100</div>`;
-            }
-
-            html += `</div>`;
-
-            // Keep the progressive logs if we want, or just overwrite. Overwriting for cleanliness in this theme.
-            resultDiv.innerHTML = html;
-            if (risk !== 'low') resultDiv.className = 'scan-result danger';
-        }
-
-        async function loadRecentScans() {
-            // ... Simple list loading ...
-            try {
-                const res = await fetch('/api/scans/', { headers: { 'Authorization': `Bearer ${token}` } });
-                const scans = await res.json();
-                const list = document.getElementById('scanList');
-                if (scans.length === 0) { list.innerHTML = '>> NO_DATA'; return; }
-
-                let html = '<ul style="list-style:none; padding:0;">';
-                scans.slice(0, 5).forEach(s => {
-                    let color = (s.risk_level === 'HIGH' || s.risk_level === 'CRITICAL') ? '#ff3333' : 'var(--accent-cyan)';
-                    html += `<li style="margin-bottom:5px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:2px;">
-                        <span style="color:${color};">[${s.risk_level}]</span> ${s.source} <span style="float:right; color:var(--text-dim);">${new Date(s.created_at).toLocaleTimeString()}</span>
-                    </li>`;
-                });
-                html += '</ul>';
-                list.innerHTML = html;
-            } catch (e) { }
-        }
-
-        // --- NEW: ARCHIVES LOGIC ---
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                if (b.textContent.includes(tabId.toUpperCase())) b.classList.add('active');
-            });
-
-            if (tabId === 'active') {
-                document.getElementById('tab-active').style.display = 'grid';
-                document.getElementById('tab-archives').style.display = 'none';
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+            if (menu.classList.contains('hidden')) {
+                document.body.style.overflow = '';
             } else {
-                document.getElementById('tab-active').style.display = 'none';
-                document.getElementById('tab-archives').style.display = 'block';
-                loadArchives();
+                document.body.style.overflow = 'hidden';
             }
         }
-
-        function toggleArchiveDetail(id) {
-            const detail = document.getElementById(`detail-${id}`);
-            const toggleBtn = document.getElementById(`toggle-${id}`);
-            const isVisible = detail.style.display === 'block';
-
-            detail.style.display = isVisible ? 'none' : 'block';
-            if (toggleBtn) {
-                toggleBtn.textContent = isVisible ? '[ EXPAND ]' : '[ COLLAPSE ]';
-                toggleBtn.style.color = isVisible ? 'var(--text-dim)' : 'var(--accent-cyan)';
-            }
-        }
-
-        async function loadArchives() {
-            const container = document.getElementById('archivesContainer');
-            try {
-                const res = await fetch('/api/scans/', { headers: { 'Authorization': `Bearer ${token}` } });
-                const scans = await res.json();
-
-                if (scans.length === 0) {
-                    container.innerHTML = '<p style="text-align:center;">NO_ARCHIVES_FOUND</p>';
-                    return;
-                }
-
-                let html = '';
-                scans.forEach(s => {
-                    const risk = s.risk_level || 'UNKNOWN';
-                    const riskColor = (risk === 'HIGH' || risk === 'CRITICAL') ? '#ff3333' : 'var(--accent-cyan)';
-
-                    // Parse AI Analysis
-                    let aiBlock = '';
-                    if (s.ai_analysis) {
-                        try {
-                            // Handle both stringified JSON and direct object (depending on API)
-                            const ai = (typeof s.ai_analysis === 'string') ? JSON.parse(s.ai_analysis) : s.ai_analysis;
-
-                            // Fields from dlp_engine.py: verdict, score, category, reason
-                            aiBlock = `
-                                <div class="ai-analysis-box">
-                                    <div style="display:flex; justify-content:space-between; margin-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px;">
-                                        <span style="color:var(--accent-cyan);">>> CISO_AI_VERDICT: ${ai.verdict || 'PENDING'}</span>
-                                        <span>SCORE: <span style="font-size:1.2em; font-weight:bold; color:${(ai.score > 50) ? '#ff3333' : 'var(--accent-cyan)'};">${ai.score || 0}</span>/100</span>
-                                    </div>
-                                    <div style="display:grid; grid-template-columns: 1fr 3fr; gap:10px; margin-bottom:10px; font-size:0.9rem;">
-                                        <div style="color:var(--text-dim);">CATEGORY:</div>
-                                        <div>${ai.category || 'General'}</div>
-                                    </div>
-                                    <div style="display:grid; grid-template-columns: 1fr 3fr; gap:10px; font-size:0.9rem;">
-                                        <div style="color:var(--text-dim);">ANALYSIS:</div>
-                                        <div style="line-height:1.5; color:#fff;">${ai.reason || ai.reasoning || 'No specific reasoning provided.'}</div>
-                                    </div>
-                                </div>
-                            `;
-                        } catch (e) { aiBlock = `<div class="ai-analysis-box" style="border-color:red;">AI DATA CORRUPT: ${e.message}</div>`; }
-                    } else {
-                        aiBlock = `<div class="ai-analysis-box" style="border-style:dashed; opacity:0.6;">>> AI_ANALYSIS_NOT_AVAILABLE</div>`;
-                    }
-
-                    // Findings List
-                    let findingsBlock = '';
-                    if (s.findings && s.findings.length > 0) {
-                        findingsBlock = '<ul style="margin-top:10px; padding-left:20px; color:var(--text-dim);">';
-                        s.findings.forEach(f => {
-                            if (typeof f === 'string') findingsBlock += `<li>${f}</li>`;
-                            else findingsBlock += `<li><span style="color:#fff;">${f.type}</span>: ${f.severity} (Count: ${f.count || 1})</li>`;
-                        });
-                        findingsBlock += '</ul>';
-                    } else {
-                        findingsBlock = '<p style="color:var(--text-dim); margin-top:10px;">>> NO_THREAT_PATTERNS_DETECTED</p>';
-                    }
-
-                    html += `
-                        <div class="archive-item">
-                            <div class="archive-header" onclick="toggleArchiveDetail(${s.id})">
-                                <div>
-                                    <span style="color:${riskColor}; font-weight:bold;">[${risk}]</span>
-                                    <span style="color:#fff; margin-left:10px;">${s.source}</span>
-                                </div>
-                                <div style="color:var(--text-dim); font-size:0.8rem;">
-                                    ${new Date(s.created_at).toLocaleString()} 
-                                    <span id="toggle-${s.id}" style="margin-left:10px; color:var(--text-dim);">[ EXPAND ]</span>
-                                </div>
-                            </div>
-                            <div id="detail-${s.id}" class="archive-details">
-                                <div style="margin-bottom:15px; color:var(--text-dim); font-size:0.9rem;">
-                                    SCAN_ID: ${s.id} // DURATION: ${s.scan_duration_ms || 0}ms // VERDICT: ${s.verdict}
-                                </div>
-                                ${aiBlock}
-                                <div style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">
-                                    <span style="color:var(--accent-purple);">>> FORENSIC_FINDINGS_LOG</span>
-                                    ${findingsBlock}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-                container.innerHTML = html;
-                container.innerHTML = html;
-            } catch (e) {
-                console.error("Archive Load Error:", e);
-                container.innerHTML = `<p style="text-align:center; color:#ff3333;">ERROR: ${e.message}</p>`;
-            }
-        }
-
-        init();
     </script>
 </body>
 

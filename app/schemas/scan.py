@@ -1,5 +1,5 @@
 """DLP Scan Pydantic schemas"""
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from app.models.scan import ScanStatus, RiskLevel
@@ -23,12 +23,21 @@ class ScanResponse(BaseModel):
     status: ScanStatus
     risk_level: Optional[RiskLevel]
     verdict: Optional[str]
+    scan_type: str = "DLP"
     ai_analysis: Optional[Any] = None
+    cdr_info: Optional[Dict[str, Any]] = None # Derived from ai_analysis usually, but useful to expose
+    threat_score: int = 0
+    summary: Optional[str] = "Analysis Complete"
+    credits_remaining: int = 50
     findings: Optional[List[Dict[str, Any]]]
     scan_duration_ms: Optional[int]
     created_at: datetime
     completed_at: Optional[datetime]
     
+    @property
+    def scan_id(self) -> str:
+        return f"cob-uuid-{self.id}"
+
     class Config:
         from_attributes = True
 
@@ -47,6 +56,24 @@ class ScanResponse(BaseModel):
     @classmethod
     def parse_ai_analysis(cls, v):
         return cls._parse_json(v)
+
+    @model_validator(mode='after')
+    def populate_cdr_info(self):
+        if self.cdr_info: return self
+        
+        # Try to extract from ai_analysis
+        if self.ai_analysis:
+             try:
+                 analysis = self.ai_analysis
+                 if isinstance(analysis, str):
+                     import json
+                     analysis = json.loads(analysis)
+                 
+                 if isinstance(analysis, dict) and 'cdr' in analysis:
+                     self.cdr_info = analysis['cdr']
+             except:
+                 pass
+        return self
 
 class ScanStats(BaseModel):
     total_scans: int
