@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <script src="/static/js/particles.js" defer></script>
-    <script>
+    <script src="/static/js/particles.js" defer nonce="{{ nonce }}"></script>
+    <script nonce="{{ nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
@@ -93,6 +93,79 @@
             font-size: 0.75rem;
             font-family: 'JetBrains Mono', monospace;
         }
+
+        /* Terminal Animation Styles */
+        .terminal-window {
+            background: #0D1117;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            height: 320px;
+        }
+
+        .terminal-header {
+            background: #161B22;
+            padding: 12px;
+            display: flex;
+            gap: 8px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #FF5F56;
+        }
+
+        .yellow {
+            background: #FFBD2E;
+        }
+
+        .green {
+            background: #27C93F;
+        }
+
+        .terminal-body {
+            padding: 20px;
+            color: #C9D1D9;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .cursor::after {
+            content: '▋';
+            animation: blink 1s step-start infinite;
+            color: #88FFFF;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        /* Syntax Colors */
+        .term-blue {
+            color: #88FFFF;
+        }
+
+        .term-green {
+            color: #27C93F;
+        }
+
+        .term-red {
+            color: #F85149;
+        }
+
+        .term-yellow {
+            color: #D29922;
+        }
     </style>
 </head>
 
@@ -105,26 +178,60 @@
             <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
         </div>
         <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
-            <a href="#features" class="hover:text-white transition">Features</a>
+            <a href="#features" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" class="hover:text-white transition">Enterprise</a>
             <a href="/api/docs" class="hover:text-white transition">API Docs</a>
             <a href="/icap" class="hover:text-white transition">ICAP Server</a>
             <a href="/about" class="hover:text-white transition">About Us</a>
+
         </div>
         <div class="flex gap-4 items-center">
-            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
-            <a href="/login" id="btn-login"
-                class="hidden sm:block btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
-                Launch Console
-            </a>
-            <a href="/dashboard" id="btn-dashboard"
-                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
-                Scan Portal
-            </a>
-            <button id="btn-logout" onclick="logout()"
-                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
-                LOGOUT
-            </button>
+            <!-- Guest State -->
+            <div id="auth-guest" class="hidden sm:flex gap-4 items-center">
+                <a href="/login" id="btn-login"
+                    class="text-sm font-bold text-gray-400 hover:text-white transition uppercase">
+                    Login
+                </a>
+                <a href="/register" id="btn-register"
+                    class="btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                    Register
+                </a>
+            </div>
+
+            <!-- User State -->
+            <div id="auth-user" class="hidden flex gap-4 items-center">
+                <a href="/dashboard"
+                    class="hidden sm:block btn-outline px-4 py-2 rounded-lg text-xs font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                    Scan Portal
+                </a>
+
+                <span id="nav-username" class="text-sm font-bold text-white uppercase hidden md:inline"></span>
+
+                <!-- Avatar Dropdown -->
+                <div class="relative">
+                    <button onclick="document.getElementById('user-dropdown').classList.toggle('hidden')"
+                        class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer focus:outline-none">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 2C8.686 2 6 4.686 6 8v2H4a2 2 0 00-2 2v6a2 2 0 002 2h2v2a2 2 0 002 2h8a2 2 0 002-2v-2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8c0-3.314-2.686-6-6-6zm0 2c2.209 0 4 1.791 4 4v2H8V8c0-2.209 1.791-4 4-4zm-4 8v6h2v-6H8zm4 0v6h-2v-6h2zm4 0v6h-2v-6h2zm-8 8h8v-2h-8v2z" />
+                        </svg>
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div id="user-dropdown"
+                        class="hidden absolute right-0 mt-2 w-48 bg-[#161B22] border border-[#30363d] rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-[#30363d] sm:hidden">
+                            <span class="block text-xs text-gray-400">Logged in as</span>
+                            <span id="dropdown-username" class="block text-sm font-bold text-white truncate"></span>
+                        </div>
+                        <a href="/dashboard"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 sm:hidden">Scan Portal</a>
+                        <a href="/dashboard#settings"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Settings</a>
+                        <button onclick="logout()"
+                            class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300">Logout</button>
+                    </div>
+                </div>
+            </div>
             <!-- Mobile Menu Button -->
             <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +244,7 @@
 
     <!-- Mobile Menu Overlay -->
     <div id="mobileMenu"
-        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6 overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
@@ -150,59 +257,172 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
-            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/api/docs" onclick="toggleMobileMenu()" class="hover:text-white transition">API Docs</a>
             <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
             <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
             <div class="h-px bg-border my-4"></div>
-            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+            <div id="mobile-user-info" class="hidden mb-4 text-center">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
+                <p id="mobile-username-display" class="text-xl font-bold text-white"></p>
+            </div>
+            <!-- Mobile Auth -->
+            <div id="mobile-auth-section" class="pt-6 border-t border-gray-800 flex flex-col gap-4">
+                <a href="/login" id="mobile-btn-login" class="text-gray-400 hover:text-white transition font-bold">[
+                    LOGIN ]</a>
+                <a href="/register" id="mobile-btn-register"
+                    class="bg-brand text-black px-4 py-2 rounded font-bold text-center">REGISTER NOW</a>
+                <a href="/dashboard" id="mobile-btn-dashboard"
+                    class="hidden text-brand font-black tracking-widest">[SCAN PORTAL]</a>
+                <a href="/dashboard#archive" id="mobile-btn-reports"
+                    class="hidden text-gray-400 hover:text-white transition font-bold">REPORTS</a>
+                <button id="mobile-btn-logout" onclick="logout()"
+                    class="hidden text-left text-red-500 font-bold hover:text-red-400">LOGOUT</button>
+            </div>
         </div>
     </div>
 
     <!-- Hero Section -->
-    <header class="relative pt-24 pb-32 px-4 overflow-hidden">
-        <div class="max-w-5xl mx-auto text-center relative z-10">
-            <div class="inline-block pill text-brand mb-8 animate-pulse">
-                SCALING SECURITY WITH AI
-            </div>
-            <h1
-                class="text-5xl md:text-7xl font-black tracking-tighter text-white mb-8 leading-[0.95] overflow-wrap-anywhere hyphens-auto">
-                Stop Data Leaks <br>
-                <span class="hero-gradient italic">Before They Cost Millions.</span>
-            </h1>
-            <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-12 leading-relaxed">
-                The intelligent security engine for the AI era. Scan files for Malware, Redact PII, and Disarm threats
-                instantly. Powered by AI.
-            </p>
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <a href="/register" id="btn-hero-cta"
-                    class="w-full sm:w-auto bg-brand hover:bg-opacity-90 text-black px-10 py-5 rounded-xl font-black text-lg transition shadow-xl shadow-brand/20">
-                    Start Scanning - Free
-                </a>
-                <a href="/api/docs"
-                    class="w-full sm:w-auto btn-outline px-10 py-5 rounded-xl font-black text-lg transition">
-                    Read API Docs
-                </a>
+    <header class="relative pt-32 pb-20 px-4 overflow-hidden">
+        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
+            <!-- Left Side: Copy -->
+            <div class="text-left space-y-8">
+                <div class="inline-block pill text-brand mb-4 animate-pulse">
+                    SCALING SECURITY WITH AI
+                </div>
+                <h1 class="text-5xl md:text-6xl font-black tracking-tighter text-white leading-tight">
+                    The Unified <br>
+                    <span class="hero-gradient">Immune System</span> <br>
+                    for Your Data.
+                </h1>
+                <p class="text-lg text-gray-400 max-w-xl leading-relaxed">
+                    One engine to secure your Files, Source Code, and Network Traffic. Block malware, redact PII, and
+                    secure your supply chain via API or ICAP.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <a href="/register" id="btn-hero-cta"
+                        class="bg-brand hover:bg-opacity-90 text-black px-8 py-4 rounded-xl font-bold text-lg transition shadow-[0_0_20px_rgba(136,255,255,0.2)] text-center">
+                        Start Free Scan
+                    </a>
+                    <a href="/api/docs"
+                        class="btn-outline px-8 py-4 rounded-xl font-bold text-lg transition text-center">
+                        Integration Docs
+                    </a>
+                </div>
             </div>
 
-            <!-- Trust Badges -->
-            <div class="mt-20 pt-10 border-t border-border/50">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-6">Trusted by developers
-                    securing:</p>
+            <!-- Right Side: Terminal -->
+            <div class="relative group">
+                <!-- Glow effect behind terminal -->
                 <div
-                    class="flex flex-wrap justify-center gap-6 opacity-40 grayscale hover:opacity-100 transition duration-500">
-                    <span class="font-mono font-bold text-xl">Node.js</span>
-                    <span class="text-2xl opacity-20">•</span>
-                    <span class="font-mono font-bold text-xl">Python</span>
-                    <span class="text-2xl opacity-20">•</span>
-                    <span class="font-mono font-bold text-xl">AWS</span>
-                    <span class="text-2xl opacity-20">•</span>
-                    <span class="font-mono font-bold text-xl">Docker</span>
+                    class="absolute -inset-1 bg-gradient-to-r from-brand to-purple-600 rounded-lg blur opacity-25 group-hover:opacity-50 transition duration-1000">
+                </div>
+
+                <div class="terminal-window relative font-mono text-sm leading-relaxed">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                        <div class="ml-4 text-xs text-gray-500">spidercob-engine — zsh — 80x24</div>
+                    </div>
+                    <div class="terminal-body" id="heroTerminal">
+                        <!-- Content injected by JS -->
+                    </div>
                 </div>
             </div>
         </div>
     </header>
+
+    <!-- Architecture Diagram -->
+    <section class="py-16 bg-bg border-y border-white/5 relative z-20">
+        <div class="max-w-6xl mx-auto px-4">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-2">Secure Every Entry Point.</h2>
+                <p class="text-gray-500 text-sm">Full coverage across your entire infrastructure.</p>
+            </div>
+
+            <div class="flex flex-col md:flex-row justify-center items-center gap-8 relative">
+                <!-- Input Columns -->
+                <div class="flex flex-col gap-6 md:w-1/3">
+                    <!-- Pipe A -->
+                    <div id="arch-input-a"
+                        class="glass-panel p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-brand/30 transition group">
+                        <div
+                            class="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                            📄</div>
+                        <div class="text-left">
+                            <div class="text-white font-bold text-sm">The App</div>
+                            <div class="text-xs text-gray-500 font-mono">User Uploads (API)</div>
+                        </div>
+                        <div class="ml-auto text-gray-600">→</div>
+                    </div>
+                    <!-- Pipe B -->
+                    <div id="arch-input-b"
+                        class="glass-panel p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-brand/30 transition group">
+                        <div
+                            class="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                            📡</div>
+                        <div class="text-left">
+                            <div class="text-white font-bold text-sm">The Network</div>
+                            <div class="text-xs text-gray-500 font-mono">Corp Proxy (ICAP)</div>
+                        </div>
+                        <div class="ml-auto text-gray-600">→</div>
+                    </div>
+                    <!-- Pipe C -->
+                    <div id="arch-input-c"
+                        class="glass-panel p-6 rounded-xl border border-white/5 flex items-center gap-4 hover:border-brand/30 transition group">
+                        <div
+                            class="w-12 h-12 bg-gray-800 rounded-lg flex items-center justify-center text-2xl group-hover:scale-110 transition">
+                            💻</div>
+                        <div class="text-left">
+                            <div class="text-white font-bold text-sm">The Code</div>
+                            <div class="text-xs text-gray-500 font-mono">CI/CD Pipeline</div>
+                        </div>
+                        <div class="ml-auto text-gray-600">→</div>
+                    </div>
+                </div>
+
+                <!-- Connectors Visual (Desktop) -->
+                <div class="hidden md:flex flex-col justify-center items-center w-24 relative">
+                    <div class="w-full border-t-2 border-dashed border-gray-700 relative top-0"></div>
+                    <button onclick="runArchitectureFlow()"
+                        class="absolute bg-bg text-brand text-2xl hover:scale-125 transition-transform cursor-pointer z-20 outline-none">▶</button>
+                </div>
+
+                <!-- The Brain -->
+                <div id="arch-brain"
+                    class="md:w-1/4 flex flex-col items-center justify-center relative z-10 transition-transform duration-300">
+                    <div
+                        class="w-32 h-32 rounded-full bg-black border-2 border-brand shadow-[0_0_50px_rgba(136,255,255,0.2)] flex items-center justify-center relative overflow-hidden">
+                        <div class="absolute inset-0 bg-brand/10 animate-pulse"></div>
+                        <span class="text-4xl relative z-10">🧠</span>
+                    </div>
+                    <div class="mt-4 text-brand font-bold">SpiderCob Brain</div>
+                </div>
+
+                <!-- Connector -->
+                <div class="hidden md:block text-gray-700">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                    </svg>
+                </div>
+
+                <!-- Output -->
+                <div id="arch-output"
+                    class="glass-panel p-8 rounded-2xl border border-green-500/30 bg-green-500/5 md:w-1/4 text-center transition-all duration-300">
+                    <div class="w-16 h-16 mx-auto bg-green-500/20 rounded-full flex items-center justify-center mb-4">
+                        <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="text-white font-bold">Sanitized & Compliant</div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- The Problem Section -->
     <section class="bg-[#161B22]/50 py-24 px-4 border-y border-border">
@@ -265,181 +485,170 @@
     </section>
 
     <!-- The Solution: 4 Pillars -->
-    <section id="features" class="py-32 px-4 space-y-32"
-        style="content-visibility: auto; contain-intrinsic-size: 1000px;">
-        <div class="max-w-6xl mx-auto">
-            <h2 class="text-center text-4xl font-black text-white mb-24">The Solution: The 4 Pillars</h2>
 
-            <!-- Pillar 1 -->
-            <div class="flex flex-col md:flex-row items-center gap-16">
-                <div class="md:w-1/2 space-y-6">
-                    <div class="text-brand font-mono font-bold tracking-[0.3em]">PILLAR_01</div>
-                    <h3 class="text-4xl font-black text-white">Intelligent File Guard 🛡️</h3>
-                    <p class="text-xl text-gray-300 font-bold">Don't just scan. Understand.</p>
-                    <p class="text-gray-400 leading-relaxed">
-                        We combine the raw power of ClamAV with the intelligence of AI. SpiderCob doesn't just
-                        look for virus signatures; it reads the context.
-                    </p>
-                    <ul class="space-y-4">
-                        <li class="flex items-start gap-4">
-                            <span class="text-brand">✔</span>
-                            <p class="text-sm text-gray-400"><strong>Smart Risk:</strong> Distinguishes between a
-                                "Stripe Test Card" (Safe) and a real customer credit card (Blocked).</p>
-                        </li>
-                        <li class="flex items-start gap-4">
-                            <span class="text-brand">✔</span>
-                            <p class="text-sm text-gray-400"><strong>Metadata Forensics:</strong> Detects hidden author
-                                names and GPS data inside PDFs before you publish them.</p>
-                        </li>
-                    </ul>
-                </div>
-                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
-                    <div
-                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-brand/30 transition">
-                        <!-- Visual representation of file scanning -->
-                        <div class="text-gray-700 font-mono text-xs overflow-hidden w-full p-6">
-                            <div class="text-green-500">>> [INITIATING_DEEP_SCAN]</div>
-                            <div class="text-white mt-1">Found: Invoice_v2.pdf</div>
-                            <div class="mt-2">Scanning signature... [CLEAN]</div>
-                            <div class="mt-1">Analyzing context via AI...</div>
-                            <div class="text-alert mt-1 font-bold">WARNING: Found SSN pattern "455-XX-XXXX" in hidden
-                                layer [CLEANING_RECOMMENDED]</div>
-                            <div class="animate-pulse mt-1 ml-4 ring-1 ring-brand w-2 h-4 inline-block"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Capabilities Grid -->
+    <section id="features" class="py-24 px-4 bg-[#161B22]/30 border-y border-white/5">
+        <div class="max-w-7xl mx-auto">
+            <h2 class="text-center text-4xl font-black text-white mb-4">Capabilities</h2>
+            <p class="text-center text-gray-500 max-w-2xl mx-auto mb-16">
+                Comprehensive defense for the modern stack.
+            </p>
 
-            <!-- Pillar 2 -->
-            <div class="flex flex-col md:flex-row-reverse items-center gap-16">
-                <div class="md:w-1/2 space-y-6">
-                    <div class="text-green-500 font-mono font-bold tracking-[0.3em]">PILLAR_02</div>
-                    <h3 class="text-4xl font-black text-white">Safe Wash (CDR) 🧼</h3>
-                    <p class="text-xl text-gray-300 font-bold">Malware hides in the macros. We scrub it out.</p>
-                    <p class="text-gray-400 leading-relaxed">
-                        Stop blocking files your team needs. Our Content Disarm & Reconstruction engine converts risky
-                        files (like Word Docs with Macros) into harmless formats, cleans the code, and rebuilds a
-                        safe copy.
-                    </p>
-                    <div
-                        class="bg-green-500/10 border border-green-500/20 p-4 rounded-xl text-green-400 text-sm italic">
-                        "Result: You get the document. The malware gets the trash."
-                    </div>
-                </div>
-                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
-                    <div
-                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-green-500/30 transition overflow-hidden">
-                        <div class="relative w-full h-full flex items-center justify-center">
-                            <div class="absolute inset-0 bg-green-500/5 mesh-gradient"></div>
-                            <div class="text-center space-y-4 z-10">
-                                <span class="block text-4xl">🧼</span>
-                                <div class="font-mono text-[10px] text-green-500">RECONSTRUCTING_INTERNAL_DOM</div>
-                                <div class="w-48 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto">
-                                    <div class="h-full bg-green-500 w-3/4 animate-pulse"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pillar 3 -->
-            <div class="flex flex-col md:flex-row items-center gap-16">
-                <div class="md:w-1/2 space-y-6">
-                    <div class="text-warning font-mono font-bold tracking-[0.3em]">PILLAR_03</div>
-                    <h3 class="text-4xl font-black text-white">Secret & Supply Chain 🔑</h3>
-                    <p class="text-xl text-gray-300 font-bold">Secure your code, not just your files.</p>
-                    <p class="text-gray-400 leading-relaxed">
-                        Developers are the new frontline. We integrate TruffleHog and OSV directly into your upload
-                        pipeline to find vulnerabilities and secrets before they reach the cloud.
-                    </p>
-                    <ul class="space-y-4">
-                        <li class="flex items-start gap-4">
-                            <span class="text-warning">✔</span>
-                            <p class="text-sm text-gray-400"><strong>Secrets:</strong> Instantly block commits
-                                containing API Keys, Tokens, or Passwords.</p>
-                        </li>
-                        <li class="flex items-start gap-4">
-                            <span class="text-warning">✔</span>
-                            <p class="text-sm text-gray-400"><strong>Dependencies:</strong> Upload package.json or
-                                requirements.txt and get a full vulnerability report.</p>
-                        </li>
-                    </ul>
-                </div>
-                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
-                    <div
-                        class="bg-bg rounded-2xl h-80 p-6 border border-border group-hover:border-warning/30 transition font-mono text-[10px]">
-                        <div class="text-gray-500 mb-2">trufflehog --json --file app.js</div>
-                        <div class="text-alert">{ "type": "PRIVATE_KEY", "file": "app.js", "line": 45, "risk":
-                            "CRITICAL" }</div>
-                        <div class="mt-4 text-gray-500">pip-audit -r requirements.txt</div>
-                        <div class="text-warning">Found Dependency: Django==3.2.1 [CVE-2022-XXXXX] HIGH RISK</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pillar 4 -->
-            <div class="flex flex-col md:flex-row-reverse items-center gap-16">
-                <div class="md:w-1/2 space-y-6">
-                    <div class="text-brand font-mono font-bold tracking-[0.3em]">PILLAR_04</div>
-                    <h3 class="text-4xl font-black text-white">ICAP Enterprise Gateway 🌐</h3>
-                    <p class="text-xl text-gray-300 font-bold">Zero-Trust Network Traffic Scanning.</p>
-                    <p class="text-gray-400 leading-relaxed">
-                        Multiplex your high-performance security scanning into any enterprise proxy using standard RFC
-                        3507 ICAP. Zero latency, full visibility over all corporate traffic.
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- 1. File Guard -->
+                <div class="glass-panel p-8 rounded-2xl hover:border-brand/50 transition group">
+                    <div class="text-4xl mb-6 group-hover:scale-110 transition duration-300">🛡️</div>
+                    <h3 class="text-xl font-bold text-white mb-2">File Guard & CDR</h3>
+                    <p class="text-brand font-bold text-sm mb-4">"Make Files Safe."</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Disarm malware in PDFs/Docs. Reconstruct safe files instantly.
                     </p>
                 </div>
-                <div class="md:w-1/2 glass-panel p-4 rounded-3xl group">
-                    <div
-                        class="bg-bg rounded-2xl h-80 flex items-center justify-center border border-border group-hover:border-brand/30 transition">
-                        <div class="text-center">
-                            <div class="text-6xl mb-4">🌐</div>
-                            <div class="font-mono text-xs text-brand">icaps://icap.spidercob.com:443</div>
-                            <p class="text-[10px] text-gray-600 mt-2 italic">Standard SNI Multiplexing Enabled</p>
-                        </div>
-                    </div>
+
+                <!-- 2. Supply Chain -->
+                <div class="glass-panel p-8 rounded-2xl hover:border-warning/50 transition group">
+                    <div class="text-4xl mb-6 group-hover:scale-110 transition duration-300">📦</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Supply Chain Security</h3>
+                    <p class="text-warning font-bold text-sm mb-4">"Secure Your Code."</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Scan package.json, pom.xml, and container manifests for CVEs.
+                    </p>
+                </div>
+
+                <!-- 3. DLP -->
+                <div class="glass-panel p-8 rounded-2xl hover:border-accent/50 transition group">
+                    <div class="text-4xl mb-6 group-hover:scale-110 transition duration-300">👁️</div>
+                    <h3 class="text-xl font-bold text-white mb-2">DLP & Privacy</h3>
+                    <p class="text-accent font-bold text-sm mb-4">"Stop The Leaks."</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Detect PII, PCI data, and secrets in text, images (OCR), and audio.
+                    </p>
+                </div>
+
+                <!-- 4. Network -->
+                <div class="glass-panel p-8 rounded-2xl hover:border-green-500/50 transition group">
+                    <div class="text-4xl mb-6 group-hover:scale-110 transition duration-300">🌐</div>
+                    <h3 class="text-xl font-bold text-white mb-2">Network Defense</h3>
+                    <p class="text-green-400 font-bold text-sm mb-4">"Filter The Traffic."</p>
+                    <p class="text-gray-400 text-sm leading-relaxed">
+                        Plug SpiderCob directly into your Proxy (Squid/F5) to scan downloads in real-time.
+                    </p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Developer Experience Section -->
-    <section class="bg-bg py-32 px-4">
-        <div class="max-w-6xl mx-auto flex flex-col lg:flex-row items-center gap-12">
-            <div class="lg:w-1/2 space-y-6 text-left">
-                <h2 class="text-4xl font-black text-white leading-tight">Security integrated <br> in 3 lines of code.
-                </h2>
-                <p class="text-gray-400 font-bold text-lg">Built for developers, by developers. Drop SpiderCob into your
-                    Python, Node, or Go backend today.</p>
-                <div class="flex gap-4">
-                    <div class="pill bg-brand/20 text-brand">PYTHON</div>
-                    <div class="pill bg-gray-800 text-gray-500">NODE.JS</div>
-                    <div class="pill bg-gray-800 text-gray-500">GO</div>
-                </div>
+    <!-- Integration Section -->
+    <section class="py-24 px-4 bg-bg border-t border-white/5">
+        <div class="max-w-5xl mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="text-3xl font-bold text-white mb-4">Plug into any layer of your stack.</h2>
+                <p class="text-gray-500">Native integrations for every entry point.</p>
             </div>
-            <div class="lg:w-1/2 w-full">
-                <div class="glass-panel rounded-2xl overflow-hidden border-2 border-border shadow-2xl">
-                    <div class="bg-gray-800 px-4 py-2 flex items-center gap-2 border-b border-border">
-                        <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
-                        <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
-                        <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
-                        <span class="ml-auto text-[10px] font-mono text-gray-500">spider_scan.py</span>
-                    </div>
-                    <div class="p-6 font-mono text-sm overflow-x-auto text-gray-300">
-                        <pre>
-<span class="text-gray-500"># The SpiderCob Way: Simple. Powerful.</span>
-<span class="text-brand">import</span> requests
 
-response = requests.post(
-    <span class="text-brand">"https://api.spidercob.com/v1/scan"</span>,
-    headers={<span class="text-brand">"Authorization"</span>: <span class="text-brand">"Bearer YOUR_API_KEY"</span>},
-    files={<span class="text-brand">"file"</span>: open(<span class="text-brand">"invoice_v2.pdf"</span>, <span class="text-brand">"rb"</span>)}
+            <!-- Tabs -->
+            <div class="flex justify-center gap-4 mb-8">
+                <button onclick="switchTab('api')" id="tab-api"
+                    class="px-6 py-2 rounded-lg font-mono text-sm font-bold bg-brand text-black transition shadow-[0_0_15px_rgba(136,255,255,0.4)]">REST
+                    API</button>
+                <button onclick="switchTab('icap')" id="tab-icap"
+                    class="px-6 py-2 rounded-lg font-mono text-sm font-bold bg-gray-800 text-gray-400 hover:text-white transition">ICAP
+                    Proxy</button>
+                <button onclick="switchTab('cicd')" id="tab-cicd"
+                    class="px-6 py-2 rounded-lg font-mono text-sm font-bold bg-gray-800 text-gray-400 hover:text-white transition">CI/CD</button>
+            </div>
+
+            <!-- Code Window -->
+            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl border border-gray-700">
+                <div class="bg-[#0D1117] p-3 border-b border-gray-700 flex items-center gap-2">
+                    <div class="flex gap-2">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                </div>
+
+                <div class="p-6 overflow-x-auto bg-[#0D1117]">
+                    <!-- Tab 1: API -->
+                    <pre id="code-api" class="font-mono text-sm text-gray-300">
+<span class="text-purple-400">import</span> requests
+
+<span class="text-gray-500"># Scan a file upload</span>
+resp = requests.post(
+    <span class="text-green-400">"https://api.spidercob.com/v1/scan"</span>,
+    files={<span class="text-green-400">"file"</span>: open(<span class="text-green-400">"resume.pdf"</span>, <span class="text-green-400">"rb"</span>)},
+    data={<span class="text-green-400">"mode"</span>: <span class="text-green-400">"deep_scan"</span>}
 )
 
-<span class="text-brand">if</span> response.json()[<span class="text-brand">'status'</span>] == <span class="text-brand">"BLOCKED"</span>:
-    <span class="text-brand">print</span>(f<span class="text-brand">"Threat Detected: {response.json()['threat_type']}"</span>)
-    <span class="text-brand">print</span>(f<span class="text-brand">"Action Taken: {response.json()['action']}"</span>)</pre>
-                    </div>
+<span class="text-blue-400">print</span>(resp.json())</pre>
+
+                    <!-- Tab 2: ICAP -->
+                    <pre id="code-icap" class="hidden font-mono text-sm text-gray-300">
+<span class="text-gray-500"># squid.conf - Protect your corporate network</span>
+
+icap_enable <span class="text-purple-400">on</span>
+icap_preview_enable <span class="text-purple-400">on</span>
+icap_preview_size <span class="text-blue-400">1024</span>
+
+<span class="text-gray-500"># Define SpiderCob Service</span>
+icap_service <span class="text-yellow-400">spidercob_req</span> reqmod_precache icap://spidercob-engine:1344/reqmod
+icap_service <span class="text-yellow-400">spidercob_resp</span> respmod_precache icap://spidercob-engine:1344/respmod
+
+<span class="text-gray-500"># Apply to all traffic</span>
+adaptation_access <span class="text-yellow-400">spidercob_req</span> allow all
+adaptation_access <span class="text-yellow-400">spidercob_resp</span> allow all</pre>
+
+                    <!-- Tab 3: CI/CD -->
+                    <pre id="code-cicd" class="hidden font-mono text-sm text-gray-300">
+<span class="text-gray-500"># .github/workflows/security.yml</span>
+<span class="text-blue-400">name:</span> SpiderCob Code Scan
+
+<span class="text-blue-400">on:</span> [push, pull_request]
+
+<span class="text-blue-400">jobs:</span>
+  <span class="text-yellow-400">security-check:</span>
+    <span class="text-blue-400">runs-on:</span> ubuntu-latest
+    <span class="text-blue-400">steps:</span>
+      - <span class="text-blue-400">uses:</span> actions/checkout@v3
+      
+      - <span class="text-blue-400">name:</span> Run SpiderCob CLI
+        <span class="text-blue-400">run:</span> |
+          curl -sL https://spidercob.com/cli | bash
+          spidercob-cli scan --target ./src --check-secrets --fail-on-critical
+        <span class="text-blue-400">env:</span>
+          <span class="text-yellow-400">SPIDERCOB_API_KEY:</span> ${{ secrets.SPIDERCOB_KEY }}</pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Bottom CTA & Trust Section -->
+    <section class="py-24 px-4 text-center">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+                <a href="/register" id="btn-bottom-cta"
+                    class="w-full sm:w-auto bg-brand hover:bg-opacity-90 text-black px-10 py-5 rounded-xl font-black text-lg transition shadow-xl shadow-brand/20">
+                    Start Scanning - Free
+                </a>
+                <a href="/api/docs"
+                    class="w-full sm:w-auto btn-outline px-10 py-5 rounded-xl font-black text-lg transition">
+                    Read API Docs
+                </a>
+            </div>
+
+            <!-- Trust Badges -->
+            <div class="pt-10 border-t border-border/50">
+                <p class="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold mb-6">Trusted by developers
+                    securing:</p>
+                <div
+                    class="flex flex-wrap justify-center gap-6 opacity-40 grayscale hover:opacity-100 transition duration-500">
+                    <span class="font-mono font-bold text-xl">Node.js</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">Python</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">AWS</span>
+                    <span class="text-2xl opacity-20">•</span>
+                    <span class="font-mono font-bold text-xl">Docker</span>
                 </div>
             </div>
         </div>
@@ -454,7 +663,8 @@ response = requests.post(
                 <span class="text-xs font-mono font-bold tracking-[0.4em] text-brand mb-6 block">COMING SOON</span>
                 <h2 class="text-4xl md:text-5xl font-black text-white mb-8">Autonomous Red Teaming</h2>
                 <p class="text-gray-400 text-lg mb-10 max-w-2xl mx-auto">
-                    We are integrating Stanford’s ARTEMIS agent. Soon, you won't just scan files—you'll legally "hack"
+                    We are integrating Stanford’s ARTEMIS agent. Soon, you won't just scan files—you'll legally
+                    "hack"
                     your own infrastructure to find holes before the bad guys do.
                 </p>
                 <a href="#" class="text-white font-bold border-b-2 border-brand pb-1 hover:text-brand transition">
@@ -497,60 +707,109 @@ response = requests.post(
         </div>
     </footer>
 
-    <script>
+    <script nonce="{{ nonce }}">
         // Check Auth - Toggle Buttons & Fetch User
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            // User is logged in - Update Nav
-            const btnLogin = document.getElementById('btn-login');
-            const btnDash = document.getElementById('btn-dashboard');
-
-            if (btnLogin) {
-                btnLogin.classList.add('hidden');
-                btnLogin.classList.remove('sm:block');
-            }
-            if (btnDash) {
-                btnDash.classList.remove('hidden');
-                btnDash.classList.add('sm:block');
-            }
-
-            // Update Hero CTA
-            const heroCta = document.getElementById('btn-hero-cta');
-            if (heroCta) {
-                heroCta.href = "/dashboard";
-                heroCta.innerText = "Go to Dashboard";
-            }
-
-            // Toggle Logout Button
-            const btnLogout = document.getElementById('btn-logout');
-            if (btnLogout) btnLogout.classList.remove('hidden');
-
-            // Fetch Username
-            fetch('/api/users/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error('Unauthorized');
+        // Instead of local storage check, we try to fetch user directly using cookie
+        fetch('/api/users/me')
+            .then(res => {
+                if (res.ok) {
                     return res.json();
-                })
-                .then(user => {
-                    const navName = document.getElementById('nav-username');
-                    if (navName) {
-                        navName.innerText = user.username;
-                        navName.classList.remove('hidden');
-                    }
-                })
-                .catch(err => {
-                    console.warn('Session expired', err);
-                    localStorage.removeItem('access_token');
-                    window.location.reload();
-                });
+                }
+                throw new Error('Not authenticated');
+            })
+            .then(user => {
+                // User is logged in - Update Nav
+                const guestSection = document.getElementById('auth-guest');
+                const userSection = document.getElementById('auth-user');
+
+                if (guestSection) {
+                    guestSection.classList.add('hidden');
+                    guestSection.classList.remove('sm:flex');
+                }
+                if (userSection) {
+                    userSection.classList.remove('hidden');
+                    userSection.classList.add('flex'); // Ensure it displays
+                }
+
+                // Legacy/Individual Button Handling (Cleanup)
+                const btnLogin = document.getElementById('btn-login');
+                if (btnLogin) btnLogin.classList.add('hidden');
+
+                const btnRegister = document.getElementById('btn-register');
+                if (btnRegister) btnRegister.classList.add('hidden');
+
+                const btnDash = document.getElementById('btn-dashboard');
+                if (btnDash) {
+                    btnDash.classList.remove('hidden');
+                    btnDash.classList.add('sm:block');
+                }
+
+
+                // Update Hero CTA
+                const heroCta = document.getElementById('btn-hero-cta');
+                if (heroCta) {
+                    heroCta.href = "/dashboard";
+                    heroCta.innerText = "Scan Portal";
+                }
+
+                // Update Bottom CTA
+                const bottomCta = document.getElementById('btn-bottom-cta');
+                if (bottomCta) {
+                    bottomCta.href = "/dashboard";
+                    bottomCta.innerText = "Go to Dashboard";
+                }
+
+                // Toggle Logout Button
+                const btnLogout = document.getElementById('btn-logout');
+                if (btnLogout) btnLogout.classList.remove('hidden');
+
+                // Mobile Menu Updates
+                const mBtnLogin = document.getElementById('mobile-btn-login');
+                const mBtnRegister = document.getElementById('mobile-btn-register');
+                const mBtnDash = document.getElementById('mobile-btn-dashboard');
+                const mBtnLogout = document.getElementById('mobile-btn-logout');
+
+                if (mBtnLogin) mBtnLogin.classList.add('hidden');
+                if (mBtnRegister) mBtnRegister.classList.add('hidden');
+                if (mBtnDash) mBtnDash.classList.remove('hidden');
+                const mBtnReports = document.getElementById('mobile-btn-reports');
+                if (mBtnReports) mBtnReports.classList.remove('hidden');
+                if (mBtnLogout) mBtnLogout.classList.remove('hidden');
+
+                // Update Username Display
+                const navName = document.getElementById('nav-username');
+                const mobileName = document.getElementById('mobile-username-display');
+                const mobileInfo = document.getElementById('mobile-user-info');
+                const dropdownName = document.getElementById('dropdown-username');
+
+                if (navName) {
+                    navName.innerText = user.username;
+                    navName.classList.remove('hidden');
+                }
+                if (mobileName) {
+                    mobileName.innerText = user.username;
+                }
+                if (mobileInfo) mobileInfo.classList.remove('hidden');
+                if (dropdownName) {
+                    dropdownName.innerText = user.username;
+                }
+            })
+            .catch(err => {
+                // console.log('Not authenticated (Guest Mode)');
+                // No action needed, default state is guest
+            });
+
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout', { method: 'POST' });
+            } catch (e) {
+                console.error('Logout failed', e);
+            }
+            // Cleanup local storage just in case old tokens exist
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
         }
 
-        function logout() {
-            localStorage.removeItem('access_token');
-            window.location.reload();
-        }
 
 
         // Particle system is initialized automatically by /static/js/particles.js
@@ -564,6 +823,153 @@ response = requests.post(
             } else {
                 document.body.style.overflow = 'hidden';
             }
+        }
+
+        // Terminal Typewriter Animation
+        const terminalContent = [
+            { type: 'cmd', text: '> [ICAP] Incoming Stream: invoice.pdf' },
+            { type: 'log', text: '... BLOCKED (Malware: Win32.Trojan)', color: 'term-red' },
+            { type: 'cmd', text: '> [API] Upload: source_code.zip' },
+            { type: 'log', text: '... ALERT (Secret: AWS Key Found)', color: 'term-yellow' },
+            { type: 'cmd', text: '> [SCA] Dependency: requirements.txt' },
+            { type: 'log', text: '... WARNING (Vuln: Log4j CVE-2021-44228)', color: 'term-red' },
+            { type: 'cmd', text: '> [SYSTEM] SpiderCob Engine Active...' }
+        ];
+
+        async function typeWriter(containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+
+            let lineIndex = 0;
+
+            while (true) { // Infinite Loop
+                container.innerHTML = ''; // Clear
+                lineIndex = 0;
+
+                for (const line of terminalContent) {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'mb-2';
+                    container.appendChild(lineDiv);
+
+                    if (line.type === 'cmd') {
+                        lineDiv.innerHTML = '<span class="term-blue">$</span> ';
+                    } else {
+                        // slightly indent logs
+                        lineDiv.style.paddingLeft = '16px';
+                    }
+
+                    // Type out char by char
+                    const text = line.text;
+                    for (let i = 0; i < text.length; i++) {
+                        lineDiv.innerHTML += text.charAt(i);
+                        // Add cursor to current typing location (simulated by having a span that moves?)
+                        // Simpler: just append chars. 
+                        // To show cursor, we could add a span class cursor at the end and remove it later.
+                        lineDiv.insertAdjacentHTML('beforeend', '<span class="cursor"></span>');
+                        await new Promise(r => setTimeout(r, 20 + Math.random() * 30));
+                        lineDiv.querySelector('.cursor').remove();
+                    }
+
+                    if (line.color) lineDiv.classList.add(line.color);
+
+                    await new Promise(r => setTimeout(r, 500)); // Pause after line
+                }
+
+                await new Promise(r => setTimeout(r, 3000)); // Wait before restart
+            }
+        }
+
+        // Start animation
+        document.addEventListener('DOMContentLoaded', () => {
+            typeWriter('heroTerminal');
+        });
+
+        // Tab Switching Logic
+        function switchTab(tab) {
+            // Hide all code
+            ['api', 'icap', 'cicd'].forEach(t => document.getElementById('code-' + t).classList.add('hidden'));
+            document.getElementById('code-' + tab).classList.remove('hidden');
+
+            // Reset buttons
+            ['api', 'icap', 'cicd'].forEach(t => {
+                const btn = document.getElementById('tab-' + t);
+                btn.className = 'px-6 py-2 rounded-lg font-mono text-sm font-bold bg-gray-800 text-gray-400 hover:text-white transition';
+            });
+
+            // Highlight active button
+            const activeBtn = document.getElementById('tab-' + tab);
+            activeBtn.className = 'px-6 py-2 rounded-lg font-mono text-sm font-bold bg-brand text-black transition shadow-[0_0_15px_rgba(136,255,255,0.4)]';
+        }
+
+        // Architecture Flow Animation
+        function runArchitectureFlow() {
+            // Elements
+            const inputs = ['arch-input-a', 'arch-input-b', 'arch-input-c'].map(id => document.getElementById(id));
+            const brain = document.getElementById('arch-brain');
+            const output = document.getElementById('arch-output');
+
+            // 1. Create Particles from Inputs to Brain
+            inputs.forEach((input, index) => {
+                createParticle(input, brain, index * 200); // Staggered start
+            });
+
+            // 2. Pulse Brain after delay
+            setTimeout(() => {
+                brain.classList.add('scale-125');
+                brain.style.filter = "drop-shadow(0 0 20px #88FFFF)";
+                setTimeout(() => {
+                    brain.classList.remove('scale-125');
+                    brain.style.filter = "";
+                    // 3. Send Particle to Output
+                    createParticle(brain, output, 0, true);
+                }, 400);
+            }, 1200);
+
+            // 4. Pulse Output after delay
+            setTimeout(() => {
+                output.classList.add('scale-110', 'bg-green-500/20');
+                output.style.borderColor = "#27C93F";
+                setTimeout(() => {
+                    output.classList.remove('scale-110', 'bg-green-500/20');
+                    output.style.borderColor = "";
+                }, 500);
+            }, 2000);
+        }
+
+        function createParticle(startElem, endElem, delay, isGreen = false) {
+            setTimeout(() => {
+                const startRect = startElem.getBoundingClientRect();
+                const endRect = endElem.getBoundingClientRect();
+
+                // Center points
+                const startX = startRect.left + startRect.width / 2;
+                const startY = startRect.top + startRect.height / 2;
+                const endX = endRect.left + endRect.width / 2;
+                const endY = endRect.top + endRect.height / 2;
+
+                const particle = document.createElement('div');
+                particle.className = `fixed w-4 h-4 rounded-full z-50 pointer-events-none ${isGreen ? 'bg-green-500 shadow-[0_0_10px_#27C93F]' : 'bg-brand shadow-[0_0_10px_#88FFFF]'}`;
+
+                // Start position
+                particle.style.left = startX + 'px';
+                particle.style.top = startY + 'px';
+                particle.style.transform = 'translate(-50%, -50%)';
+                particle.style.transition = 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)'; // Smooth ease-in-out
+
+                document.body.appendChild(particle);
+
+                // Force reflow
+                particle.offsetHeight;
+
+                // Animate to end
+                particle.style.left = endX + 'px';
+                particle.style.top = endY + 'px';
+
+                // Cleanup
+                setTimeout(() => {
+                    particle.remove();
+                }, 800);
+            }, delay);
         }
     </script>
 </body>

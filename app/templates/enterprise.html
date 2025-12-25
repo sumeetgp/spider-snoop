@@ -104,26 +104,59 @@
             <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
         </a>
         <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
-            <a href="/#features" class="hover:text-white transition">Features</a>
+            <a href="/#features" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" class="text-brand transition">Enterprise</a>
             <a href="/api/docs" class="hover:text-white transition">API Docs</a>
             <a href="/icap" class="hover:text-white transition">ICAP Server</a>
             <a href="/about" class="hover:text-white transition">About Us</a>
         </div>
         <div class="flex gap-4 items-center">
-            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
-            <a href="/login" id="btn-login"
-                class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
-                Launch Console
-            </a>
-            <a href="/dashboard" id="btn-dashboard"
-                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
-                Scan Portal
-            </a>
-            <button id="btn-logout" onclick="logout()"
-                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
-                LOGOUT
-            </button>
+            <!-- Guest State -->
+            <div id="auth-guest" class="hidden sm:flex gap-4 items-center">
+                <a href="/login" id="btn-login"
+                    class="text-sm font-bold text-gray-400 hover:text-white transition uppercase">
+                    Login
+                </a>
+                <a href="/register" id="btn-register"
+                    class="btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                    Register
+                </a>
+            </div>
+
+            <!-- User State -->
+            <div id="auth-user" class="hidden flex gap-4 items-center">
+                <a href="/dashboard"
+                    class="hidden sm:block btn-outline px-4 py-2 rounded-lg text-xs font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                    Scan Portal
+                </a>
+
+                <span id="nav-username" class="text-sm font-bold text-white uppercase hidden md:inline"></span>
+
+                <!-- Avatar Dropdown -->
+                <div class="relative">
+                    <button onclick="document.getElementById('user-dropdown').classList.toggle('hidden')"
+                        class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer focus:outline-none">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 2C8.686 2 6 4.686 6 8v2H4a2 2 0 00-2 2v6a2 2 0 002 2h2v2a2 2 0 002 2h8a2 2 0 002-2v-2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8c0-3.314-2.686-6-6-6zm0 2c2.209 0 4 1.791 4 4v2H8V8c0-2.209 1.791-4 4-4zm-4 8v6h2v-6H8zm4 0v6h-2v-6h2zm4 0v6h-2v-6h2zm-8 8h8v-2h-8v2z" />
+                        </svg>
+                    </button>
+                    <!-- Dropdown Content -->
+                    <div id="user-dropdown"
+                        class="hidden absolute right-0 mt-2 w-48 bg-[#161B22] border border-[#30363d] rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-[#30363d] sm:hidden">
+                            <span class="block text-xs text-gray-400">Logged in as</span>
+                            <span id="dropdown-username" class="block text-sm font-bold text-white truncate"></span>
+                        </div>
+                        <a href="/dashboard"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 sm:hidden">Scan Portal</a>
+                        <a href="/dashboard#settings"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Settings</a>
+                        <button onclick="logout()"
+                            class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300">Logout</button>
+                    </div>
+                </div>
+            </div>
             <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
@@ -135,7 +168,7 @@
 
     <!-- Mobile Menu Overlay -->
     <div id="mobileMenu"
-        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6 overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
@@ -148,13 +181,23 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" onclick="toggleMobileMenu()" class="text-brand">Enterprise</a>
             <a href="/api/docs" class="hover:text-white transition">API Docs</a>
             <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
             <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
             <div class="h-px bg-border my-4"></div>
-            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+            <div id="mobile-user-info" class="hidden mb-4 text-center">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
+                <p id="mobile-username-display" class="text-xl font-bold text-white"></p>
+            </div>
+            <a href="/login" id="mobile-btn-login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+            <a href="/dashboard" id="mobile-btn-dashboard" class="hidden text-brand font-black tracking-widest">[SCAN
+                PORTAL]</a>
+            <a href="/dashboard#archive" id="mobile-btn-reports"
+                class="hidden text-gray-400 font-bold tracking-widest hover:text-white transition">REPORTS</a>
+            <button id="mobile-btn-logout" onclick="logout()"
+                class="hidden text-left text-red-500 font-bold tracking-widest">[LOGOUT]</button>
         </div>
     </div>
 
@@ -500,25 +543,31 @@
         const token = localStorage.getItem('access_token');
         if (token) {
             // User is logged in - Update Nav
-            const btnLogin = document.getElementById('btn-login');
-            const btnDash = document.getElementById('btn-dashboard');
+            const guestSection = document.getElementById('auth-guest');
+            const userSection = document.getElementById('auth-user');
 
-            if (btnLogin) {
-                btnLogin.classList.add('hidden');
-                btnLogin.classList.remove('sm:block');
+            if (guestSection) {
+                guestSection.classList.add('hidden');
+                guestSection.classList.remove('sm:flex');
             }
-            if (btnDash) {
-                btnDash.classList.remove('hidden');
-                btnDash.classList.add('sm:block');
-            }
+            if (userSection) userSection.classList.remove('hidden');
 
-            // Toggle Logout Button
-            const btnLogout = document.getElementById('btn-logout');
-            if (btnLogout) btnLogout.classList.remove('hidden');
+            // Mobile Menu Updates
+            const mBtnLogin = document.getElementById('mobile-btn-login');
+            const mBtnDash = document.getElementById('mobile-btn-dashboard');
+            const mBtnLogout = document.getElementById('mobile-btn-logout');
+            const mBtnReports = document.getElementById('mobile-btn-reports');
+
+            if (mBtnLogin) mBtnLogin.classList.add('hidden');
+            if (mBtnDash) mBtnDash.classList.remove('hidden');
+            if (mBtnReports) mBtnReports.classList.remove('hidden');
+            if (mBtnLogout) mBtnLogout.classList.remove('hidden');
 
             // Fetch Username
             fetch('/api/users/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
             })
                 .then(res => {
                     if (!res.ok) throw new Error('Unauthorized');
@@ -526,10 +575,19 @@
                 })
                 .then(user => {
                     const navName = document.getElementById('nav-username');
+                    const dropName = document.getElementById('dropdown-username');
+                    const mobileName = document.getElementById('mobile-username-display');
+                    const mobileInfo = document.getElementById('mobile-user-info');
+
                     if (navName) {
                         navName.innerText = user.username;
                         navName.classList.remove('hidden');
                     }
+                    if (dropName) dropName.innerText = user.username;
+                    if (mobileName) {
+                        mobileName.innerText = user.username;
+                    }
+                    if (mobileInfo) mobileInfo.classList.remove('hidden');
                 })
                 .catch(err => {
                     console.warn('Session expired', err);

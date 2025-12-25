@@ -7,10 +7,10 @@
     <title>NEW IDENTITY // SPIDERCOB</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Particles -->
-    <script src="/static/js/particles.js"></script>
+    <script src="/static/js/particles.js" nonce="{{ nonce }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <script>
+    <script nonce="{{ nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
@@ -70,7 +70,7 @@
             <p class="text-xs font-mono text-gray-600">// CREATE_NEW_RECORD</p>
         </div>
 
-        <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3">
+        <form id="registerForm" class="space-y-3">
             <div>
                 <label class="block text-xs font-bold text-brand mb-1">FULL_NAME</label>
                 <input type="text" id="fullname"
@@ -108,12 +108,15 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ nonce }}">
         if (window.particlesJS) {
             particlesJS("bgCanvas", {
                 "particles": { "number": { "value": 40 }, "color": { "value": "#88FFFF" }, "opacity": { "value": 0.3 }, "size": { "value": 2 }, "line_linked": { "color": "#88FFFF", "opacity": 0.1 }, "move": { "speed": 1 } }
             });
         }
+
+        // Add event listener programmatically to satisfy CSP
+        document.getElementById('registerForm').addEventListener('submit', handleRegister);
 
         async function handleRegister(e) {
             e.preventDefault();
@@ -138,7 +141,7 @@
                 const data = await res.json();
 
                 if (res.ok) {
-                    localStorage.setItem('access_token', data.access_token);
+                    // Cookie is set automatically due to HttpOnly
                     btn.textContent = 'SUCCESS // REDIRECTING';
                     btn.classList.add('bg-brand', 'text-white');
                     setTimeout(() => window.location.href = '/dashboard', 800);

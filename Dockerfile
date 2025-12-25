@@ -32,7 +32,7 @@ RUN mkdir -p /usr/share/keyrings && \
 # Install python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m spacy download en_core_web_lg
+    python -m spacy download en_core_web_sm
 
 # Copy the rest of the application code
 COPY . .
@@ -41,4 +41,4 @@ COPY . .
 EXPOSE 8000
 
 # Command to run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

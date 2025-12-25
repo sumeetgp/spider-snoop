@@ -1,6 +1,6 @@
 """API Routes - Authentication"""
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -13,7 +13,7 @@ from app.config import settings
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Login to get an access token.
     
@@ -41,10 +41,21 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
         data={"sub": user.username, "role": user.role.value}, expires_delta=access_token_expires
     )
     
+    # Set HttpOnly Cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
+        secure=False, # Set to True in Production (HTTPS)
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register", response_model=Token)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
+async def register(response: Response, user_data: UserCreate, db: Session = Depends(get_db)):
     """Public registration endpoint"""
     # Check existing user
     if db.query(User).filter(User.email == user_data.email).first():
@@ -78,4 +89,21 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         data={"sub": db_user.username, "role": db_user.role.value}, expires_delta=access_token_expires
     )
     
+    # Set HttpOnly Cookie
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        samesite="lax",
+        secure=False, # Set to True in Production
+    )
+    
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Logout and clear cookie"""
+    response.delete_cookie("access_token")
+    return {"message": "Logged out successfully"}

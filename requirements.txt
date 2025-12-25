@@ -1,49 +1,47 @@
 # Web Framework
 fastapi>=0.110.0
 jinja2>=3.1.2
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
 slowapi>=0.1.9
 moviepy>=1.0.3
-openai>=1.0.0
-
 
 # Database
 sqlalchemy>=2.0.36
-alembic==1.12.1
-psycopg2-binary==2.9.11
+alembic>=1.12.1
+psycopg2-binary>=2.9.9
 
 # Authentication
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
-python-dotenv==1.0.0
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt==3.2.2
+python-dotenv>=1.0.0
 
 # ICAP Protocol
-pyicap==1.0b1
+pyicap>=1.0b1
 
 # AI/ML
 openai>=1.40.0
 
 # Utilities
 pydantic>=2.7.4
-pydantic-settings==2.1.0
-email-validator==2.1.0
-python-dateutil==2.8.2
+pydantic-settings>=2.1.0
+email-validator>=2.1.0
+python-dateutil>=2.8.2
 python-docx
 pypdf
 pytesseract
-Pillow>=1.1.0
+Pillow>=10.0.0
 oletools>=0.60
 reportlab>=4.0.0
 
 
 # Monitoring & Logging
-python-json-logger==2.0.7
+python-json-logger>=2.0.7
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
+pytest>=7.4.3
+pytest-asyncio>=0.21.1
 httpx>=0.27.0
 langchain>=0.2.0
 langchain-openai>=0.1.0
@@ -51,10 +49,10 @@ clamd>=1.0.2
 yara-python>=4.3.0
 
 # Storage
-boto3==1.34.0
+boto3>=1.34.0
 
 # MCP
-mcp[cli]>=1.0.0
+mcp>=1.0.0
 
 # Advanced DLP
 presidio-analyzer>=2.2.351

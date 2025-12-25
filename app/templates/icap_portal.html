@@ -48,38 +48,41 @@
             <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
         </a>
         <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
-            <a href="/#features" class="hover:text-white transition">Features</a>
+            <a href="/#features" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" class="hover:text-white transition">Enterprise</a>
             <a href="/api/docs" class="hover:text-white transition">API Docs</a>
             <a href="/icap" class="text-brand transition">ICAP Server</a>
             <a href="/about" class="hover:text-white transition">About Us</a>
         </div>
-        <div class="flex gap-4 items-center">
-            <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
-            <a href="/login" id="btn-login"
-                class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
-                Launch Console
-            </a>
-            <a href="/dashboard" id="btn-dashboard"
-                class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
-                Scan Portal
-            </a>
-            <button id="btn-logout" onclick="logout()"
-                class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
-                LOGOUT
-            </button>
-            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
-                    </path>
-                </svg>
-            </button>
+        <div class="hidden md:flex gap-4 items-center">
+            <div id="authSection" class="flex gap-4 items-center">
+                <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
+                <a href="/login" id="btn-login"
+                    class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                    Launch Console
+                </a>
+                <a href="/dashboard" id="btn-dashboard"
+                    class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                    Scan Portal
+                </a>
+            </div>
+        </div>
+        <button id="btn-logout" onclick="logout()"
+            class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
+            LOGOUT
+        </button>
+        <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                </path>
+            </svg>
+        </button>
         </div>
     </nav>
 
     <!-- Mobile Menu -->
     <div id="mobileMenu"
-        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6">
+        class="fixed inset-0 z-[60] bg-bg/95 backdrop-blur-xl hidden lg:hidden flex flex-col p-8 space-y-6 overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
@@ -92,13 +95,23 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Features</a>
+            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
             <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
             <a href="/api/docs" onclick="toggleMobileMenu()" class="hover:text-white transition">API Docs</a>
             <a href="/icap" onclick="toggleMobileMenu()" class="text-brand">ICAP Server</a>
             <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
             <div class="h-px bg-border my-4"></div>
-            <a href="/login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+            <div id="mobile-user-info" class="hidden mb-4 text-center">
+                <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
+                <p id="mobile-username-display" class="text-xl font-bold text-white"></p>
+            </div>
+            <a href="/login" id="mobile-btn-login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
+            <a href="/dashboard" id="mobile-btn-dashboard" class="hidden text-brand font-black tracking-widest">[SCAN
+                PORTAL]</a>
+            <a href="/dashboard#archive" id="mobile-btn-reports"
+                class="hidden text-gray-400 font-bold tracking-widest hover:text-white transition">REPORTS</a>
+            <button id="mobile-btn-logout" onclick="logout()"
+                class="hidden text-left text-red-500 font-bold tracking-widest">[LOGOUT]</button>
         </div>
     </div>
 
@@ -128,6 +141,17 @@
             const btnLogout = document.getElementById('btn-logout');
             if (btnLogout) btnLogout.classList.remove('hidden');
 
+            // Mobile Menu Updates
+            const mBtnLogin = document.getElementById('mobile-btn-login');
+            const mBtnDash = document.getElementById('mobile-btn-dashboard');
+            const mBtnLogout = document.getElementById('mobile-btn-logout');
+
+            if (mBtnLogin) mBtnLogin.classList.add('hidden');
+            if (mBtnDash) mBtnDash.classList.remove('hidden');
+            const mBtnReports = document.getElementById('mobile-btn-reports');
+            if (mBtnReports) mBtnReports.classList.remove('hidden');
+            if (mBtnLogout) mBtnLogout.classList.remove('hidden');
+
             // Fetch Username
             fetch('/api/users/me', {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -138,10 +162,17 @@
                 })
                 .then(user => {
                     const navName = document.getElementById('nav-username');
+                    const mobileName = document.getElementById('mobile-username-display');
+                    const mobileInfo = document.getElementById('mobile-user-info');
+
                     if (navName) {
                         navName.innerText = user.username;
                         navName.classList.remove('hidden');
                     }
+                    if (mobileName) {
+                        mobileName.innerText = user.username;
+                    }
+                    if (mobileInfo) mobileInfo.classList.remove('hidden');
                 })
                 .catch(err => {
                     console.warn('Session expired', err);

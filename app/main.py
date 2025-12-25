@@ -96,6 +96,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from app.core.file_guard import FileGuard
+from app.middleware.security import SecurityHeadersMiddleware
 
 # ... (rest of imports)
 
@@ -217,6 +218,7 @@ async def test_icap_connection(request: Request, current_user: User = Depends(ge
 app.state.limiter = limiter
 app.state.file_guard = FileGuard()
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(SlowAPIMiddleware)
 
 # CORS middleware
@@ -243,7 +245,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
 @app.get("/", response_class=HTMLResponse)
-async def root():
+async def root(request: Request):
     """Root endpoint with dashboard"""
     template_path = Path("app/templates/index.html")
     if not template_path.exists():
@@ -254,11 +256,12 @@ async def root():
     # Replace placeholders
     html_content = html_content.replace("{{ICAP_PORT}}", str(settings.ICAP_PORT))
     html_content = html_content.replace("{{ICAP_SERVICE_NAME}}", settings.ICAP_SERVICE_NAME)
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
     
-    return html_content
+    return HTMLResponse(content=html_content)
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
+async def dashboard(request: Request):
     """Dashboard endpoint"""
     template_path = Path("app/templates/dashboard.html")
     if not template_path.exists():
@@ -269,26 +272,33 @@ async def dashboard():
     # Replace placeholders if any
     html_content = html_content.replace("{{ICAP_PORT}}", str(settings.ICAP_PORT))
     html_content = html_content.replace("{{ICAP_SERVICE_NAME}}", settings.ICAP_SERVICE_NAME)
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
     
-    return html_content
+    return HTMLResponse(content=html_content)
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_page():
+async def login_page(request: Request):
     """Login page"""
     template_path = Path("app/templates/login.html")
     if not template_path.exists():
         return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
     with open(template_path, "r") as f:
-        return f.read()
+        html_content = f.read()
+    
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/register", response_class=HTMLResponse)
-async def register_page():
+async def register_page(request: Request):
     """Registration page"""
     template_path = Path("app/templates/register.html")
     if not template_path.exists():
         return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
     with open(template_path, "r") as f:
-        return f.read()
+        html_content = f.read()
+    
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/about", response_class=HTMLResponse)
 async def about_page():

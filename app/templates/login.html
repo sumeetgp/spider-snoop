@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ACCESS CONTROL // SPIDERCOB</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="/static/js/particles.js"></script>
+    <script src="/static/js/particles.js" nonce="{{ nonce }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <script>
+    <script nonce="{{ nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
@@ -69,7 +69,7 @@
             <p class="text-xs font-mono text-gray-600">// AUTHENTICATE_USER</p>
         </div>
 
-        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+        <form id="loginForm" class="space-y-4">
             <div>
                 <label class="block text-xs font-bold text-brand mb-1">USERNAME</label>
                 <input type="text" id="username"
@@ -96,12 +96,15 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ nonce }}">
         if (window.particlesJS) {
             particlesJS("bgCanvas", {
                 "particles": { "number": { "value": 40 }, "color": { "value": "#88FFFF" }, "opacity": { "value": 0.3 }, "size": { "value": 2 }, "line_linked": { "color": "#88FFFF", "opacity": 0.1 }, "move": { "speed": 1 } }
             });
         }
+
+        // Add event listener programmatically to satisfy CSP
+        document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
         async function handleLogin(e) {
             e.preventDefault();
@@ -127,7 +130,7 @@
 
                 if (res.ok) {
                     const data = await res.json();
-                    localStorage.setItem('access_token', data.access_token);
+                    // Cookie is set automatically
                     btn.textContent = 'ACCESS_GRANTED';
                     btn.classList.add('bg-brand', 'text-white');
                     // Direct redirect
