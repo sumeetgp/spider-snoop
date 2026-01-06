@@ -33,9 +33,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         
         # 6. CMP (Content Security Policy) - Strict Nonce-based
         csp = (
-            "default-src 'self'; " 
-            f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval' https://cdn.tailwindcss.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: https:; "
             "connect-src 'self' https://api.openai.com; " 

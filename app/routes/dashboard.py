@@ -5,7 +5,7 @@ from sqlalchemy import func
 from datetime import datetime, timedelta
 
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.scan import DLPScan, RiskLevel
 from app.utils.auth import get_current_active_user
 
@@ -20,7 +20,10 @@ async def get_dashboard_overview(
     
     # Base query filter
     filter_user = None
-    if current_user.role.value != "admin":
+    # Rigorous check: strictly ensure admin role to bypass filter
+    is_admin = current_user.role == UserRole.ADMIN
+    
+    if not is_admin:
         filter_user = DLPScan.user_id == current_user.id
         
     def apply_filter(query):

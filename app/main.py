@@ -115,27 +115,29 @@ app = FastAPI(
 from fastapi.openapi.docs import get_swagger_ui_html
 
 @app.get("/api/docs/content", include_in_schema=False)
-async def custom_swagger_ui_html():
+async def custom_swagger_ui_html(request: Request):
+    nonce = request.state.nonce
+    
     # Obsidian Glass Theme Injection
-    dark_css = """
-    <style>
-        body { background-color: #0d1117 !important; color: #c9d1d9 !important; }
-        .swagger-ui .info .title, .swagger-ui .info h1, .swagger-ui .info h2, .swagger-ui .info h3, .swagger-ui .info h4, .swagger-ui .info h5 { color: #c9d1d9 !important; }
-        .swagger-ui .opblock .opblock-summary-operation-id, .swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-path__deprecated { color: #c9d1d9 !important; }
-        .swagger-ui .opblock .opblock-summary-description { color: #8b949e !important; }
-        .swagger-ui .scheme-container { background-color: #161b22 !important; box-shadow: none !important; border-bottom: 1px solid #30363d; }
-        .swagger-ui .opblock-tag { color: #c9d1d9 !important; border-bottom: 1px solid #30363d; }
-        .swagger-ui .opblock { background: #161b22 !important; border: 1px solid #30363d; }
-        .swagger-ui .opblock .opblock-section-header { background: #0d1117; color: #c9d1d9; }
-        .swagger-ui .tab li { color: #c9d1d9 !important; }
-        .swagger-ui .btn { color: #c9d1d9 !important; border-color: #30363d !important; background: #21262d !important; }
-        .swagger-ui .btn:hover { background: #30363d !important; }
-        .swagger-ui select { color: #c9d1d9; background: #21262d; border-color: #30363d; }
-        .swagger-ui input { color: #c9d1d9 !important; background: #0d1117 !important; border: 1px solid #30363d !important; }
-        .swagger-ui textarea { color: #c9d1d9 !important; background: #0d1117 !important; border: 1px solid #30363d !important; }
-        .swagger-ui .dialog-ux .modal-ux { background: #161b22 !important; border: 1px solid #30363d; color: #c9d1d9; }
-        .swagger-ui .dialog-ux .modal-ux-header { border-bottom: 1px solid #30363d; }
-        .swagger-ui .expand-methods svg, .swagger-ui .expand-operation svg { fill: #c9d1d9 !important; }
+    dark_css = f"""
+    <style nonce="{nonce}">
+        body {{ background-color: #0d1117 !important; color: #c9d1d9 !important; }}
+        .swagger-ui .info .title, .swagger-ui .info h1, .swagger-ui .info h2, .swagger-ui .info h3, .swagger-ui .info h4, .swagger-ui .info h5 {{ color: #c9d1d9 !important; }}
+        .swagger-ui .opblock .opblock-summary-operation-id, .swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-path__deprecated {{ color: #c9d1d9 !important; }}
+        .swagger-ui .opblock .opblock-summary-description {{ color: #8b949e !important; }}
+        .swagger-ui .scheme-container {{ background-color: #161b22 !important; box-shadow: none !important; border-bottom: 1px solid #30363d; }}
+        .swagger-ui .opblock-tag {{ color: #c9d1d9 !important; border-bottom: 1px solid #30363d; }}
+        .swagger-ui .opblock {{ background: #161b22 !important; border: 1px solid #30363d; }}
+        .swagger-ui .opblock .opblock-section-header {{ background: #0d1117; color: #c9d1d9; }}
+        .swagger-ui .tab li {{ color: #c9d1d9 !important; }}
+        .swagger-ui .btn {{ color: #c9d1d9 !important; border-color: #30363d !important; background: #21262d !important; }}
+        .swagger-ui .btn:hover {{ background: #30363d !important; }}
+        .swagger-ui select {{ color: #c9d1d9; background: #21262d; border-color: #30363d; }}
+        .swagger-ui input {{ color: #c9d1d9 !important; background: #0d1117 !important; border: 1px solid #30363d !important; }}
+        .swagger-ui textarea {{ color: #c9d1d9 !important; background: #0d1117 !important; border: 1px solid #30363d !important; }}
+        .swagger-ui .dialog-ux .modal-ux {{ background: #161b22 !important; border: 1px solid #30363d; color: #c9d1d9; }}
+        .swagger-ui .dialog-ux .modal-ux-header {{ border-bottom: 1px solid #30363d; }}
+        .swagger-ui .expand-methods svg, .swagger-ui .expand-operation svg {{ fill: #c9d1d9 !important; }}
     </style>
     """
     
@@ -147,6 +149,11 @@ async def custom_swagger_ui_html():
     # Inject Style - Decode to string, replace, then create NEW response
     # This prevents "Response content longer than Content-Length" error
     body_content = html.body.decode("utf-8")
+    
+    # Inject Nonce into existing Script tags
+    body_content = body_content.replace("<script>", f'<script nonce="{nonce}">')
+    
+    # Inject Custom CSS with Nonce
     body_content = body_content.replace("</head>", f"{dark_css}</head>")
     
     return HTMLResponse(content=body_content)
@@ -319,13 +326,16 @@ async def enterprise_page():
         return f.read()
 
 @app.get("/api/docs", response_class=HTMLResponse)
-async def api_docs_page():
+async def api_docs_page(request: Request):
     """API Documentation Wrapper page"""
     template_path = Path("app/templates/api_docs.html")
     if not template_path.exists():
         return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
     with open(template_path, "r") as f:
-        return f.read()
+        html_content = f.read()
+    
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/health")
 async def health_check():

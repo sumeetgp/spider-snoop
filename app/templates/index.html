@@ -209,7 +209,7 @@
 
                 <!-- Avatar Dropdown -->
                 <div class="relative">
-                    <button onclick="document.getElementById('user-dropdown').classList.toggle('hidden')"
+                    <button id="btn-avatar-dropdown"
                         class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer focus:outline-none">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                             <path
@@ -227,13 +227,14 @@
                             class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 sm:hidden">Scan Portal</a>
                         <a href="/dashboard#settings"
                             class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Settings</a>
-                        <button onclick="logout()"
+                        <button id="btn-logout-desktop"
                             class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300">Logout</button>
                     </div>
                 </div>
             </div>
             <!-- Mobile Menu Button -->
-            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+            <!-- Mobile Menu Button -->
+            <button id="btn-mobile-menu-open" class="lg:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
                     </path>
@@ -249,7 +250,7 @@
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
             </div>
-            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+            <button id="btn-mobile-menu-close" class="text-gray-400 hover:text-white">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                     </path>
@@ -257,11 +258,11 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
-            <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
-            <a href="/api/docs" onclick="toggleMobileMenu()" class="hover:text-white transition">API Docs</a>
-            <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
-            <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
+            <a href="#features" class="mobile-nav-link hover:text-white transition">Capabilities</a>
+            <a href="/enterprise" class="mobile-nav-link hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="mobile-nav-link hover:text-white transition">API Docs</a>
+            <a href="/icap" class="mobile-nav-link hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="mobile-nav-link hover:text-white transition">About Us</a>
             <div class="h-px bg-border my-4"></div>
             <div id="mobile-user-info" class="hidden mb-4 text-center">
                 <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
@@ -277,7 +278,7 @@
                     class="hidden text-brand font-black tracking-widest">[SCAN PORTAL]</a>
                 <a href="/dashboard#archive" id="mobile-btn-reports"
                     class="hidden text-gray-400 hover:text-white transition font-bold">REPORTS</a>
-                <button id="mobile-btn-logout" onclick="logout()"
+                <button id="mobile-btn-logout-action"
                     class="hidden text-left text-red-500 font-bold hover:text-red-400">LOGOUT</button>
             </div>
         </div>
@@ -386,7 +387,7 @@
                 <!-- Connectors Visual (Desktop) -->
                 <div class="hidden md:flex flex-col justify-center items-center w-24 relative">
                     <div class="w-full border-t-2 border-dashed border-gray-700 relative top-0"></div>
-                    <button onclick="runArchitectureFlow()"
+                    <button id="btn-run-arch"
                         class="absolute bg-bg text-brand text-2xl hover:scale-125 transition-transform cursor-pointer z-20 outline-none">▶</button>
                 </div>
 
@@ -879,9 +880,66 @@ adaptation_access <span class="text-yellow-400">spidercob_resp</span> allow all<
             }
         }
 
-        // Start animation
+        // Start animation & Attach Listeners
         document.addEventListener('DOMContentLoaded', () => {
+            // Typewriter
             typeWriter('heroTerminal');
+
+            // --- CSP Safe Event Listeners ---
+
+            // 1. Mobile Menu Toggle
+            function handleToggleMobileMenu() {
+                const menu = document.getElementById('mobileMenu');
+                menu.classList.toggle('hidden');
+                if (menu.classList.contains('hidden')) {
+                    document.body.style.overflow = '';
+                } else {
+                    document.body.style.overflow = 'hidden';
+                }
+            }
+
+            const btnMobileOpen = document.getElementById('btn-mobile-menu-open');
+            if (btnMobileOpen) btnMobileOpen.addEventListener('click', handleToggleMobileMenu);
+
+            const btnMobileClose = document.getElementById('btn-mobile-menu-close');
+            if (btnMobileClose) btnMobileClose.addEventListener('click', handleToggleMobileMenu);
+
+            // Mobile Links - Close menu on click
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.addEventListener('click', handleToggleMobileMenu);
+            });
+
+            // 2. Desktop Avatar Dropdown
+            const btnAvatar = document.getElementById('btn-avatar-dropdown');
+            const dropdown = document.getElementById('user-dropdown');
+            if (btnAvatar && dropdown) {
+                btnAvatar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('hidden');
+                });
+
+                // Click outside to close
+                window.addEventListener('click', (e) => {
+                    if (!btnAvatar.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
+
+            // 3. Logout Actions
+            function handleLogout() {
+                logout();
+            }
+
+            const btnLogoutDesktop = document.getElementById('btn-logout-desktop');
+            if (btnLogoutDesktop) btnLogoutDesktop.addEventListener('click', handleLogout);
+
+            const btnLogoutMobile = document.getElementById('mobile-btn-logout-action');
+            if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', handleLogout);
+
+            // 4. Architecture Flow
+            const btnRunArch = document.getElementById('btn-run-arch');
+            if (btnRunArch) btnRunArch.addEventListener('click', runArchitectureFlow);
         });
 
         // Tab Switching Logic

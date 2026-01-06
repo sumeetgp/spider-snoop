@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 
 from app.database import get_db
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.scan import DLPScan, ScanStatus
 from app.schemas.scan import ScanCreate, ScanResponse, ScanStats
 from app.utils.auth import get_current_active_user
@@ -656,7 +656,10 @@ async def list_scans(
     # Regular users can only see their own scans
     query = db.query(DLPScan)
     
-    if current_user.role.value != "admin":
+    # Rigorous filter: Admin sees all, everyone else sees ONLY their own
+    is_admin = current_user.role == UserRole.ADMIN
+    
+    if not is_admin:
         query = query.filter(DLPScan.user_id == current_user.id)
     
     scans = query.order_by(DLPScan.created_at.desc()).offset(skip).limit(limit).all()
@@ -670,8 +673,9 @@ async def get_scan_stats(
     """Get scan statistics"""
     query = db.query(DLPScan)
     
-    if current_user.role.value != "admin":
-        query = query.filter(DLPScan.user_id == current_user.id)
+    is_admin = current_user.role == UserRole.ADMIN
+    
+    if not is_admin:
         query = query.filter(DLPScan.user_id == current_user.id)
     
     all_scans = query.all()
@@ -725,7 +729,7 @@ async def get_scan(
         )
     
     # Check permissions
-    if current_user.role.value != "admin" and scan.user_id != current_user.id:
+    if current_user.role != UserRole.ADMIN and scan.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Not enough permissions"
