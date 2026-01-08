@@ -32,8 +32,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         
         # 6. CMP (Content Security Policy) - Strict Nonce-based
+        script_src = f"'self' 'nonce-{nonce}' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net"
+        
+        # Allow unsafe-inline for Swagger UI (API Docs) which may have inline handlers
+        if request.url.path.startswith("/api/docs"):
+            script_src += " 'unsafe-inline'"
+
         csp = (
-            f"script-src 'self' 'nonce-{nonce}' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            f"script-src {script_src}; "
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; "
             "font-src 'self' https://fonts.gstatic.com; "
             "img-src 'self' data: https:; "

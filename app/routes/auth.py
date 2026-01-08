@@ -49,7 +49,7 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False, # Set to True in Production (HTTPS)
+        secure=True, # Production (HTTPS)
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -97,7 +97,7 @@ async def register(response: Response, user_data: UserCreate, db: Session = Depe
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=False, # Set to True in Production
+        secure=True, # Production
     )
     
     return {"access_token": access_token, "token_type": "bearer"}

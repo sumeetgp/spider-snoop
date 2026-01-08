@@ -129,15 +129,23 @@
                 });
 
                 if (res.ok) {
-                    const data = await res.json();
-                    // Cookie is set automatically
+                    // Success - Wait for body (even if ignored) to ensure clean completion
+                    try { await res.json(); } catch (e) { }
+
                     btn.textContent = 'ACCESS_GRANTED';
                     btn.classList.add('bg-brand', 'text-white');
-                    // Direct redirect
                     window.location.href = '/dashboard';
                 } else {
-                    const errData = await res.json();
-                    throw new Error(errData.detail || 'Invalid credentials');
+                    // Handle Errors
+                    let msg = 'Invalid credentials';
+                    try {
+                        const errData = await res.json();
+                        msg = errData.detail || msg;
+                    } catch (e) {
+                        // Response wasn't JSON (e.g., 502 Bad Gateway)
+                        msg = `Server Error (${res.status})`;
+                    }
+                    throw new Error(msg);
                 }
             } catch (error) {
                 console.error("Login Error:", error);

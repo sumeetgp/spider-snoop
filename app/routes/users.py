@@ -53,6 +53,12 @@ async def list_users(
     current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.ANALYST]))
 ):
     """List all users"""
+    # Strict Role Check (Redundant but safe)
+    if current_user.role not in [UserRole.ADMIN, UserRole.ANALYST]:
+         raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not enough permissions"
+        )
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
@@ -68,11 +74,11 @@ async def get_user(
     current_user: User = Depends(get_current_active_user)
 ):
     """Get user by ID"""
-    # Users can only view their own profile unless they're admin/analyst
+    # IDOR Prevention: Users can only view their own profile unless they're admin/analyst
     if current_user.id != user_id and current_user.role not in [UserRole.ADMIN, UserRole.ANALYST]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
+            detail="Access denied to other user profiles"
         )
     
     user = db.query(User).filter(User.id == user_id).first()
@@ -108,6 +114,10 @@ async def update_user(
         user.role = user_data.role
     if user_data.is_active is not None:
         user.is_active = user_data.is_active
+    
+    # Handle Password Reset
+    if user_data.password:
+        user.hashed_password = get_password_hash(user_data.password)
     
     db.commit()
     db.refresh(user)

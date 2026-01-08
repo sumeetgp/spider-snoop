@@ -443,9 +443,16 @@ def scan_dependencies_logic(manifest_content: str, ecosystem: str = "PyPI") -> s
             "version": pkg["version"]
         })
 
+    import requests
+    from app.utils.security import SecurityUtils
+
+    url = "https://api.osv.dev/v1/querybatch"
+    if not SecurityUtils.is_safe_url(url):
+         return "SECURITY_ERROR: Outbound request blocked (Invalid URL)"
+         
     try:
         resp = requests.post(
-            "https://api.osv.dev/v1/querybatch", 
+            url, 
             json={"queries": queries},
             timeout=10
         )
@@ -688,6 +695,13 @@ def scan_os_package_list_logic(package_list_text: str, os_distro: str = "Debian"
             "package": {"name": pkg["name"], "ecosystem": os_distro},
             "version": pkg["version"]
         })
+
+    api_url = "https://api.osv.dev/v1/querybatch"
+    
+    # SSRF Protection
+    from app.utils.security import SecurityUtils
+    if not SecurityUtils.is_safe_url(api_url):
+         return "SECURITY_ERROR: Outbound request blocked (Invalid URL)"
 
     try:
         response = requests.post(api_url, json={"queries": queries}, timeout=10)

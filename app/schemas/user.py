@@ -18,6 +18,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
+    password: Optional[str] = None # For admin-initiated resets
 
 class UserResponse(UserBase):
     id: int

@@ -600,6 +600,28 @@
                     </button>
 
 
+                    <button id="nav-users"
+                        class="hidden w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <div>
+                            <span class="block">USER MANAGEMENT</span>
+                            <span class="text-[10px] font-bold text-brand block">ADMIN CONSOLE</span>
+                        </div>
+                    </button>
+                    <button id="nav-users"
+                        class="hidden w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <div>
+                            <span class="block">USER MANAGEMENT</span>
+                            <span class="text-[10px] font-bold text-brand block">ADMIN CONSOLE</span>
+                        </div>
+                    </button>
                 </nav>
             </div>
 
@@ -739,6 +761,96 @@
                         class="inline-block w-12 h-12 border-4 border-t-brand border-r-transparent border-b-brand border-l-transparent rounded-full animate-spin">
                     </div>
                     <p class="mt-4 text-brand font-mono text-sm animate-pulse">ANALYZING_PAYLOAD...</p>
+                </div>
+
+                <!-- User Management View -->
+                <div id="usersView" class="hidden space-y-6">
+                    <div class="flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-brand animate-pulse"></div>
+                            <h2 class="text-lg font-bold text-white tracking-wide">SYSTEM USERS</h2>
+                        </div>
+                        <button id="btnRefreshUsers"
+                            class="bg-gray-700 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition">
+                            REFRESH LIST
+                        </button>
+                    </div>
+
+                    <div class="glass-panel overflow-hidden rounded-xl border border-border">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead
+                                    class="bg-gray-800/50 text-xs uppercase text-gray-500 font-bold border-b border-border">
+                                    <tr>
+                                        <th class="p-4">ID</th>
+                                        <th class="p-4">Identity</th>
+                                        <th class="p-4">Role</th>
+                                        <th class="p-4">Status</th>
+                                        <th class="p-4">Credits</th>
+                                        <th class="p-4 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTableBody" class="divide-y divide-border text-gray-300">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit User Modal -->
+                <div id="editUserModal"
+                    class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div class="glass-panel w-full max-w-md p-6 rounded-xl border border-border shadow-2xl relative">
+                        <button id="btnCloseEditUser" type="button"
+                            class="absolute top-4 right-4 text-gray-500 hover:text-white">&times;</button>
+
+                        <h3 class="text-xl font-bold text-white mb-6">EDIT USER IDENTITY</h3>
+
+                        <form id="editUserForm" class="space-y-4">
+                            <input type="hidden" id="editUserId">
+
+                            <div>
+                                <label class="block text-xs font-bold text-gray-500 mb-1">USERNAME</label>
+                                <input type="text" id="editUsername" disabled
+                                    class="w-full bg-black/30 border border-gray-700 rounded p-2 text-gray-500 cursor-not-allowed">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-bold text-brand mb-1">ROLE ASSIGNMENT</label>
+                                <select id="editRole"
+                                    class="w-full bg-black/30 border border-border rounded p-2 text-white focus:border-brand focus:outline-none">
+                                    <option value="viewer">VIEWER</option>
+                                    <option value="analyst">ANALYST</option>
+                                    <option value="admin">ADMIN</option>
+                                </select>
+                            </div>
+
+                            <div class="flex items-center gap-3 bg-gray-800/30 p-2 rounded border border-gray-700/50">
+                                <label class="text-xs font-bold text-gray-400">ACCOUNT STATUS:</label>
+                                <label class="flex items-center space-x-2 cursor-pointer">
+                                    <input type="checkbox" id="editActive"
+                                        class="form-checkbox text-brand rounded focus:ring-brand bg-gray-900 border-gray-600 h-4 w-4">
+                                    <span class="text-xs text-white">ACTIVE</span>
+                                </label>
+                            </div>
+
+                            <div class="pt-4 border-t border-gray-800">
+                                <label class="block text-xs font-bold text-alert mb-1">RESET PASSWORD (OPTIONAL)</label>
+                                <input type="password" id="editPassword" placeholder="Enter new password to reset"
+                                    class="w-full bg-black/30 border border-red-900/50 rounded p-2 text-white focus:border-alert focus:outline-none transition placeholder-gray-700">
+                                <p class="text-[10px] text-gray-500 mt-1">Leave blank to keep existing password.</p>
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-4">
+                                <button type="button" id="btnCancelEdit"
+                                    class="px-4 py-2 rounded border border-gray-600 text-gray-400 hover:text-white text-xs font-bold">CANCEL</button>
+                                <button type="submit"
+                                    class="px-4 py-2 rounded bg-brand hover:bg-reg text-black shadow-lg shadow-brand/20 text-xs font-bold transition">SAVE
+                                    CHANGES</button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- Results View -->

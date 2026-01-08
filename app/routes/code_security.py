@@ -8,7 +8,9 @@ from mcp_server import scan_dependencies_logic as scan_dependencies, scan_secret
 import shutil
 import os
 import uuid
+import re
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
@@ -39,8 +41,14 @@ async def scan_code(
     # db.commit() # Commit later with scan creation to be atomic-ish or just now. 
     # Better to commit with Scan creation to ensure both happen or fail? 
     # Actually, let's commit with the scan creation below.
-    file_ext = os.path.splitext(file.filename)[1].lower()
-    temp_filename = f"storage/temp_{uuid.uuid4()}_{file.filename}"
+    
+    # 1. Sanitize Filename (Fix Path Traversal / DoS)
+    safe_filename = secure_filename(file.filename)
+    if not safe_filename:
+        safe_filename = f"unnamed_file_{uuid.uuid4()}"
+        
+    file_ext = os.path.splitext(safe_filename)[1].lower()
+    temp_filename = f"storage/temp_{uuid.uuid4()}_{safe_filename}"
     
     # Init Scan Record
     # Generate source string based on file type

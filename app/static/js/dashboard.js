@@ -102,6 +102,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const videoInput = document.getElementById('videoInput');
     if (videoInput) videoInput.addEventListener('change', () => handleVideoSelection(videoInput));
+
+    // User Management Events
+    const navUsers = document.getElementById('nav-users');
+    if (navUsers) navUsers.addEventListener('click', () => showUsers());
+
+    const btnRefreshUsers = document.getElementById('btnRefreshUsers');
+    if (btnRefreshUsers) btnRefreshUsers.addEventListener('click', fetchUsers);
+
+    // Edit Modal Events
+    const editForm = document.getElementById('editUserForm');
+    if (editForm) editForm.addEventListener('submit', handleEditUserSubmit);
+
+    const btnCloseEditUser = document.getElementById('btnCloseEditUser');
+    if (btnCloseEditUser) btnCloseEditUser.addEventListener('click', closeEditUserModal);
+
+    const btnCancelEdit = document.getElementById('btnCancelEdit');
+    if (btnCancelEdit) btnCancelEdit.addEventListener('click', closeEditUserModal);
 });
 
 function copyJSON() {
@@ -144,6 +161,12 @@ async function setupAuth() {
             const user = await res.json();
             document.getElementById('userSection').classList.remove('hidden');
             document.getElementById('usernameDisplay').textContent = user.username.toUpperCase();
+
+            // Show Admin Nav
+            if (user.role === 'admin') {
+                const navUsers = document.getElementById('nav-users');
+                if (navUsers) navUsers.classList.remove('hidden');
+            }
 
             // Enable Credits Widget
             const w = document.getElementById('creditsWidget');
@@ -1428,5 +1451,158 @@ function renderCodeSecurityView(data, aiResult) {
         term.innerHTML = safeReport;
     } else {
         term.innerText = "No raw log available.";
+    }
+}
+
+// --- USER MANAGEMENT LOGIC ---
+
+async function showUsers() {
+    currentTrack = 'users';
+
+    // Update Sidebar Nav UI
+    document.querySelectorAll('aside nav button').forEach(b => {
+        b.classList.remove('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+        b.classList.add('text-gray-400');
+    });
+    const navUsers = document.getElementById('nav-users');
+    if (navUsers) {
+        navUsers.classList.remove('text-gray-400');
+        navUsers.classList.add('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+    }
+
+    // Update Header
+    document.getElementById('trackTitle').textContent = "USER MANAGEMENT";
+    document.getElementById('trackDesc').textContent = "Admin Console: Identity & Access Control";
+
+    // Toggle Views
+    document.getElementById('inputZone').classList.add('hidden');
+    document.getElementById('resultsView').classList.add('hidden');
+    document.getElementById('archiveView').classList.add('hidden');
+    document.getElementById('stagingView').classList.add('hidden');
+
+    const usersView = document.getElementById('usersView');
+    if (usersView) usersView.classList.remove('hidden');
+
+    await fetchUsers();
+}
+
+async function fetchUsers() {
+    const tbody = document.getElementById('usersTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-gray-500 animate-pulse">LOADING_IDENTITY_DB...</td></tr>';
+
+    try {
+        const res = await fetch('/api/users/');
+        if (!res.ok) throw new Error("Unauthorized or Failed");
+        const users = await res.json();
+
+        tbody.innerHTML = '';
+        users.forEach(u => {
+            const row = document.createElement('tr');
+            row.className = "hover:bg-white/5 transition border-b border-white/5";
+
+            let roleColor = "text-gray-400";
+            if (u.role === 'admin') roleColor = "text-brand font-bold";
+            if (u.role === 'analyst') roleColor = "text-blue-400";
+
+            row.innerHTML = `
+                < td class="p-4 font-mono text-xs text-gray-500" > ID - ${u.id}</td >
+                <td class="p-4">
+                    <div class="text-sm font-bold text-white">${escapeHtml(u.username)}</div>
+                    <div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>
+                </td>
+                <td class="p-4 text-xs ${roleColor} uppercase">${u.role}</td>
+                <td class="p-4 text-xs">
+                    ${u.is_active ?
+                    '<span class="text-success font-bold">ACTIVE</span>' :
+                    '<span class="text-alert font-bold">SUSPENDED</span>'}
+                </td>
+                <td class="p-4 text-xs font-mono">${u.credits_remaining}/50</td>
+                <td class="p-4 text-right">
+                    <button class="btn-edit-user px-3 py-1 rounded border border-gray-600 hover:border-brand hover:text-white text-gray-400 text-xs transition"
+                        data-id="${u.id}" 
+                        data-username="${escapeHtml(u.username)}" 
+                        data-role="${u.role}" 
+                        data-active="${u.is_active}">
+                        EDIT
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+    } catch (e) {
+        console.error(e);
+        tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-alert">ACCESS_DENIED: Admin privileges required.</td></tr>';
+    }
+}
+
+// Event Delegation for Edit Button (CSP compliant)
+document.addEventListener('click', function (e) {
+    if (e.target && e.target.classList.contains('btn-edit-user')) {
+        const btn = e.target;
+        openEditUser(
+            btn.getAttribute('data-id'),
+            btn.getAttribute('data-username'),
+            btn.getAttribute('data-role'),
+            btn.getAttribute('data-active') === 'true'
+        );
+    }
+});
+
+// Global scope for onclick access
+window.openEditUser = function (id, username, role, isActive) {
+    document.getElementById('editUserId').value = id;
+    document.getElementById('editUsername').value = username;
+    document.getElementById('editRole').value = role;
+    document.getElementById('editActive').checked = isActive;
+    document.getElementById('editPassword').value = ''; // Reset password field
+
+    document.getElementById('editUserModal').classList.remove('hidden');
+};
+
+function closeEditUserModal() {
+    document.getElementById('editUserModal').classList.add('hidden');
+}
+
+async function handleEditUserSubmit(e) {
+    e.preventDefault();
+    const id = document.getElementById('editUserId').value;
+    const role = document.getElementById('editRole').value;
+    const isActive = document.getElementById('editActive').checked;
+    const password = document.getElementById('editPassword').value;
+
+    const payload = {
+        role: role,
+        is_active: isActive
+    };
+
+    if (password && password.trim() !== '') {
+        payload.password = password;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    const origText = btn.innerText;
+    btn.innerText = "SAVING...";
+    btn.disabled = true;
+
+    try {
+        const res = await fetch(`/ api / users / ${id} `, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Update Failed");
+
+        closeEditUserModal();
+        fetchUsers(); // Refresh list
+        alert("User Updated Successfully");
+
+    } catch (err) {
+        alert("Error updating user: " + err.message);
+    } finally {
+        btn.innerText = origText;
+        btn.disabled = false;
     }
 }
