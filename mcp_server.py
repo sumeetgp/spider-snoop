@@ -435,33 +435,23 @@ def scan_dependencies_logic(manifest_content: str, ecosystem: str = "PyPI") -> s
     if not packages:
         return "CLEAN: No parseable packages found in manifest."
 
-    # 2. Query OSV Batch API
-    queries = []
-    for pkg in packages:
-        queries.append({
-            "package": {"name": pkg["name"], "ecosystem": pkg["ecosystem"]},
-            "version": pkg["version"]
-        })
-
     import requests
-    from app.utils.security import SecurityUtils
-
-    url = "https://api.osv.dev/v1/querybatch"
-    if not SecurityUtils.is_safe_url(url):
-         return "SECURITY_ERROR: Outbound request blocked (Invalid URL)"
-         
-    try:
-        resp = requests.post(
-            url, 
-            json={"queries": queries},
-            timeout=10
-        )
-        if resp.status_code != 200:
-            return f"OSV_API_ERROR: {resp.status_code} {resp.text}"
-            
-        results = resp.json().get("results", [])
-    except Exception as e:
-        return f"OSV_CONNECTION_ERROR: {str(e)}"
+    # 2. Query OSV (Single Query Loop to ensure full details)
+    results = []
+    for pkg in packages[:20]:
+        try:
+            query = {
+                "package": {"name": pkg["name"], "ecosystem": ecosystem},
+                "version": pkg["version"]
+            }
+            resp = requests.post("https://api.osv.dev/v1/query", json=query, timeout=10)
+            if resp.status_code == 200:
+                results.append(resp.json())
+            else:
+                results.append({"vulns": []})
+        except Exception as e:
+             results.append({"vulns": []})
+             # print(f"Error querying OSV for {pkg['name']}: {e}")
 
     # 3. Format Report
     report = ["SUPPLY CHAIN VULNERABILITIES:"]

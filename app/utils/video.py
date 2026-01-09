@@ -1,5 +1,5 @@
 import os
-from moviepy import VideoFileClip
+from moviepy.editor import VideoFileClip
 import openai
 from app.config import settings
 

@@ -292,6 +292,8 @@ function showTrack(trackId) {
     // Reset View
     document.getElementById('resultsView').classList.add('hidden');
     document.getElementById('archiveView').classList.add('hidden');
+    const usersView = document.getElementById('usersView');
+    if (usersView) usersView.classList.add('hidden');
     document.getElementById('inputZone').classList.remove('hidden');
 
 
@@ -315,6 +317,8 @@ async function showArchive() {
     // Toggle Views
     document.getElementById('inputZone').classList.add('hidden');
     document.getElementById('resultsView').classList.add('hidden');
+    const usersView = document.getElementById('usersView');
+    if (usersView) usersView.classList.add('hidden');
     document.getElementById('archiveView').classList.remove('hidden');
 
     // Fetch Data
@@ -1506,7 +1510,7 @@ async function fetchUsers() {
             if (u.role === 'analyst') roleColor = "text-blue-400";
 
             row.innerHTML = `
-                < td class="p-4 font-mono text-xs text-gray-500" > ID - ${u.id}</td >
+                <td class="p-4 font-mono text-xs text-gray-500">ID - ${u.id}</td>
                 <td class="p-4">
                     <div class="text-sm font-bold text-white">${escapeHtml(u.username)}</div>
                     <div class="text-xs text-gray-500">${escapeHtml(u.email)}</div>
