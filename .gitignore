@@ -41,3 +41,4 @@ secret.txt
 production_credentials.txt
 postgres_data/
 *.tar.gz
+test_data/

@@ -186,7 +186,10 @@ end
                 <div>
                     <h2 class="text-lg font-bold text-white mb-2">Security & Token Lifecycle</h2>
                     <p class="text-sm text-gray-400 mb-2 leading-relaxed">
-                        The ICAP server requires authentication for all connections. You must pass a valid JWT in the
+                        The ICAP server requires authentication for scanning connections (REQMOD/RESPMOD).
+                        <span class="font-mono text-brand">OPTIONS</span> requests for health checks are allowed without
+                        authentication.
+                        For scanning, you must pass a valid JWT in the
                         <span class="font-mono text-brand">Authorization</span> or <span
                             class="font-mono text-brand">X-ICAP-Auth</span> header.
                     </p>

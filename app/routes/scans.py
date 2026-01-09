@@ -18,7 +18,15 @@ from app.utils.limiter import limiter, get_rate_limit_key
 from fastapi import Request
 
 router = APIRouter(prefix="/api/scans", tags=["DLP Scanning"])
-dlp_engine = DLPEngine()
+
+_dlp_engine_instance = None
+
+def get_dlp_engine():
+    global _dlp_engine_instance
+    if _dlp_engine_instance is None:
+        _dlp_engine_instance = DLPEngine()
+    return _dlp_engine_instance
+
 
 @router.post("/", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
 @limiter.limit("50/60minute")
@@ -26,7 +34,8 @@ async def create_scan(
     request: Request,
     scan_data: ScanCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    dlp_engine: DLPEngine = Depends(get_dlp_engine)
 ):
     """Create and execute a DLP scan"""
     # Guardian Text Scan Cost: 2
@@ -103,7 +112,8 @@ async def upload_file(
     correct: bool = Query(False, description="Redact sensitive data if found"),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user)
+    current_user: User = Depends(get_current_active_user),
+    dlp_engine: DLPEngine = Depends(get_dlp_engine)
 ):
     """
     Upload and scan a file for sensitive data and forensics.
@@ -576,8 +586,9 @@ async def upload_video(
     
     # 4. DLP Scan (using just the text part)
     # Re-fetch is not needed, we have the object
-    from app.dlp_engine import DLPEngine
-    engine = DLPEngine()
+    # 4. DLP Scan (using just the text part)
+    # Re-fetch is not needed, we have the object
+    engine = get_dlp_engine()
     
     # We scan ONLY the text, but the findings will link back to the record
     scan_result = await engine.scan(transcript_text, use_ai=True)

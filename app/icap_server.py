@@ -87,6 +87,12 @@ class ICAPServer:
                     except ValueError:
                         continue
             
+            if method == "OPTIONS":
+                response = self.handle_options()
+                writer.write(response)
+                await writer.drain()
+                return
+
             # --- AUTHENTICATION CHECK ---
             if not self.verify_auth(headers):
                 logger.warning(f"ICAP Unauthorized Access Attempt: {request_str}")
@@ -101,9 +107,6 @@ class ICAPServer:
                 writer.write(response)
             elif method == "REQMOD":
                 response = await self.handle_reqmod(reader, headers)
-                writer.write(response)
-            elif method == "OPTIONS":
-                response = self.handle_options()
                 writer.write(response)
             else:
                 response = self.error_response(405, "Method Not Allowed")

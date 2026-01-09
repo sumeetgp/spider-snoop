@@ -44,7 +44,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"ICAP server starting on {settings.ICAP_HOST}:{settings.ICAP_PORT}")
     
     # Import globally for use in error handlers
-    from app.routes.scans import dlp_engine
+    from app.routes.scans import get_dlp_engine
+    dlp_engine = get_dlp_engine()
 
     # --- MCP CONNECTION START ---
     try:
