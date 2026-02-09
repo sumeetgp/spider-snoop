@@ -97,6 +97,7 @@ class CDREngine:
         Reconstructs image by re-saving it, which strips EXIF and non-image data.
         """
         try:
+            from PIL import Image
             with Image.open(input_path) as img:
                 # We need to convert to RGB to save as JPEG/PNG reliably (stripping transparency if needed for JPEG)
                 # But to preserve fidelity we'll try to keep mode unless unusable.
@@ -116,6 +117,7 @@ class CDREngine:
         Reconstructs PDF pages into a new document, effectively stripping JS/Forms.
         """
         try:
+            from pypdf import PdfReader, PdfWriter
             reader = PdfReader(input_path)
             writer = PdfWriter()
 
@@ -137,6 +139,7 @@ class CDREngine:
         True reconstruction for Word files: Reads text and writes to a new .docx.
         """
         try:
+            import docx
             doc = docx.Document(input_path)
             new_doc = docx.Document()
 

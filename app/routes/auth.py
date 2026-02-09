@@ -36,6 +36,11 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
             detail="Inactive user"
         )
     
+    # Update last login timestamp
+    from datetime import datetime
+    user.last_login = datetime.utcnow()
+    db.commit()
+    
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role.value}, expires_delta=access_token_expires
@@ -49,7 +54,7 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=True, # Production (HTTPS)
+        secure=not settings.DEBUG, # False in Dev (HTTP), True in Prod (HTTPS)
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -97,7 +102,7 @@ async def register(response: Response, user_data: UserCreate, db: Session = Depe
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         expires=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="lax",
-        secure=True, # Production
+        secure=not settings.DEBUG, # False in Dev (HTTP), True in Prod (HTTPS)
     )
     
     return {"access_token": access_token, "token_type": "bearer"}
@@ -107,3 +112,125 @@ async def logout(response: Response):
     """Logout and clear cookie"""
     response.delete_cookie("access_token")
     return {"message": "Logged out successfully"}
+
+# Password Reset Endpoints
+@router.post("/forgot-password")
+async def forgot_password(email: str, db: Session = Depends(get_db)):
+    """
+    Request a password reset token.
+    Sends an email with reset link via SMTP2GO.
+    """
+    from app.models.password_reset_token import PasswordResetToken
+    from app.services.email_service import email_service
+    from datetime import datetime, timedelta
+    import os
+    
+    # Find user by email
+    user = db.query(User).filter(User.email == email).first()
+    
+    if not user:
+        # Don't reveal if email exists (security best practice)
+        return {"message": "If the email exists, a reset link has been sent"}
+    
+    # Rate limiting: Check how many reset requests in the last hour
+    one_hour_ago = datetime.utcnow() - timedelta(hours=1)
+    recent_requests = db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.created_at >= one_hour_ago
+    ).count()
+    
+    if recent_requests >= 3:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many password reset requests. Please try again in an hour."
+        )
+    
+    # Invalidate any existing tokens for this user
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.used == False
+    ).update({"used": True})
+    
+    # Generate new token
+    token = PasswordResetToken.create_token(user.id)
+    expires_at = datetime.utcnow() + timedelta(hours=1)
+    
+    reset_token = PasswordResetToken(
+        user_id=user.id,
+        token=token,
+        expires_at=expires_at
+    )
+    
+    db.add(reset_token)
+    db.commit()
+    
+    # Determine base URL (use environment variable or default)
+    base_url = os.getenv('APP_BASE_URL', 'http://localhost')
+    reset_url = f"{base_url}/reset-password?token={token}"
+    
+    # Send email via SMTP2GO
+    email_sent = email_service.send_password_reset_email(
+        to_email=user.email,
+        reset_url=reset_url,
+        username=user.username
+    )
+    
+    # Return response (same message regardless of success for security)
+    response = {"message": "If the email exists, a reset link has been sent"}
+    
+    # In development mode, include debug info
+    if settings.DEBUG:
+        response["dev_email_sent"] = email_sent
+        response["dev_reset_url"] = reset_url
+        if not email_sent:
+            response["dev_token"] = token  # Fallback for dev
+    
+    return response
+
+@router.get("/verify-reset-token/{token}")
+async def verify_reset_token(token: str, db: Session = Depends(get_db)):
+    """Verify if a reset token is valid"""
+    from app.models.password_reset_token import PasswordResetToken
+    
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token
+    ).first()
+    
+    if not reset_token or not reset_token.is_valid():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    return {
+        "valid": True,
+        "email": reset_token.user.email,
+        "username": reset_token.user.username
+    }
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+    """Reset password using a valid token"""
+    from app.models.password_reset_token import PasswordResetToken
+    
+    # Find and validate token
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token == token
+    ).first()
+    
+    if not reset_token or not reset_token.is_valid():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired reset token"
+        )
+    
+    # Update user password
+    user = reset_token.user
+    user.hashed_password = get_password_hash(new_password)
+    
+    # Mark token as used
+    reset_token.used = True
+    
+    db.commit()
+    
+    return {"message": "Password reset successful. You can now login with your new password."}

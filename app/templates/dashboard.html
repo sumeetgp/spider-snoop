@@ -599,6 +599,19 @@
                         </div>
                     </button>
 
+                    <button id="nav-firewall"
+                        class="hidden w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z">
+                            </path>
+                        </svg>
+                        <div>
+                            <span class="block text-brand">AI FIREWALL</span>
+                            <span class="text-[10px] font-normal opacity-50 block">LLM Guard & Audit</span>
+                        </div>
+                    </button>
+
 
                     <button id="nav-users"
                         class="hidden w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
@@ -791,6 +804,84 @@
                                     </tr>
                                 </thead>
                                 <tbody id="usersTableBody" class="divide-y divide-border text-gray-300">
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Firewall View -->
+                <div id="firewallView" class="hidden space-y-6">
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="glass-panel p-6 rounded-xl border border-border">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-2">Total Requests</h3>
+                            <div class="flex items-end justify-between">
+                                <span class="text-3xl font-black text-white" id="stat-fw-total">--</span>
+                                <span class="text-xs text-brand font-mono">ALL TIME</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-6 rounded-xl border border-red-900/30">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-2">Threats Blocked</h3>
+                            <div class="flex items-end justify-between">
+                                <span class="text-3xl font-black text-red-500" id="stat-fw-blocked">--</span>
+                                <span class="text-xs text-red-400 font-mono">BLOCKED</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-6 rounded-xl border border-yellow-900/30">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-2">PII Redacted</h3>
+                            <div class="flex items-end justify-between">
+                                <span class="text-3xl font-black text-yellow-500" id="stat-fw-redacted">--</span>
+                                <span class="text-xs text-yellow-400 font-mono">PROTECTED</span>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-6 rounded-xl border border-green-900/30">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-2">Allowed Traffic</h3>
+                            <div class="flex items-end justify-between">
+                                <span class="text-3xl font-black text-green-500" id="stat-fw-allowed">--</span>
+                                <span class="text-xs text-green-400 font-mono">PASSTHROUGH</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Audit Log Table -->
+                    <div class="flex justify-between items-center bg-gray-800/50 p-4 rounded-xl border border-gray-700">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-2 rounded-full bg-brand animate-pulse"></div>
+                            <h2 class="text-lg font-bold text-white tracking-wide">LIVE AUDIT TRAIL</h2>
+                        </div>
+                        <div class="flex gap-2">
+                            <button id="btnOpenOnboarding"
+                                class="bg-gray-700 hover:bg-brand hover:text-white text-gray-300 px-3 py-1.5 rounded-lg text-sm font-bold transition flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                SETUP GUIDE
+                            </button>
+                            <button id="btnRefreshFirewall"
+                                class="bg-gray-700 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg text-sm font-bold transition">
+                                REFRESH
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel overflow-hidden rounded-xl border border-border">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead
+                                    class="bg-gray-800/50 text-xs uppercase text-gray-500 font-bold border-b border-border">
+                                    <tr>
+                                        <th class="p-4">Time</th>
+                                        <th class="p-4">User</th>
+                                        <th class="p-4">Model</th>
+                                        <th class="p-4">Action</th>
+                                        <th class="p-4">Risk</th>
+                                        <th class="p-4">Summary</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="firewallTableBody" class="divide-y divide-border text-gray-300 font-mono">
                                     <!-- Populated via JS -->
                                 </tbody>
                             </table>
@@ -1183,7 +1274,7 @@
                                                 <th class="p-4 font-semibold w-1/4">Package / Version</th>
                                                 <th class="p-4 font-semibold w-1/4">CVEs</th>
                                                 <th class="p-4 font-semibold w-1/6">Severity</th>
-                                                <th class="p-4 font-semibold w-1/6">Fixed In</th>
+                                                <th class="p-4 font-semibold w-1/6">Solution</th>
                                                 <th class="p-4 font-semibold w-1/6">Action</th>
                                             </tr>
                                         </thead>
@@ -1222,6 +1313,76 @@
 
                 </div><!-- End Standard Results Content -->
 
+                <!-- Code Security Specialized View -->
+                <div id="codeSecurityView" class="hidden sc-container">
+                    <div class="sc-header">
+                        <div class="sc-brand">
+                            <span>🛡️</span> CODE SECURITY <span class="text-brand">REPORT</span>
+                        </div>
+                        <div class="sc-meta">
+                            <span id="scReportId" class="sc-tag">#SCAN-ID</span>
+                            <span id="scDuration" class="sc-tag">0.00s</span>
+                            <button
+                                onclick="document.getElementById('findingsPanelContainer').classList.toggle('hidden'); document.getElementById('standardResultsContent').classList.toggle('hidden');"
+                                class="sc-tag hover:bg-white/10 cursor-pointer text-brand border border-brand/30">
+                                TOGGLE DEBUG VIEW
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="sc-grid-3">
+                        <div class="sc-card">
+                            <div class="label">THREAT SCORE</div>
+                            <div id="scThreatScore" class="value">0 <span class="unit">/100</span></div>
+                        </div>
+                        <div class="sc-card">
+                            <div class="label">RISK LEVEL</div>
+                            <div id="scRiskBadge" class="badge-critical">UNKNOWN</div>
+                        </div>
+                        <div class="sc-card">
+                            <div class="label">THREAT SUMMARY</div>
+                            <ul id="scStatsList" class="sc-stats-list">
+                                <li><span class="dot red"></span> <strong>0</strong> Critical Threats</li>
+                                <li><span class="dot orange"></span> <strong>0</strong> High Threats</li>
+                                <li><span class="dot green"></span> <strong>0</strong> Medium Threats</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="sc-section">
+                        <div class="sc-title">
+                            <svg class="w-5 h-5 text-brand" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.022.547l-2.387 4.774a1 1 0 001.205 1.405l4.774-2.387a2 2 0 011.51-.105l.318.158a2 2 0 001.51.105l4.774 2.387a1 1 0 001.205-1.405l-2.387-4.774z" />
+                            </svg>
+                            AI Remediation Plan
+                        </div>
+                        <div id="scRemediationGrid" class="sc-remediation-grid">
+                            <!-- Dynamic Remediation Cards -->
+                        </div>
+                    </div>
+
+                    <div class="sc-section">
+                        <div class="sc-title">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Terminal Output
+                            <span id="scFindingsCount" class="sc-badge-counter">0 Issues</span>
+                        </div>
+                        <div class="sc-terminal-window">
+                            <div class="terminal-header">
+                                <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+                                <span class="term-title">spider_cob_cli --scan .</span>
+                            </div>
+                            <div id="scTerminalContent" class="terminal-content whitespace-pre-wrap font-mono text-xs">
+                                Initializing Code Security Scan...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Archive View -->
                 <div id="archiveView" class="hidden glass-panel rounded-2xl overflow-hidden p-6">
                     <div class="flex justify-between items-center mb-6">
@@ -1256,8 +1417,35 @@
             </div>
         </main>
     </div>
+    </div>
 
-    <script src="/static/js/dashboard.js" nonce="{{ nonce }}"></script>
+    <script src="/static/js/dashboard.js?v=4" nonce="{{ nonce }}"></script>
+
+    <!-- Fallback Inline Script for Modal (Context-Aware) -->
+    <script nonce="{{ nonce }}">
+        document.addEventListener('DOMContentLoaded', function () {
+            const btnOpen = document.getElementById('btnOpenOnboarding');
+            const modal = document.getElementById('onboardingModal');
+            const btnClose = document.getElementById('btnCloseOnboarding');
+            const btnDone = document.getElementById('btnDoneOnboarding');
+
+            if (btnOpen && modal) {
+                btnOpen.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    modal.classList.remove('hidden');
+                });
+            }
+
+            if (modal) {
+                const closeFn = () => modal.classList.add('hidden');
+                if (btnClose) btnClose.addEventListener('click', closeFn);
+                if (btnDone) btnDone.addEventListener('click', closeFn);
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeFn();
+                });
+            }
+        });
+    </script>
 </body>
 
 </html>

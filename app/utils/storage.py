@@ -1,4 +1,5 @@
-import boto3
+import boto3  # Cloud storage SDK
+
 import os
 from typing import Optional
 from app.config import settings
@@ -11,17 +12,25 @@ class StorageManager:
 
     def __init__(self):
         self.enabled = bool(settings.DO_SPACES_KEY and settings.DO_SPACES_SECRET)
+        self.client = None
+        self.bucket = None
+        
         if self.enabled:
-            self.client = boto3.client(
-                's3',
-                region_name=settings.DO_SPACES_REGION,
-                endpoint_url=settings.DO_SPACES_ENDPOINT,
-                aws_access_key_id=settings.DO_SPACES_KEY,
-                aws_secret_access_key=settings.DO_SPACES_SECRET
-            )
-            self.bucket = settings.DO_SPACES_BUCKET
+            try:
+                self.client = boto3.client(
+                    's3',
+                    region_name=settings.DO_SPACES_REGION,
+                    endpoint_url=settings.DO_SPACES_ENDPOINT,
+                    aws_access_key_id=settings.DO_SPACES_KEY,
+                    aws_secret_access_key=settings.DO_SPACES_SECRET
+                )
+                self.bucket = settings.DO_SPACES_BUCKET
+            except Exception as e:
+                logger.error(f"Failed to initialize cloud storage: {e}")
+                self.enabled = False
         else:
             logger.warning("Cloud storage disabled: Missing credentials")
+
 
     async def upload_file(self, file_path: str, object_name: Optional[str] = None) -> Optional[str]:
         """

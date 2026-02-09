@@ -7,17 +7,17 @@ from app.database import Base
 
 class ScanStatus(str, enum.Enum):
     """Scan status"""
-    PENDING = "pending"
-    SCANNING = "scanning"
-    COMPLETED = "completed"
-    FAILED = "failed"
+    PENDING = "PENDING"
+    SCANNING = "SCANNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
 
 class RiskLevel(str, enum.Enum):
     """Risk level classification"""
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
 
 class DLPScan(Base):
     """DLP Scan result model"""

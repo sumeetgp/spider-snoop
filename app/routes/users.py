@@ -50,15 +50,9 @@ async def list_users(
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role([UserRole.ADMIN, UserRole.ANALYST]))
+    current_user: User = Depends(require_role([UserRole.ADMIN]))
 ):
-    """List all users"""
-    # Strict Role Check (Redundant but safe)
-    if current_user.role not in [UserRole.ADMIN, UserRole.ANALYST]:
-         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions"
-        )
+    """List all users (Admin only)"""
     users = db.query(User).offset(skip).limit(limit).all()
     return users
 
@@ -75,7 +69,7 @@ async def get_user(
 ):
     """Get user by ID"""
     # IDOR Prevention: Users can only view their own profile unless they're admin/analyst
-    if current_user.id != user_id and current_user.role not in [UserRole.ADMIN, UserRole.ANALYST]:
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to other user profiles"

@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SpiderCob // ICAP Integration</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script nonce="{{ nonce }}" src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <script>
+    <script nonce="{{ nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
@@ -97,7 +97,7 @@
                         <span id="statusText" class="font-mono text-sm text-gray-500">UNKNOWN</span>
                     </div>
                 </div>
-                <button onclick="testConnection()" id="btnTest"
+                <button id="btnTest"
                     class="bg-gray-800 hover:bg-white/10 text-white px-4 py-2 rounded text-sm font-bold transition border border-border">
                     TEST CONNECTIVITY
                 </button>
@@ -199,7 +199,7 @@ end
                             or use the API to generate long-lived credentials (Coming Soon).</li>
                     </ul>
                     <div class="bg-black/30 p-3 rounded font-mono text-xs text-gray-500 break-all cursor-pointer hover:text-white transition"
-                        onclick="copyToken()" id="currentToken">
+                        id="currentToken">
                         [Login to view your current temporary token]
                     </div>
                 </div>
@@ -212,9 +212,9 @@ end
         <p>&copy; 2025 SPIDER-SNOOP DLP. SECURE DATA TRANSMISSION.</p>
     </footer>
 
-    <script>
-        // Get Token from LocalStorage
-        const token = localStorage.getItem('access_token');
+    <script nonce="{{ nonce }}">
+        // Get Token from LocalStorage or parent window
+        let token = localStorage.getItem('access_token');
 
         document.addEventListener('DOMContentLoaded', () => {
             const display = document.getElementById('currentToken');
@@ -224,6 +224,16 @@ end
             } else {
                 display.textContent = "Please login to Dashboard first to generate a token.";
             }
+
+            // Add event listeners to replace inline onclick handlers
+            const btnTest = document.getElementById('btnTest');
+            if (btnTest) {
+                btnTest.addEventListener('click', testConnection);
+            }
+
+            if (display) {
+                display.addEventListener('click', copyToken);
+            }
         });
 
         async function testConnection() {
@@ -231,6 +241,17 @@ end
             const dot = document.getElementById('statusDot');
             const text = document.getElementById('statusText');
             const resBox = document.getElementById('testResult');
+
+            // Re-read token in case it was updated
+            token = localStorage.getItem('access_token');
+
+            // Check if user is authenticated
+            if (!token) {
+                if (confirm('You need to login first to test ICAP connectivity.\n\nClick OK to go to the login page.')) {
+                    window.location.href = '/login';
+                }
+                return;
+            }
 
             btn.disabled = true;
             btn.textContent = "CONNECTING...";
@@ -246,17 +267,37 @@ end
                 const data = await res.json();
 
                 if (res.ok && data.status === 'ok') {
-                    dot.classList.remove('bg-gray-600', 'bg-red-500');
+                    dot.classList.remove('bg-gray-600', 'bg-red-500', 'bg-yellow-500');
                     dot.classList.add('bg-green-500', 'animate-pulse');
+                    text.classList.remove('text-yellow-500', 'text-red-500');
                     text.textContent = "OPERATIONAL";
                     text.classList.add('text-green-500');
                     resBox.textContent = `SUCCESS: ${data.message}\nLatency: ${data.latency_ms}ms\nISTag: ${data.istag}`;
+                } else if (res.status === 401) {
+                    // Token expired or invalid
+                    dot.classList.remove('bg-gray-600', 'bg-green-500');
+                    dot.classList.add('bg-yellow-500');
+                    text.classList.remove('text-green-500');
+                    text.textContent = "UNAUTHENTICATED";
+                    text.classList.add('text-yellow-500');
+                    resBox.textContent = `AUTHENTICATION FAILED: ${data.detail}\n\nYour session may have expired. Please login again.`;
+
+                    // Clear invalid token
+                    localStorage.removeItem('access_token');
+
+                    // Prompt to login
+                    setTimeout(() => {
+                        if (confirm('Your session has expired.\n\nClick OK to login again.')) {
+                            window.location.href = '/login';
+                        }
+                    }, 1000);
                 } else {
                     throw new Error(data.detail || "ICAP Server Unreachable");
                 }
             } catch (e) {
-                dot.classList.remove('bg-gray-600', 'bg-green-500');
+                dot.classList.remove('bg-gray-600', 'bg-green-500', 'bg-yellow-500');
                 dot.classList.add('bg-red-500');
+                text.classList.remove('text-green-500', 'text-yellow-500');
                 text.textContent = "OFFLINE / ERROR";
                 text.classList.add('text-red-500');
                 resBox.textContent = `FAILED: ${e.message}`;

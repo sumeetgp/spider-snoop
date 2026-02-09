@@ -69,7 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-sentinel').addEventListener('click', () => showTrack('sentinel'));
     document.getElementById('nav-guardian').addEventListener('click', () => showTrack('guardian'));
     document.getElementById('nav-vision').addEventListener('click', () => showTrack('vision'));
+    document.getElementById('nav-vision').addEventListener('click', () => showTrack('vision'));
     document.getElementById('nav-security').addEventListener('click', () => showTrack('security'));
+    document.getElementById('nav-firewall').addEventListener('click', () => showFirewall());
+
+    // Refresh Logic
+    const btnRefreshFirewall = document.getElementById('btnRefreshFirewall');
+    if (btnRefreshFirewall) btnRefreshFirewall.addEventListener('click', fetchFirewallStats);
 
     const sidebarLogout = document.getElementById('btnSidebarLogout');
     if (sidebarLogout) sidebarLogout.addEventListener('click', logout);
@@ -132,6 +138,94 @@ function copyJSON() {
     });
 }
 
+// --- Firewall View ---
+async function showFirewall() {
+    currentTrack = 'firewall';
+    hideAllViews();
+    document.getElementById('firewallView').classList.remove('hidden');
+    setActiveNav('nav-firewall');
+
+    // Update Header
+    document.getElementById('trackTitle').innerHTML = `AI <span class="text-brand">FIREWALL</span>`;
+    document.getElementById('trackDesc').innerText = "LLM Traffic Authorization & DLP Redaction";
+
+    // Load Data
+    await fetchFirewallStats();
+}
+
+async function fetchFirewallStats() {
+    try {
+        const res = await fetch('/api/dashboard/firewall-stats');
+        if (!res.ok) throw new Error("Failed to fetch firewall stats");
+        const data = await res.json();
+
+        // Update Stats
+        document.getElementById('stat-fw-total').innerText = data.stats.total_requests;
+        document.getElementById('stat-fw-blocked').innerText = data.stats.blocked;
+        document.getElementById('stat-fw-redacted').innerText = data.stats.redacted;
+        document.getElementById('stat-fw-allowed').innerText = data.stats.allowed;
+
+        // Update Table
+        const tbody = document.getElementById('firewallTableBody');
+        tbody.innerHTML = '';
+
+        if (data.logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No activity recorded yet</td></tr>`;
+            return;
+        }
+
+        data.logs.forEach(log => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-white/5 transition";
+
+            // Risk Badge
+            let riskColor = "text-gray-400";
+            if (log.risk_score === "CRITICAL") riskColor = "text-red-500 font-bold";
+            else if (log.risk_score === "HIGH") riskColor = "text-orange-500 font-bold";
+            else if (log.risk_score === "MEDIUM") riskColor = "text-yellow-500";
+
+            // Action Badge
+            let actionBadge = `<span class="px-2 py-1 rounded text-xs font-bold bg-gray-800 text-gray-300">${log.action}</span>`;
+            if (log.action.includes("BLOCKED")) actionBadge = `<span class="px-2 py-1 rounded text-xs font-bold bg-red-900/30 text-red-500 border border-red-900/50">BLOCKED</span>`;
+            else if (log.action === "REDACTED") actionBadge = `<span class="px-2 py-1 rounded text-xs font-bold bg-yellow-900/30 text-yellow-500 border border-yellow-900/50">REDACTED</span>`;
+            else if (log.action === "ALLOWED") actionBadge = `<span class="px-2 py-1 rounded text-xs font-bold bg-green-900/30 text-green-500 border border-green-900/50">ALLOWED</span>`;
+
+            tr.innerHTML = `
+                <td class="p-4 text-xs text-gray-500">${new Date(log.timestamp).toLocaleTimeString()}</td>
+                <td class="p-4 font-bold text-white">${log.user}</td>
+                <td class="p-4 text-xs text-gray-400">${log.model}</td>
+                <td class="p-4">${actionBadge}</td>
+                <td class="p-4 text-xs ${riskColor}">${log.risk_score}</td>
+                <td class="p-4 text-xs text-gray-500 truncate max-w-xs" title="${escapeHtml(log.summary)}">${escapeHtml(log.summary)}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+// --- Onboarding Modal ---
+// --- Onboarding Modal (Event Delegation) ---
+// --- Onboarding Modal Global Handler ---
+// --- Onboarding Modal Global Handler ---
+// Logic moved to inline script in dashboard.html for CSP compliance fallback
+
+// Event Delegation for Closing
+document.addEventListener('click', (e) => {
+    // Close (Button)
+    if (e.target.closest('#btnCloseOnboarding') || e.target.closest('#btnDoneOnboarding')) {
+        const modal = document.getElementById('onboardingModal');
+        if (modal) modal.classList.add('hidden');
+    }
+
+    // Close (Backdrop)
+    if (e.target.id === 'onboardingModal') {
+        e.target.classList.add('hidden');
+    }
+});
+
 function initParticles() {
     if (window.particlesJS) {
         particlesJS("bgCanvas", {
@@ -166,6 +260,8 @@ async function setupAuth() {
             if (user.role === 'admin') {
                 const navUsers = document.getElementById('nav-users');
                 if (navUsers) navUsers.classList.remove('hidden');
+                const navFirewall = document.getElementById('nav-firewall');
+                if (navFirewall) navFirewall.classList.remove('hidden');
             }
 
             // Enable Credits Widget
@@ -256,7 +352,7 @@ function showTrack(trackId) {
         fileInput.accept = ".txt,.json,.md,.csv,.log,.xml,.yaml,.yml,.pdf,.docx,.docm,.xlsx,.xlsm,.zip,.png,.jpg,.jpeg,.tiff,.bmp";
         document.getElementById('redactionOption').classList.remove('hidden');
     } else if (trackId === 'security') {
-        fileInput.accept = ".txt,.json,.zip"; // Simplified for requirements.txt/package.json/zip
+        fileInput.accept = ".txt,.json,.xml,.yaml,.yml,.py,.js,.ts,.go,.java,.cpp,.c,.h,.hpp,.rb,.php,.zip"; // expanded for source code
         document.getElementById('redactionOption').classList.add('hidden');
     } else {
         // Sentinel (Anything goes, usually Executables/Zips)
@@ -294,9 +390,10 @@ function showTrack(trackId) {
     document.getElementById('archiveView').classList.add('hidden');
     const usersView = document.getElementById('usersView');
     if (usersView) usersView.classList.add('hidden');
+    const firewallView = document.getElementById('firewallView');
+    if (firewallView) firewallView.classList.add('hidden');
+
     document.getElementById('inputZone').classList.remove('hidden');
-
-
 
 }
 
@@ -700,8 +797,10 @@ async function processUpload(file, endpoint) {
     if (!file) return;
 
     // Update UI
-    document.getElementById('stagingView').classList.add('hidden');
-    document.getElementById('loader').classList.remove('hidden');
+    document.getElementById('nav-vision').classList.remove('active-tab');
+    document.getElementById('nav-security').classList.remove('active-tab');
+    document.getElementById('nav-firewall').classList.remove('active-tab');
+    document.getElementById('nav-users').classList.remove('active-tab');
 
     // Hide previous results
     document.getElementById('resultsView').classList.add('hidden');
@@ -789,16 +888,19 @@ function renderResults(data) {
     resultsDiv.classList.remove('hidden');
 
     // --- VIEW TOGGLING ---
-    const isCodeSecurity = currentTrack === 'security';
-    /*
-    // const isCodeSecurity = currentTrack === 'security'; // Moved up
+    // Enhanced Code Security Check
+    const isCodeSec = currentTrack === 'security' ||
+        (data.source && data.source.startsWith('CODE_SECURITY')) ||
+        (data.scan_type === 'CODE_SECURITY' || data.scan_type === 'Static Code Analysis') ||
+        (data.verdict && data.verdict.includes("Scan complete."));
+
     const standardView = document.getElementById('standardResultsContent');
     const codeSecurityView = document.getElementById('codeSecurityView');
- 
-    if (isCodeSecurity && codeSecurityView) {
+
+    if (isCodeSec && codeSecurityView) {
         if (standardView) standardView.classList.add('hidden');
         codeSecurityView.classList.remove('hidden');
- 
+
         // Prepare AI Result
         let aiResult = {};
         try {
@@ -806,17 +908,21 @@ function renderResults(data) {
                 aiResult = typeof data.ai_analysis === 'string' ? JSON.parse(data.ai_analysis) : data.ai_analysis;
             }
         } catch (e) { }
- 
+
         renderCodeSecurityView(data, aiResult);
+
+        // Update Credits
+        if (data.credits_remaining !== undefined) {
+            updateCredits(data.credits_remaining);
+        }
         return; // Stop standard rendering
     } else {
         // Standard View
         if (standardView) standardView.classList.remove('hidden');
         if (codeSecurityView) codeSecurityView.classList.add('hidden');
     }
-    */
 
-    const standardView = document.getElementById('standardResultsContent');
+    // Standard View (Fallback or active)
     if (standardView) standardView.classList.remove('hidden');
 
     // --- STANDARD RENDERING ---
@@ -834,17 +940,15 @@ function renderResults(data) {
     const vBox = document.getElementById('verdictBox');
     let vText = data.verdict || 'UNKNOWN';
 
-    // DEBUG: Inject diagnostic info
-    const dSrc = data.source || 'null';
-    const dType = data.scan_type || 'null';
-    const dVer = data.verdict || 'null';
-    const dIsCode = (dSrc.startsWith && dSrc.startsWith('CODE_SECURITY')) ||
-        (dType === 'CODE_SECURITY') ||
-        (dVer.includes && dVer.includes("Scan complete."));
+    // 1. Strip internal prefix if present (Backend sometimes leaks VERDICT_REVIEW)
+    vText = vText.replace(/^VERDICT_/, '');
 
-    vText += ` [DBG: IsCol=${dIsCode}, Src=${dSrc}, Type=${dType}]`;
+    // 2. Simple truncation if too long (e.g. legacy scans)
+    if (vText.length > 30 && vText.includes(':')) {
+        vText = vText.split(':')[0]; // Take only the prefix status
+    }
 
-    vBox.textContent = `VERDICT: ${vText} `;
+    vBox.textContent = vText;
 
     if (data.risk_level === 'CRITICAL' || data.risk_level === 'HIGH') {
         vBox.className = "mt-4 p-2 rounded text-[11px] font-mono border bg-red-900/20 border-alert/30 text-alert";
@@ -879,9 +983,8 @@ function renderResults(data) {
     if (remediationTable) remediationTable.innerHTML = '';
 
     // Check Scan Type logic (using source, scan_type, AND verdict heuristic)
-    const isCodeSec = (data.source && data.source.startsWith('CODE_SECURITY')) ||
-        (data.scan_type === 'CODE_SECURITY') ||
-        (data.verdict && data.verdict.includes("Scan complete."));
+    // Check Scan Type logic (using source, scan_type, AND verdict heuristic)
+    // Reuse isCodeSec from top of function
 
     if (isCodeSec) {
         // FORCE CLEAR SUMMARY
@@ -947,7 +1050,76 @@ function renderResults(data) {
             // Standard Logic
             if (aiResult.reason || aiResult.verdict) {
                 aiInsightPanel.classList.remove('hidden');
-                aiSummaryText.innerText = aiResult.reason || `Verdict: ${aiResult.verdict} `;
+
+                // Enhanced UI for ML Metadata
+                if (aiResult.ml_model && aiResult.confidence !== undefined) {
+                    const conf = aiResult.confidence * 100;
+                    const label = aiResult.inference_label || aiResult.verdict;
+
+                    let colorClass = "text-gray-400 border-gray-600";
+                    let barColor = "bg-gray-500";
+
+                    if (label.includes("sensitive") || label.includes("BLOCK") || label === "sensitive confidential data") {
+                        colorClass = "text-alert border-alert bg-alert/10";
+                        barColor = "bg-alert";
+                    } else if (label.includes("safe") || label.includes("ALLOW")) {
+                        colorClass = "text-success border-success bg-success/10";
+                        barColor = "bg-success";
+                    }
+
+                    aiSummaryText.innerHTML = `
+                        <div class="grid grid-cols-1 gap-4">
+                            <!-- 1. Model Header -->
+                            <div class="flex items-center justify-between border-b border-gray-700/50 pb-2">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Analysis Engine</span>
+                                <span class="text-[10px] font-mono text-brand bg-brand/10 px-2 py-0.5 rounded border border-brand/20">${escapeHtml(aiResult.ml_model)}</span>
+                            </div>
+                            
+                            <!-- 2. Combined Findings Summary (Threat Analysis) -->
+                            <div class="bg-gray-800/50 rounded p-3 border border-gray-700">
+                                <div class="text-[10px] uppercase text-gray-500 font-bold mb-2">Threat Analysis</div>
+                                <div class="text-xs text-gray-300 space-y-1">
+                                    ${(data.findings && data.findings.length > 0) ?
+                            data.findings.slice(0, 3).map(f => `
+                                            <div class="flex justify-between">
+                                                <span>• ${escapeHtml(f.type)}</span>
+                                                <span class="${f.severity === 'CRITICAL' ? 'text-red-500' : 'text-yellow-500'} font-mono text-[10px]">${f.severity}</span>
+                                            </div>
+                                        `).join('')
+                            : '<span class="text-gray-500 italic">No specific patterns matched.</span>'}
+                                     ${(data.findings && data.findings.length > 3) ? `<div class="text-[10px] text-gray-500 pl-2">+ ${data.findings.length - 3} more</div>` : ''}
+                                </div>
+                            </div>
+
+                            <!-- 3. AI Verdict & Confidence -->
+                            <div class="bg-gray-800/50 rounded p-3 border border-gray-700">
+                                <div class="text-[10px] uppercase text-gray-500 font-bold mb-2">AI Assessment</div>
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-xs text-gray-300">Classification</span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold border ${colorClass} uppercase tracking-wide">${escapeHtml(label)}</span>
+                                </div>
+                                <div class="w-full h-1.5 bg-gray-900 rounded-full overflow-hidden mb-1">
+                                    <div class="h-full ${barColor}" style="width: ${conf}%"></div>
+                                </div>
+                                <div class="text-right text-[10px] text-gray-500 font-mono">Confidence: ${conf.toFixed(1)}%</div>
+                            </div>
+
+                            <!-- 4. Final Recommendation -->
+                            <div class="mt-1 pt-3 border-t border-gray-700/50">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-bold text-gray-400 uppercase">Recommendation</span>
+                                    <span class="text-sm font-bold ${label.includes('sensitive') ? 'text-red-400' : 'text-green-400'}">
+                                        ${label.includes('sensitive') ? '🚫 BLOCK TRANSFER' : '✅ ALLOW TRANSFER'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                } else {
+                    // Fallback to text
+                    aiSummaryText.innerText = aiResult.reason || `Verdict: ${aiResult.verdict}`;
+                }
             }
         }
 
@@ -1103,7 +1275,7 @@ function renderResults(data) {
     const scanType = (data.scan_type || 'SENTINEL').toUpperCase();
 
     // Code Security Flow
-    if (isCodeSecurity) {
+    if (isCodeSecurity || scanType === 'STATIC CODE ANALYSIS') {
         if (flowMalware) flowMalware.classList.add('hidden');
         if (flowDLP) flowDLP.classList.add('hidden');
         if (flowCodeSec) flowCodeSec.classList.remove('hidden');
@@ -1609,4 +1781,31 @@ async function handleEditUserSubmit(e) {
         btn.innerText = origText;
         btn.disabled = false;
     }
+}
+// --- Helper Functions ---
+function hideAllViews() {
+    document.getElementById('inputZone').classList.add('hidden');
+    document.getElementById('stagingView').classList.add('hidden');
+    document.getElementById('resultsView').classList.add('hidden');
+    document.getElementById('archiveView').classList.add('hidden');
+    document.getElementById('loader').classList.add('hidden');
+
+    const usersView = document.getElementById('usersView');
+    if (usersView) usersView.classList.add('hidden');
+
+    const firewallView = document.getElementById('firewallView');
+    if (firewallView) firewallView.classList.add('hidden');
+}
+
+function setActiveNav(activeId) {
+    document.querySelectorAll('aside nav button').forEach(b => {
+        const isTarget = b.id === activeId;
+        if (isTarget) {
+            b.classList.add('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+            b.classList.remove('text-gray-400');
+        } else {
+            b.classList.remove('bg-gray-800', 'text-white', 'border-l-4', 'border-brand');
+            b.classList.add('text-gray-400');
+        }
+    });
 }

@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     
     # OpenAI
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
-    USE_LANGCHAIN_CISO: bool = True
+    USE_LANGCHAIN_CISO: bool = False
+    USE_LOCAL_ML: bool = True
 
     # Storage (DigitalOcean Spaces)
     DO_SPACES_KEY: Optional[str] = os.getenv("DO_SPACES_KEY")
@@ -37,6 +38,10 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_LEVEL: str = "INFO"
+
+    # Microservices
+    SERVICE_ROLE: str = os.getenv("SERVICE_ROLE", "MONOLITH") # Options: MONOLITH, API, SCANNER
+    SCANNER_SERVICE_URL: str = os.getenv("SCANNER_SERVICE_URL", "http://scanner:8000")
     
     class Config:
         env_file = ".env"

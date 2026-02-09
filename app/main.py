@@ -11,9 +11,10 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.database import Base, engine
-from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise
+from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise, proxy
 from app.icap_server import ICAPServer
 from app.models.user import User
+from app.models.audit import ProxyLog
 from app.utils.auth import get_current_active_user
 
 # Configure logging
@@ -39,9 +40,12 @@ async def lifespan(app: FastAPI):
     logger.info("Database initialized")
     
     # Start ICAP server in background
-    icap_server = ICAPServer()
-    asyncio.create_task(icap_server.start())
-    logger.info(f"ICAP server starting on {settings.ICAP_HOST}:{settings.ICAP_PORT}")
+    try:
+        icap_server = ICAPServer()
+        asyncio.create_task(icap_server.start())
+        logger.info(f"ICAP server starting on {settings.ICAP_HOST}:{settings.ICAP_PORT}")
+    except Exception as e:
+        logger.error(f"Failed to start ICAP server: {e} (Continuing with Web App only)")
     
     # Import globally for use in error handlers
     from app.routes.scans import get_dlp_engine
@@ -162,16 +166,14 @@ async def custom_swagger_ui_html(request: Request):
 @app.get("/icap/content", response_class=HTMLResponse)
 async def icap_docs_content(request: Request):
     """Serve ICAP Documentation Content (Raw)"""
-    return templates.TemplateResponse("icap_docs.html", {"request": request})
+    nonce = getattr(request.state, 'nonce', '')
+    return templates.TemplateResponse("icap_docs.html", {"request": request, "nonce": nonce})
 
 @app.get("/icap", response_class=HTMLResponse)
 async def icap_portal(request: Request):
     """Serve ICAP Portal Wrapper"""
-    template_path = Path("app/templates/icap_portal.html")
-    if not template_path.exists():
-        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
-    with open(template_path, "r") as f:
-        return f.read()
+    nonce = getattr(request.state, 'nonce', '')
+    return templates.TemplateResponse("icap_portal.html", {"request": request, "nonce": nonce})
 
 @app.post("/api/icap/test")
 async def test_icap_connection(request: Request, current_user: User = Depends(get_current_active_user)):
@@ -232,7 +234,12 @@ app.add_middleware(SlowAPIMiddleware)
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        "http://localhost:5173", "http://localhost:5174", "http://localhost:8000", 
+        "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:8000",
+        "http://localhost:8080", "http://localhost",
+        "http://127.0.0.1:8080", "http://127.0.0.1"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -246,6 +253,7 @@ app.include_router(dashboard.router)
 app.include_router(cdr.router)
 app.include_router(code_security.router)
 app.include_router(enterprise.router)
+app.include_router(proxy.router, prefix="/v1/proxy", tags=["AI Firewall"])
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -295,7 +303,20 @@ async def login_page(request: Request):
     
     html_content = html_content.replace("{{ nonce }}", request.state.nonce)
     return HTMLResponse(content=html_content)
-
+@app.get("/firewall/onboarding", response_class=HTMLResponse)
+async def firewall_onboarding(request: Request):
+    """AI Firewall Onboarding Page"""
+    template_path = Path("app/templates/firewall_onboarding.html")
+    if not template_path.exists():
+        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
+    with open(template_path, "r") as f:
+        html_content = f.read()
+    
+    # Replace host placeholder with actual host from request
+    host_url = request.headers.get("host", "localhost:8000")
+    html_content = html_content.replace("{{ host_url }}", host_url)
+    
+    return HTMLResponse(content=html_content)
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
     """Registration page"""

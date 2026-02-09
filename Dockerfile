@@ -32,10 +32,14 @@ RUN mkdir -p /usr/share/keyrings && \
 # Install python dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
-    python -m spacy download en_core_web_sm
+    python -m spacy download en_core_web_lg
 
 # Copy the rest of the application code
+# Copy the rest of the application code
 COPY . .
+
+# Download models during build
+RUN python scripts/download_models.py
 
 # Expose the port the app runs on
 EXPOSE 8000

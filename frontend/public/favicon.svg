@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#0D1117" stroke="#88FFFF" stroke-width="3"/>
+  
+  <!-- Spider web pattern (subtle) -->
+  <g stroke="#88FFFF" stroke-width="0.8" fill="none" opacity="0.15">
+    <!-- Radial lines -->
+    <line x1="50" y1="50" x2="50" y2="5"/>
+    <line x1="50" y1="50" x2="85" y2="15"/>
+    <line x1="50" y1="50" x2="95" y2="50"/>
+    <line x1="50" y1="50" x2="85" y2="85"/>
+    <line x1="50" y1="50" x2="50" y2="95"/>
+    <line x1="50" y1="50" x2="15" y2="85"/>
+    <line x1="50" y1="50" x2="5" y2="50"/>
+    <line x1="50" y1="50" x2="15" y2="15"/>
+    
+    <!-- Concentric circles -->
+    <circle cx="50" cy="50" r="20"/>
+    <circle cx="50" cy="50" r="35"/>
+  </g>
+  
+  <!-- Large Spider body -->
+  <g fill="#88FFFF">
+    <!-- Abdomen (larger) -->
+    <ellipse cx="50" cy="58" rx="14" ry="20"/>
+    <!-- Head (larger) -->
+    <circle cx="50" cy="38" r="11"/>
+    <!-- Eyes (more visible) -->
+    <circle cx="46" cy="36" r="2.5" fill="#0D1117"/>
+    <circle cx="54" cy="36" r="2.5" fill="#0D1117"/>
+  </g>
+  
+  <!-- Spider legs (thicker and more visible) -->
+  <g stroke="#88FFFF" stroke-width="3" fill="none" stroke-linecap="round">
+    <!-- Left front legs -->
+    <path d="M 40 42 Q 25 35 15 28"/>
+    <path d="M 38 48 Q 20 45 10 42"/>
+    <path d="M 38 54 Q 22 55 12 58"/>
+    <path d="M 40 60 Q 25 68 15 75"/>
+    
+    <!-- Right front legs -->
+    <path d="M 60 42 Q 75 35 85 28"/>
+    <path d="M 62 48 Q 80 45 90 42"/>
+    <path d="M 62 54 Q 78 55 88 58"/>
+    <path d="M 60 60 Q 75 68 85 75"/>
+  </g>
+</svg>

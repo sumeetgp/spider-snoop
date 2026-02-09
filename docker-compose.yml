@@ -2,13 +2,12 @@ services:
   db:
     image: postgres:15-alpine
     volumes:
-      - postgres_data:/var/lib/postgresql/data/
+      - ./postgres_data:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
       - POSTGRES_DB=spider_snoop
-    ports:
-      - "5432:5432"
+    restart: always
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U postgres" ]
       interval: 5s
@@ -24,7 +23,12 @@ services:
       - clamav_db:/var/lib/clamav
 
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: spider-snoop-api-1
+    env_file:
+      - .env
     volumes:
       - .:/app
     ports:
@@ -32,25 +36,75 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/spider_snoop
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERVICE_ROLE=API
+      - SCANNER_SERVICE_URL=http://scanner:8000
+      - SMTP2GO_API_KEY=${SMTP2GO_API_KEY}
+      - SMTP2GO_BASE_URL=${SMTP2GO_BASE_URL}
+      - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8080}
     depends_on:
       db:
         condition: service_healthy
-    # command: bash -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
-    # For now, we will stick to the Dockerfile CMD, but if you have migrations, uncomment the line below or run them manually
-    # command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      # scanner:
+      #   condition: service_started
+
+  scanner:
+    build:
+      context: .
+      dockerfile: Dockerfile.scanner
+    container_name: spider-snoop-scanner-1
+    volumes:
+      - .:/app
+    ports:
+      - "8001:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/spider_snoop
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - SERVICE_ROLE=SCANNER
+    depends_on:
+      db:
+        condition: service_healthy
+      clamav:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    volumes:
+      # Mount the built React app for Nginx to serve
+      - ./frontend/dist:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: always
+
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./policies:/policies
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "/policies"
 
   nginx:
     image: nginx:alpine
     volumes:
-      - ./nginx/nginx.local.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.react.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend/dist:/app/frontend/dist:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     ports:
       - "80:80"
       - "443:443"
     depends_on:
       - api
+      - frontend
     restart: always
 
 volumes:
-  postgres_data:
   clamav_db:

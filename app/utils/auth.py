@@ -92,7 +92,7 @@ async def get_current_active_user(
         last_reset = last_reset.replace(tzinfo=timezone.utc)
 
     if now - last_reset > timedelta(hours=1):
-        current_user.credits_remaining = 50
+        current_user.credits_remaining = 500
         current_user.last_credit_reset = now
         db.add(current_user)
         db.commit()

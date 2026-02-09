@@ -1,4 +1,5 @@
 import re
+import math
 from typing import Dict, List
 
 class DLPPatternMatcher:
@@ -100,6 +101,26 @@ class DLPPatternMatcher:
                 "severity": "CRITICAL",
                 "description": "Generic API Key"
             },
+            "slack_api_token": {
+                "pattern": r'\b(xox[baprs]-[a-zA-Z0-9-]{10,})\b',
+                "severity": "CRITICAL",
+                "description": "Slack API Token"
+            },
+            "slack_webhook": {
+                "pattern": r'https://hooks.slack.com/services/T[a-zA-Z0-9_]{8}/B[a-zA-Z0-9_]{8}/[a-zA-Z0-9_]{24}',
+                "severity": "CRITICAL",
+                "description": "Slack Webhook URL"
+            },
+            "google_api_key": {
+                "pattern": r'\b(AIza[0-9A-Za-z_-]{35})\b',
+                "severity": "CRITICAL",
+                "description": "Google API Key"
+            },
+            "aws_session_token": {
+                "pattern": r'\b(FQoGZXRfYXJj[a-zA-Z0-9/+=]{20,})\b',
+                "severity": "HIGH",
+                "description": "AWS Session Token (Base64)"
+            },
             "bearer_token": {
                 "pattern": r'\bBearer\s+([a-zA-Z0-9\-._~+/]+=*)\b',
                 "severity": "CRITICAL",
@@ -188,6 +209,22 @@ class DLPPatternMatcher:
             checksum += digit
         return checksum % 10 == 0
     
+    def _calculate_entropy(self, data: str) -> float:
+        """
+        Calculate Shannon Entropy to detect random keys vs words.
+        High entropy (>3.5) indicates random/cryptographic data.
+        Low entropy (<3.5) indicates natural language or patterns.
+        """
+        if not data:
+            return 0.0
+        
+        entropy = 0.0
+        for x in range(256):
+            p_x = float(data.count(chr(x))) / len(data)
+            if p_x > 0:
+                entropy += - p_x * math.log(p_x, 2)
+        return entropy
+    
     def scan(self, text: str, secrets_only: bool = False) -> Dict[str, List[Dict]]:
         """
         Comprehensive scan of text for all DLP patterns
@@ -205,7 +242,8 @@ class DLPPatternMatcher:
         secret_types = {
             "aws_access_key", "aws_secret_key", "github_token", "generic_api_key",
             "bearer_token", "jwt_token", "private_key", "ssh_private_key", 
-            "pgp_private_key", "db_connection_string", "password_in_code"
+            "pgp_private_key", "db_connection_string", "password_in_code",
+            "slack_api_token", "google_api_key", "aws_session_token"
         }
         
         # Scan for all patterns
@@ -223,15 +261,28 @@ class DLPPatternMatcher:
                     if not pattern_info["validator"](matched_text):
                         continue  # Skip invalid matches
                 
+                # Apply entropy check for API keys/secrets (reduce false positives)
+                if pattern_name in secret_types:
+                    entropy = self._calculate_entropy(matched_text)
+                    if entropy < 3.5:
+                        # Skip low-entropy matches (likely false positives)
+                        continue
+                
                 # Mask sensitive data in output
                 masked_value = self._mask_value(matched_text, pattern_name)
+                
+                # Extract Context Window (±100 chars)
+                start_context = max(0, match.start() - 100)
+                end_context = min(len(text), match.end() + 100)
+                context_window = text[start_context:end_context]
                 
                 finding = {
                     "type": pattern_name,
                     "description": pattern_info["description"],
                     "value": masked_value,
                     "position": f"char {match.start()}-{match.end()}",
-                    "severity": pattern_info["severity"]
+                    "severity": pattern_info["severity"],
+                    "context": context_window
                 }
                 
                 results[pattern_info["severity"]].append(finding)
@@ -254,7 +305,7 @@ class DLPPatternMatcher:
         """Mask sensitive values for safe logging"""
         if pattern_type in ["credit_card", "ssn", "bank_account"]:
             return f"{value[:4]}...{value[-4:]}" if len(value) > 8 else "***"
-        elif pattern_type in ["aws_secret_key", "github_token", "bearer_token", "password_in_code"]:
+        elif pattern_type in ["aws_secret_key", "github_token", "bearer_token", "password_in_code", "slack_api_token", "google_api_key"]:
             return f"{value[:6]}...***" if len(value) > 10 else "***"
         elif pattern_type == "email":
             parts = value.split('@')

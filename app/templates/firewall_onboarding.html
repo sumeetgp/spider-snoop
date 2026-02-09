@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Firewall Onboarding | SpiderCob</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            background-color: #0D1117;
+            color: #C9D1D9;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .hero-gradient {
+            background: linear-gradient(135deg, #88FFFF 0%, #00E5FF 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .code-block {
+            background: #161B22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            position: relative;
+        }
+
+        .step-circle {
+            width: 32px;
+            height: 32px;
+            background: #88FFFF;
+            color: #000;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <nav class="border-b border-[#30363d] p-6 flex justify-between items-center bg-[#0D1117] sticky top-0 z-50">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.href='/'">
+            <span class="text-3xl">🕸️</span>
+            <span class="text-xl font-black tracking-tighter text-white">Spider<span
+                    class="text-[#88FFFF]">Cob</span></span>
+        </div>
+        <a href="/" class="text-sm font-bold text-gray-400 hover:text-white transition">BACK TO DASHBOARD</a>
+    </nav>
+
+    <!-- Hero -->
+    <div class="flex-1 max-w-4xl mx-auto w-full p-8 md:p-12">
+        <div class="text-center mb-16">
+            <h1 class="text-5xl font-black mb-4 hero-gradient">SECURE YOUR LLM TRAFFIC</h1>
+            <p class="text-xl text-gray-400 max-w-2xl mx-auto">
+                Integrate SpiderCob's **AI Firewall** in 2 minutes. Protect against PII leaks, block unauthorized
+                models, and audit every prompt.
+            </p>
+        </div>
+
+        <!-- Integration Steps -->
+        <div class="space-y-12">
+
+            <!-- Step 1 -->
+            <div class="flex gap-6">
+                <div class="flex-shrink-0">
+                    <div class="step-circle">1</div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-2xl font-bold text-white mb-2">Change Base URL</h3>
+                    <p class="text-gray-400 mb-4">
+                        Replace standard OpenAI endpoints with our secure proxy. It acts as a transparent middleman.
+                    </p>
+                    <div class="code-block font-mono text-sm text-green-400">
+                        <div class="flex justify-between text-gray-500 mb-2 border-b border-gray-700 pb-2">
+                            <span>OpenAI Python SDK</span>
+                        </div>
+                        <pre>
+from openai import OpenAI
+
+client = OpenAI(
+    api_key="your_spidercob_api_token",  <span class="text-gray-500"># Authenticate with SpiderCob</span>
+    base_url="<span class="text-[#88FFFF]">https://{{ host_url }}/v1/proxy</span>"  <span class="text-gray-500"># Route via Firewall</span>
+)
+
+completion = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": "Hello world!"}]
+)
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="flex gap-6">
+                <div class="flex-shrink-0">
+                    <div class="step-circle">2</div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-2xl font-bold text-white mb-2">Verify Protection</h3>
+                    <p class="text-gray-400 mb-4">
+                        Try sending a test prompt containing sensitive data (e.g., a credit card number or
+                        "SECRET_KEY"). The firewall should redact or block it.
+                    </p>
+                    <div class="code-block font-mono text-sm text-yellow-400">
+                        <div class="flex justify-between text-gray-500 mb-2 border-b border-gray-700 pb-2">
+                            <span>Test with cURL</span>
+                        </div>
+                        <pre>
+curl https://{{ host_url }}/v1/proxy/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{
+    "model": "gpt-3.5-turbo",
+    "messages": [
+      {"role": "user", "content": "My secret password is..."}
+    ]
+  }'
+                        </pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="flex gap-6">
+                <div class="flex-shrink-0">
+                    <div class="step-circle">3</div>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-2xl font-bold text-white mb-2">Monitor Threats</h3>
+                    <p class="text-gray-400 mb-4">
+                        View real-time audit logs, including risk scores and blocked attempts, in your Admin Dashboard.
+                    </p>
+                    <a href="/"
+                        class="inline-flex items-center gap-2 bg-[#88FFFF] hover:opacity-90 text-black font-bold px-6 py-3 rounded-lg transition">
+                        GO TO DASHBOARD
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="mt-20 pt-10 border-t border-[#30363d] text-center text-gray-500 text-sm">
+            <p>&copy; 2026 SpiderCob Security. All systems operational.</p>
+        </div>
+    </div>
+</body>
+
+</html>

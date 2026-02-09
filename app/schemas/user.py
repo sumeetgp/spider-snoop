@@ -25,6 +25,7 @@ class UserResponse(UserBase):
     role: UserRole
     is_active: bool
     created_at: datetime
+    last_login: Optional[datetime] = None
     credits_remaining: int
     
     class Config:

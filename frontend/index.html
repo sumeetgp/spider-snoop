@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpiderCob</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0D1117',
+            card: '#161B22',
+            glass: 'rgba(22, 27, 34, 0.7)',
+            border: '#30363d',
+            brand: '#88FFFF',
+            success: '#238636',
+            warning: '#D29922',
+            alert: '#F85149',
+            text: '#C9D1D9',
+            accent: '#00E5FF'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #0D1117;
+      color: #C9D1D9;
+      overflow-x: hidden;
+    }
+
+    .glass-panel {
+      background: rgba(22, 27, 34, 0.7);
+      border: 1px solid #30363d;
+      backdrop-filter: blur(12px);
+    }
+  </style>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+
+</body>
+
+</html>

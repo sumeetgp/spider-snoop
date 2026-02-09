@@ -57,12 +57,34 @@ class ScanResponse(BaseModel):
     def parse_ai_analysis(cls, v):
         return cls._parse_json(v)
 
+    score: int = 0
+    duration: int = 0
+    aiInsight: Optional[str] = None
+    compliance_alerts: List[str] = []
+
     @model_validator(mode='after')
-    def populate_cdr_info(self):
-        if self.cdr_info: return self
+    def populate_frontend_fields(self):
+        # Map internal fields to Frontend expectations
+        self.score = self.threat_score
+        self.duration = self.scan_duration_ms or 0
         
-        # Try to extract from ai_analysis
+        # Populate aiInsight and compliance_alerts from ai_analysis
         if self.ai_analysis:
+             try:
+                 analysis = self.ai_analysis
+                 if isinstance(analysis, str):
+                     import json
+                     analysis = json.loads(analysis)
+                 if isinstance(analysis, dict):
+                     self.aiInsight = analysis.get('reason')
+                     self.compliance_alerts = analysis.get('compliance_alerts', [])
+                     # Also try to refresh score if logic differs
+                     # if 'score' in analysis: self.score = analysis['score']
+             except:
+                 pass
+                 
+        # Populate cdr_info (Existing logic)
+        if not self.cdr_info and self.ai_analysis:
              try:
                  analysis = self.ai_analysis
                  if isinstance(analysis, str):
@@ -73,6 +95,7 @@ class ScanResponse(BaseModel):
                      self.cdr_info = analysis['cdr']
              except:
                  pass
+                 
         return self
 
 class ScanStats(BaseModel):

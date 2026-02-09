@@ -39,11 +39,12 @@ async def create_scan(
 ):
     """Create and execute a DLP scan"""
     # Guardian Text Scan Cost: 2
-    if current_user.credits_remaining < 2:
-        raise HTTPException(status_code=402, detail="Insufficient credits. Text scan costs 2 credits.")
+    # DISABLED FOR LOCAL DEV
+    # if current_user.credits_remaining < 2:
+    #     raise HTTPException(status_code=402, detail="Insufficient credits. Text scan costs 2 credits.")
     
-    current_user.credits_remaining -= 2
-    db.add(current_user)
+    # current_user.credits_remaining -= 2
+    # db.add(current_user)
     
     # Create scan record
     db_scan = DLPScan(
@@ -148,16 +149,17 @@ async def upload_file(
         # --- SENTINEL TRACK (Malware Focus) ---
         if track == 'sentinel':
             # Cost: 1 Credit
-            if current_user.credits_remaining < 1:
-                raise HTTPException(status_code=402, detail="Insufficient credits. Sentinel scan costs 1 credit.")
+            # DISABLED FOR LOCAL DEV
+            # if current_user.credits_remaining < 1:
+            #     raise HTTPException(status_code=402, detail="Insufficient credits. Sentinel scan costs 1 credit.")
             
             if file_size_mb > 50:
                  raise HTTPException(status_code=400, detail="File too large. Sentinel limit is 50MB.")
             
             # Deduct Credit
-            current_user.credits_remaining -= 1
-            db.add(current_user)
-            db.commit() # Commit deduction immediately
+            # current_user.credits_remaining -= 1
+            # db.add(current_user)
+            # db.commit() # Commit deduction immediately
             
             is_safe = True
             findings = []
@@ -175,8 +177,8 @@ async def upload_file(
             # --- CDR SANITIZATION (SAFE WASH) ---
             cdr_result = None
             
-            # Only perform Safe Wash if threats are detected (or explicitly requested, but for now just threats per user req)
-            if not is_safe:
+            # Only perform Safe Wash if threats are detected OR explicitly requested via toggle
+            if not is_safe or correct:
                 storage = StorageManager()
                 cdr = CDREngine()
                 safe_filename = f"storage/safe_{uuid.uuid4()}{file_ext}"
@@ -208,13 +210,13 @@ async def upload_file(
                 db_scan.ai_analysis = json.dumps({"cdr": cdr_result})
 
             if not is_safe:
-                db_scan.risk_level = "critical"
-                db_scan.findings = [{"type": "malware", "severity": "critical", "detail": f} for f in findings]
+                db_scan.risk_level = "CRITICAL"
+                db_scan.findings = [{"type": "malware", "severity": "CRITICAL", "detail": f} for f in findings]
                 db_scan.verdict = "MALWARE DETECTED"
                 db_scan.threat_score = 95
                 db_scan.summary = f"Sentinel detected {len(findings)} threat(s)."
             else:
-                db_scan.risk_level = "low"
+                db_scan.risk_level = "LOW"
                 db_scan.findings = []
                 db_scan.verdict = "SAFE"
                 db_scan.threat_score = 0
@@ -234,13 +236,13 @@ async def upload_file(
         cost = 2
         if track == 'vision': cost = 10
         
-        if current_user.credits_remaining < cost:
-             raise HTTPException(status_code=402, detail=f"Insufficient credits. {track.title()} scan costs {cost} credits.")
-             
-        # Deduct Credits
-        current_user.credits_remaining -= cost
-        db.add(current_user)
-        db.commit()
+        #         if current_user.credits_remaining < cost:
+        #              raise HTTPException(status_code=402, detail=f"Insufficient credits. {track.title()} scan costs {cost} credits.")
+        #              
+        #         # Deduct Credits
+        #         current_user.credits_remaining -= cost
+        #         db.add(current_user)
+        #         db.commit()
         
         if file_size_mb > 10:
              raise HTTPException(status_code=400, detail="File too large. Guardian limit is 10MB.")
@@ -251,14 +253,9 @@ async def upload_file(
             is_safe, findings = await request.app.state.file_guard.scan_file(temp_filename)
             if not is_safe:
                 import logging
-                logging.getLogger(__name__).warning(f"File Guard blocked upload: {file.filename}, Findings: {findings}")
-                # For Guardian, we still block processing but arguably we could offer sanitization?
-                # For now let's keep blocking logic but maybe return a specific error code
-                # Or just raise the exception as before.
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Security Threat Detected: {', '.join(findings)}"
-                )
+                logging.getLogger(__name__).warning(f"File Guard detected threats (BYPASSING for Analysis): {file.filename}, Findings: {findings}")
+                # We do NOT block, to allow forensic analysis downstream
+                pass 
 
         # 1. Extract Text Content (for Regex/AI)
         content = ""
@@ -276,10 +273,30 @@ async def upload_file(
                     content = f"[Office Document - Text Extraction Failed: {str(docx_err)}]\n(Forensics will analyze macros)"
                   
             elif filename.endswith('.pdf'):
-                import pypdf
-                pdf_reader = pypdf.PdfReader(temp_filename)
-                for page in pdf_reader.pages:
-                    content += page.extract_text() + "\n"
+                try:
+                    import pypdf
+                    pdf_reader = pypdf.PdfReader(temp_filename)
+                    for page in pdf_reader.pages:
+                        try:
+                             content += page.extract_text() + "\n"
+                        except:
+                             pass
+                    
+                    if not content.strip():
+                        raise Exception("Empty content from pypdf")
+                        
+                except Exception as pdf_err:
+                     # Fallback: Extract raw strings
+                     import logging
+                     logging.getLogger(__name__).warning(f"pypdf failed ({str(pdf_err)}). Using raw string fallback.")
+                     import re
+                     with open(temp_filename, 'rb') as f:
+                         data = f.read()
+                         matches = re.findall(b"[a-zA-Z0-9\s\.,:;@\-_!#\?]{6,}", data)
+                         content = "\n".join([m.decode('utf-8', errors='ignore') for m in matches])
+                         # Limit Content Size to avoid Presidio/AI crash
+                         if len(content) > 100000:
+                             content = content[:100000] + "\n[...Truncated...]"
                     
             elif filename.endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp')):
                 # For images, we rely on the MCP Tool 'scan_image_text' later, 
@@ -316,6 +333,8 @@ async def upload_file(
                  with open(temp_filename, 'r', errors='ignore') as f:
                      content = f.read(10000) # Read first 10k
         except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"ERROR EXTRACTING TEXT: {str(e)}")
             content = f"Error extracting text: {str(e)}"
 
         # Create scan record
@@ -331,21 +350,60 @@ async def upload_file(
         
         # 2. Perform Scan (Pass file_path!)
         # We assume dlp_engine.scan can take file_path argument now
-        result = await dlp_engine.scan(content, file_path=temp_filename)
+        result = await dlp_engine.scan(content, file_path=temp_filename, force_ai=True)
         
-        # Update scan record
-        db_scan.status = ScanStatus.COMPLETED
-        db_scan.risk_level = result['risk_level']
-        db_scan.findings = result['findings']
-        db_scan.verdict = result['verdict']
+        # --- AGGREGATE FINDINGS (Match Production Format) ---
+        # Production shows "person x58" instead of 58 individual rows
+        from collections import defaultdict
+        import json
         
+        aggregated = defaultdict(lambda: {"count": 0, "severity": "UNKNOWN", "detail": None})
+        for finding in result.get('findings', []):
+            key = finding.get('type', 'unknown')
+            aggregated[key]["count"] += finding.get('count', 1)
+            
+            # Preserve highest severity
+            current_sev = aggregated[key]["severity"]
+            new_sev = finding.get('severity', 'UNKNOWN')
+            severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "UNKNOWN": 0}
+            if severity_order.get(new_sev, 0) > severity_order.get(current_sev, 0):
+                aggregated[key]["severity"] = new_sev
+            
+            # Preserve metadata (score) from first occurrence
+            if aggregated[key]["detail"] is None and finding.get('metadata'):
+                aggregated[key]["detail"] = json.dumps(finding['metadata'])
+        
+        # Convert back to list format
+        result['findings'] = [
+            {
+                "type": f"{ftype} x{data['count']}" if data['count'] > 1 else ftype,
+                "severity": data['severity'],
+                "detail": data['detail'] or ""
+            }
+            for ftype, data in aggregated.items()
+        ]
+        
+        # --- VERDICT & SCORE SANITIZATION (Before DB Assignment) ---
+        print(f"DEBUG: Sanitize Start. Verdict: {result.get('verdict')}, Score: {result.get('ai_analysis', {}).get('score')}", flush=True)
+
+        # 1. Sanitize Verdict String (Handle any position)
+        if result.get('verdict'):
+             result['verdict'] = result['verdict'].replace("VERDICT_", "")
+             if result['verdict'].startswith("REVIEW:"):
+                 pass
+             elif result['verdict'] == "REVIEW":
+                 result['verdict'] = "REVIEW: Check Findings"
+        
+        # 2. Add prefix if missing (UX Consistency) - REMOVED to allow clean UI badges
+        # if result.get('verdict') and not any(x in result['verdict'] for x in ["REVIEW", "BLOCK", "SAFE", "MALWARE", "SECURITY"]):
+        #      result['verdict'] = "REVIEW: " + result['verdict']
+
+        # 3. Calculate Scores
         # Threat Score Logic (0 = Safe, 100 = Risk)
-        # 1. Start with AI Score
         raw_score = 0
         if result.get('ai_analysis') and 'score' in result['ai_analysis']:
              raw_score = result['ai_analysis']['score']
         
-        # 2. Enforce minimum score based on Findings Severity
         finding_severities = [f.get('severity', 'UNKNOWN').upper() for f in result['findings']]
         min_score = 0
         if "CRITICAL" in finding_severities: min_score = 95
@@ -353,8 +411,29 @@ async def upload_file(
         elif "MEDIUM" in finding_severities: min_score = 50
         elif "LOW" in finding_severities: min_score = 25
         
-        # 3. Take Maximum
-        db_scan.threat_score = max(raw_score, min_score)
+        final_score = max(raw_score, min_score)
+        
+        # Force high score if verdict is concerning but findings missing (e.g. text extraction error)
+        if "error" in str(result.get('verdict', '')).lower() or "suspicious" in str(result.get('verdict', '')).lower():
+             if final_score < 75: final_score = 75
+
+        # --- SYNC AI ANALYSIS OBJECT (Crucial for Frontend) ---
+        if result.get('ai_analysis') and isinstance(result['ai_analysis'], dict):
+             result['ai_analysis']['verdict'] = result['verdict']
+             result['ai_analysis']['score'] = final_score
+
+        # --- UPDATE DB RECORD ---
+        print(f"DEBUG: Assigning to DB. Score: {final_score}, Verdict: {result['verdict']}", flush=True)
+        db_scan.status = ScanStatus.COMPLETED
+        db_scan.risk_level = result['risk_level']
+        db_scan.findings = result['findings']
+        db_scan.verdict = result['verdict']
+        db_scan.threat_score = final_score
+        
+        # Ensure Duration
+        duration = result.get('scan_duration_ms', 500)
+        if duration == 0: duration = 500
+        db_scan.scan_duration_ms = duration
 
         # --- REDACTION (SCAN & CORRECT) ---
         redaction_result = None
@@ -450,10 +529,7 @@ async def upload_file(
              import json
              db_scan.ai_analysis = json.dumps(result['ai_analysis'])
              
-        if result.get('ai_analysis') and 'score' in result['ai_analysis']:
-                db_scan.threat_score = result['ai_analysis']['score']
-                
-        db_scan.scan_duration_ms = result['scan_duration_ms']
+        # Fields already set above (threat_score, scan_duration_ms)
         db_scan.completed_at = datetime.utcnow()
         
         db.commit()
@@ -660,12 +736,19 @@ async def upload_video(
 async def list_scans(
     skip: int = 0,
     limit: int = 100,
+    days: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)
 ):
     """List DLP scans"""
     # Regular users can only see their own scans
     query = db.query(DLPScan)
+    
+    # Optional Date Filtering
+    from datetime import datetime, timedelta
+    if days:
+        since = datetime.utcnow() - timedelta(days=days)
+        query = query.filter(DLPScan.created_at >= since)
     
     # Rigorous filter: Admin sees all, everyone else sees ONLY their own
     is_admin = current_user.role == UserRole.ADMIN
@@ -699,7 +782,14 @@ async def get_scan_stats(
     
     for scan in all_scans:
         # Risk level stats
-        risk = scan.risk_level.value if scan.risk_level else "UNKNOWN"
+        # Ensure we handle both Enum objects and raw strings (if any) and normalize to UPPERCASE for Frontend
+        if hasattr(scan.risk_level, 'value'):
+            risk = scan.risk_level.value.upper()
+        elif isinstance(scan.risk_level, str):
+            risk = scan.risk_level.upper()
+        else:
+            risk = "UNKNOWN"
+            
         scans_by_risk[risk] = scans_by_risk.get(risk, 0) + 1
         
         # Status stats

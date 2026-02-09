@@ -1,5 +1,5 @@
 import os
-from moviepy.editor import VideoFileClip
+# from moviepy.editor import VideoFileClip # Moved to inside function
 import openai
 from app.config import settings
 
@@ -17,6 +17,7 @@ class VideoProcessor:
         Returns the path to the audio file.
         """
         try:
+            from moviepy.editor import VideoFileClip
             video = VideoFileClip(video_path)
             if video.audio is None:
                 return None
