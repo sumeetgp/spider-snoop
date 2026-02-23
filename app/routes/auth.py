@@ -8,7 +8,11 @@ from app.database import get_db
 from app.models.user import User, UserRole
 from app.schemas.user import Token, UserCreate
 from app.utils.auth import verify_password, create_access_token, get_password_hash
+from pydantic import BaseModel, EmailStr
 from app.config import settings
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
@@ -115,7 +119,7 @@ async def logout(response: Response):
 
 # Password Reset Endpoints
 @router.post("/forgot-password")
-async def forgot_password(email: str, db: Session = Depends(get_db)):
+async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
     Request a password reset token.
     Sends an email with reset link via SMTP2GO.
@@ -124,6 +128,8 @@ async def forgot_password(email: str, db: Session = Depends(get_db)):
     from app.services.email_service import email_service
     from datetime import datetime, timedelta
     import os
+    
+    email = request.email
     
     # Find user by email
     user = db.query(User).filter(User.email == email).first()
@@ -179,11 +185,16 @@ async def forgot_password(email: str, db: Session = Depends(get_db)):
     response = {"message": "If the email exists, a reset link has been sent"}
     
     # In development mode, include debug info
+    # In development mode, include debug info
     if settings.DEBUG:
         response["dev_email_sent"] = email_sent
-        response["dev_reset_url"] = reset_url
-        if not email_sent:
-            response["dev_token"] = token  # Fallback for dev
+        # Secure fix: Never return the token in the response, even in debug mode.
+        # response["dev_reset_url"] could also leak it if it contains the token query param.
+        # The user said "should not pass the token".
+        # reset_url = f"{base_url}/reset-password?token={token}" -> This contains the token.
+        # So we must NOT return reset_url either if we want to be safe.
+        # I will remove the token leak.
+        response["dev_email_sent"] = email_sent
     
     return response
 

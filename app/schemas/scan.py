@@ -4,6 +4,14 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 from app.models.scan import ScanStatus, RiskLevel
 
+class UserBasicInfo(BaseModel):
+    id: int
+    username: str
+    email: str
+    
+    class Config:
+        from_attributes = True
+
 class ScanCreate(BaseModel):
     content: str = Field(..., min_length=1, description="Text content to scan for sensitive data")
     source: str = Field("API", description="Source of the scan (e.g., API, Manual, App)")
@@ -33,6 +41,7 @@ class ScanResponse(BaseModel):
     scan_duration_ms: Optional[int]
     created_at: datetime
     completed_at: Optional[datetime]
+    user: Optional[UserBasicInfo] = None
     
     @property
     def scan_id(self) -> str:

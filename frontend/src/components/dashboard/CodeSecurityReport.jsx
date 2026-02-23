@@ -5,6 +5,8 @@ const CodeSecurityReport = ({ data }) => {
     // Extract remediation from API response
     const remediationPlan = data?.ai_analysis?.remediation || data?.remediation || [];
     const source = data?.source || "";
+    const summary = data?.summary || data?.ai_analysis?.summary || "";
+    const verdict = data?.verdict || "UNKNOWN";
 
     const getEcosystemUrl = (pkg, version) => {
         if (!pkg || !version) return "#";
@@ -59,6 +61,23 @@ const CodeSecurityReport = ({ data }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Assessment Summary */}
+            {(summary || verdict !== 'UNKNOWN') && (
+                <div className="glass-panel p-6 rounded-2xl border border-gray-700/50 bg-[#161B22]/70">
+                    <div className="flex items-center justify-between mb-4">
+                        <span className="text-sm font-bold uppercase tracking-wider text-[#88FFFF]">Security Assessment</span>
+                        <span className={`px-3 py-1 rounded text-xs font-bold border ${verdict && verdict.includes('CLEAN') ? 'bg-green-500/10 text-green-400 border-green-500/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+                            VERDICT: {verdict.replace('VERDICT_', '')}
+                        </span>
+                    </div>
+                    {summary && (
+                        <p className="text-sm text-gray-300 font-light leading-relaxed">
+                            {summary}
+                        </p>
+                    )}
+                </div>
+            )}
 
             {/* Remediation Panel */}
             <div className="glass-panel rounded-2xl p-6 border border-gray-700/50 bg-[#161B22]/70">

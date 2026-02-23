@@ -225,6 +225,7 @@ const OverviewTrack = () => {
                             <tr className="bg-[#161B22] text-xs uppercase text-gray-400 font-bold">
                                 <th className="p-4 w-10"></th>
                                 <th className="p-4">ID</th>
+                                <th className="p-4">User</th>
                                 <th className="p-4">Timestamp</th>
                                 <th className="p-4">Source</th>
                                 <th className="p-4">Verdict</th>
@@ -241,21 +242,28 @@ const OverviewTrack = () => {
                                             {expandedRows[scan.id] ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                                         </td>
                                         <td className="p-4 font-mono text-gray-500">#{scan.id}</td>
+                                        <td className="p-4 text-gray-300">
+                                            {scan.user ? (
+                                                <span>ID: {scan.user.id} - {scan.user.email || scan.user.username}</span>
+                                            ) : (
+                                                'Unknown'
+                                            )}
+                                        </td>
                                         <td className="p-4 text-gray-300">{new Date(scan.created_at).toLocaleString()}</td>
                                         <td className="p-4 text-gray-300 truncate max-w-[200px]">{scan.source}</td>
                                         <td className="p-4">
                                             <span className={`px-2 py-1 rounded text-[10px] font-bold border ${scan.verdict?.includes('BLOCK') ? 'border-red-500/30 bg-red-500/10 text-red-400' :
-                                                    scan.verdict?.includes('SAFE') || scan.verdict?.includes('ALLOW') ? 'border-green-500/30 bg-green-500/10 text-green-400' :
-                                                        'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
+                                                scan.verdict?.includes('SAFE') || scan.verdict?.includes('ALLOW') ? 'border-green-500/30 bg-green-500/10 text-green-400' :
+                                                    'border-yellow-500/30 bg-yellow-500/10 text-yellow-400'
                                                 }`}>
                                                 {scan.verdict?.split(':')[0]?.replace('VERDICT_', '') || 'UNKNOWN'}
                                             </span>
                                         </td>
                                         <td className="p-4">
                                             <span className={`font-mono font-bold ${(scan.risk_level === 'critical' || scan.risk_level === 'CRITICAL') ? 'text-red-500' :
-                                                    (scan.risk_level === 'high' || scan.risk_level === 'HIGH') ? 'text-orange-500' :
-                                                        (scan.risk_level === 'medium' || scan.risk_level === 'MEDIUM') ? 'text-yellow-500' :
-                                                            'text-green-500'
+                                                (scan.risk_level === 'high' || scan.risk_level === 'HIGH') ? 'text-orange-500' :
+                                                    (scan.risk_level === 'medium' || scan.risk_level === 'MEDIUM') ? 'text-yellow-500' :
+                                                        'text-green-500'
                                                 }`}>
                                                 {(scan.risk_level || 'UNKNOWN').toUpperCase()}
                                             </span>
@@ -264,51 +272,111 @@ const OverviewTrack = () => {
                                     {/* Expanded Detail Row */}
                                     {expandedRows[scan.id] && (
                                         <tr className="bg-[#0D1117]/50 animate-fade-in">
-                                            <td colSpan="6" className="p-4 border-b border-[#30363d]">
+                                            <td colSpan="7" className="p-4 border-b border-[#30363d]">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                                                     {/* Full Verdict */}
-                                                    <div className="p-3 bg-gray-800 rounded border border-gray-700">
+                                                    <div className="p-3 bg-gray-800 rounded border border-gray-700 col-span-1">
                                                         <div className="text-gray-500 mb-1 uppercase font-bold">Full Verdict</div>
                                                         <div className="font-mono text-gray-300 break-all">{scan.verdict}</div>
                                                     </div>
 
-                                                    {/* AI Analysis (if available) */}
-                                                    {scan.ai_analysis && (
-                                                        <div className="p-3 bg-gray-800 rounded border border-gray-700">
-                                                            <div className="text-gray-500 mb-1 uppercase font-bold">AI Analysis</div>
-                                                            <div className="font-mono text-gray-300 max-h-32 overflow-y-auto">
-                                                                {(() => {
-                                                                    try {
-                                                                        const ai = typeof scan.ai_analysis === 'string' ? JSON.parse(scan.ai_analysis) : scan.ai_analysis;
-                                                                        return (
-                                                                            <ul className="space-y-1">
-                                                                                {Object.entries(ai).map(([k, v]) => (
-                                                                                    <li key={k}><span className="text-gray-500">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : v}</li>
-                                                                                ))}
-                                                                            </ul>
-                                                                        );
-                                                                    } catch (e) { return scan.ai_analysis; }
-                                                                })()}
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Findings List */}
-                                                    <div className="col-span-1 md:col-span-2 p-3 bg-gray-800 rounded border border-gray-700">
+                                                    {/* Findings List (Grouped) */}
+                                                    <div className="col-span-1 p-3 bg-gray-800 rounded border border-gray-700">
                                                         <div className="text-gray-500 mb-2 uppercase font-bold">Findings Detail</div>
                                                         {scan.findings && scan.findings.length > 0 ? (
-                                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                                                {scan.findings.map((f, i) => (
-                                                                    <div key={i} className="flex justify-between p-1.5 bg-gray-900 border border-gray-700/50 rounded">
-                                                                        <span className="text-blue-400 font-bold">{f.type}</span>
-                                                                        <span className="text-gray-400 bg-gray-800 px-1.5 rounded text-[10px]">x{f.count || 1}</span>
-                                                                    </div>
-                                                                ))}
+                                                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                {(() => {
+                                                                    // Group findings by type and sum the counts
+                                                                    const groupedFindings = scan.findings.reduce((acc, current) => {
+                                                                        const type = current.type || 'unknown';
+                                                                        const count = current.count || 1;
+                                                                        acc[type] = (acc[type] || 0) + count;
+                                                                        return acc;
+                                                                    }, {});
+
+                                                                    return Object.entries(groupedFindings).map(([type, totalCount], i) => (
+                                                                        <div key={i} className="flex justify-between items-center p-1.5 bg-gray-900 border border-gray-700/50 rounded">
+                                                                            <span className="text-blue-400 font-bold truncate pr-2" title={type}>{type}</span>
+                                                                            <span className="text-gray-400 bg-gray-800 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">x{totalCount}</span>
+                                                                        </div>
+                                                                    ));
+                                                                })()}
                                                             </div>
                                                         ) : (
                                                             <span className="text-gray-500 italic">No specific findings recorded.</span>
                                                         )}
                                                     </div>
+
+                                                    {/* AI Analysis & Remediation */}
+                                                    {scan.ai_analysis && (
+                                                        <div className="col-span-1 md:col-span-2 p-3 bg-gray-800 rounded border border-gray-700">
+                                                            <div className="text-gray-500 mb-2 uppercase font-bold">AI Analysis</div>
+                                                            <div className="font-mono text-gray-300">
+                                                                {(() => {
+                                                                    try {
+                                                                        const ai = typeof scan.ai_analysis === 'string' ? JSON.parse(scan.ai_analysis) : scan.ai_analysis;
+                                                                        const { remediation, ...restAi } = ai;
+
+                                                                        return (
+                                                                            <div className="space-y-4">
+                                                                                {/* General AI fields */}
+                                                                                <ul className="space-y-1">
+                                                                                    {Object.entries(restAi).map(([k, v]) => (
+                                                                                        <li key={k}><span className="text-gray-500">{k}:</span> {typeof v === 'object' ? JSON.stringify(v) : v}</li>
+                                                                                    ))}
+                                                                                </ul>
+
+                                                                                {/* Remediation Table for CVEs */}
+                                                                                {remediation && Array.isArray(remediation) && remediation.length > 0 && (
+                                                                                    <div className="mt-4 border border-gray-700 rounded-lg overflow-hidden">
+                                                                                        <div className="bg-gray-900 px-3 py-2 text-sm font-bold text-gray-300 border-b border-gray-700">Recommended Remediations</div>
+                                                                                        <div className="overflow-x-auto">
+                                                                                            <table className="w-full text-left text-xs">
+                                                                                                <thead className="bg-[#161B22] text-gray-400">
+                                                                                                    <tr>
+                                                                                                        <th className="p-2 border-b border-gray-700">Package</th>
+                                                                                                        <th className="p-2 border-b border-gray-700">Severity</th>
+                                                                                                        <th className="p-2 border-b border-gray-700 min-w-[200px]">CVEs</th>
+                                                                                                        <th className="p-2 border-b border-gray-700 hidden sm:table-cell">Current</th>
+                                                                                                        <th className="p-2 border-b border-gray-700">Target</th>
+                                                                                                        <th className="p-2 border-b border-gray-700">Action</th>
+                                                                                                    </tr>
+                                                                                                </thead>
+                                                                                                <tbody className="divide-y divide-gray-700/50 bg-gray-800/50">
+                                                                                                    {remediation.map((item, idx) => (
+                                                                                                        <tr key={idx} className="hover:bg-gray-750">
+                                                                                                            <td className="p-2 font-bold text-white">{item.package}</td>
+                                                                                                            <td className="p-2">
+                                                                                                                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${item.severity === 'CRITICAL' || item.severity === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                                                                                                    {item.severity || 'UNKNOWN'}
+                                                                                                                </span>
+                                                                                                            </td>
+                                                                                                            <td className="p-2 text-red-400 break-words max-w-xs">{item.cve}</td>
+                                                                                                            <td className="p-2 text-gray-400 hidden sm:table-cell truncate max-w-[150px]" title={item.current_version}>{item.current_version}</td>
+                                                                                                            <td className="p-2 text-green-400 font-mono">{item.fixed_version}</td>
+                                                                                                            <td className="p-2">
+                                                                                                                {item.link ? (
+                                                                                                                    <a href={item.link} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{item.action || 'Update'}</a>
+                                                                                                                ) : (
+                                                                                                                    <span className="text-gray-300">{item.action || 'Update'}</span>
+                                                                                                                )}
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    ))}
+                                                                                                </tbody>
+                                                                                            </table>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    } catch (e) {
+                                                                        return <div className="max-h-32 overflow-y-auto">{scan.ai_analysis}</div>;
+                                                                    }
+                                                                })()}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -317,7 +385,7 @@ const OverviewTrack = () => {
                             ))}
                             {!loadingScans && scans.length === 0 && (
                                 <tr>
-                                    <td colSpan="6" className="p-8 text-center text-gray-500 italic">No scans found in the last 7 days.</td>
+                                    <td colSpan="7" className="p-8 text-center text-gray-500 italic">No scans found in the last 7 days.</td>
                                 </tr>
                             )}
                         </tbody>

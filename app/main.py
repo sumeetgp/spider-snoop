@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Spider-Snoop DLP Application...")
     
     # Create database tables
-    Base.metadata.create_all(bind=engine)
+    # Base.metadata.create_all(bind=engine) # Handled by Alembic in production
     logger.info("Database initialized")
     
     # Start ICAP server in background

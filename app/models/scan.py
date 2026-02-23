@@ -8,7 +8,13 @@ from app.database import Base
 class ScanStatus(str, enum.Enum):
     """Scan status"""
     PENDING = "PENDING"
-    SCANNING = "SCANNING"
+    UPLOADED = "UPLOADED"
+    MALWARE_SCANNING = "MALWARE_SCANNING"
+    EXTRACTING = "EXTRACTING"
+    CONTENT_SCANNING = "CONTENT_SCANNING"
+    AI_ANALYSIS = "AI_ANALYSIS"
+    POLICY_EVAL = "POLICY_EVAL"
+    SCANNING = "SCANNING"  # Legacy synchronous status
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -48,4 +54,4 @@ class DLPScan(Base):
         return "DLP"
     
     # Relationship
-    # user = relationship("User", back_populates="scans")
+    user = relationship("User", back_populates="scans")

@@ -40,6 +40,8 @@ aws_key.txt
 secret.txt
 production_credentials.txt
 postgres_data/
+postgres_data_v2/
+postgres_data*/
 *.tar.gz
 test_data/
 *.sql

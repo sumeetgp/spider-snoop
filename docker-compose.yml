@@ -2,7 +2,7 @@ services:
   db:
     image: postgres:15-alpine
     volumes:
-      - ./postgres_data:/var/lib/postgresql/data/
+      - ./postgres_data_v2:/var/lib/postgresql/data/
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -41,30 +41,40 @@ services:
       - SMTP2GO_API_KEY=${SMTP2GO_API_KEY}
       - SMTP2GO_BASE_URL=${SMTP2GO_BASE_URL}
       - APP_BASE_URL=${APP_BASE_URL:-http://localhost:8080}
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
-      # scanner:
-      #   condition: service_started
+      redis:
+        condition: service_started
 
-  scanner:
+  redis:
+    image: redis:7-alpine
+    container_name: spider-snoop-redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  celery_worker:
     build:
       context: .
-      dockerfile: Dockerfile.scanner
-    container_name: spider-snoop-scanner-1
+      dockerfile: Dockerfile.api
+    container_name: spider-snoop-celery
+    command: python -m celery -A app.worker.celery_app worker --loglevel=info
+    env_file:
+      - .env
     volumes:
       - .:/app
-    ports:
-      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/spider_snoop
+      - REDIS_URL=redis://redis:6379/0
       - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - SERVICE_ROLE=SCANNER
     depends_on:
       db:
         condition: service_healthy
-      clamav:
+      redis:
         condition: service_started
+    restart: always
 
   frontend:
     build:

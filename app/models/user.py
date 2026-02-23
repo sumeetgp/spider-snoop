@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import enum
 from app.database import Base
+from app.models.audit import ProxyLog
 
 class UserRole(str, enum.Enum):
     """User roles"""
@@ -16,7 +17,7 @@ class User(Base):
     __tablename__ = "users"
     
     id = Column(Integer, primary_key=True, index=True)
-    proxy_logs = relationship("ProxyLog", back_populates="user") # Added this line
+    proxy_logs = relationship("ProxyLog", back_populates="user")
     email = Column(String, unique=True, index=True, nullable=False)
     username = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
@@ -31,3 +32,4 @@ class User(Base):
     
     # Relationships - using string references to avoid circular imports
     reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan", lazy="dynamic")
+    scans = relationship("DLPScan", back_populates="user", lazy="dynamic", cascade="all, delete-orphan")

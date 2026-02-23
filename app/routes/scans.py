@@ -2,7 +2,7 @@
 from typing import List
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 
 from app.database import get_db
@@ -146,6 +146,58 @@ async def upload_file(
             
         file_size_mb = os.path.getsize(temp_filename) / (1024 * 1024)
         
+        # Async Pipeline for Large Files (>10MB)
+        if file_size_mb > 10.0:
+            import logging
+            from app.tasks.scan_tasks import process_async_scan
+            
+            logger = logging.getLogger(__name__)
+            logger.info(f"File {file.filename} is {file_size_mb:.2f}MB. Initiating Offline Async Scan.")
+            
+            # 1. Upload Large File directly to DO Spaces persistent storage (Sync or Async Thread)
+            storage = StorageManager()
+            if not storage.enabled:
+                raise HTTPException(status_code=500, detail="Offline Scan Failed: Storage Manager is disabled. Check DO Space credentials.")
+                
+            public_url = await storage.upload_file(temp_filename, object_name=f"async_scan_{uuid.uuid4()}{file_ext}")
+            
+            if not public_url:
+                raise HTTPException(status_code=500, detail="Failed to persist large file to temporary cloud storage.")
+            
+            # 2. Log into DB as UPLOADED
+            db_scan = DLPScan(
+                user_id=current_user.id,
+                source=f"OFFLINE: {public_url}",
+                content=f"[ASYNC UPLOAD] {file.filename} ({file_size_mb:.2f}MB)",
+                status=ScanStatus.UPLOADED
+            )
+            db.add(db_scan)
+            db.commit()
+            db.refresh(db_scan)
+            
+            # 3. Fire Celery Worker Task (Returns immediately)
+            process_async_scan.delay(scan_id=db_scan.id, file_url=public_url)
+            
+            # Clean up local node space
+            os.remove(temp_filename)
+            
+            # Return partial response (Immediate)
+            return {
+                "id": db_scan.id,
+                "status": ScanStatus.UPLOADED,
+                "verdict": "Offline Scan Processing",
+                "risk_level": "LOW",
+                "summary": "Large file accepted. Background processing started.",
+                "report": "Pending...",
+                "findings": [],
+                "ai_analysis": None,
+                "created_at": db_scan.created_at.isoformat() if hasattr(db_scan, 'created_at') and db_scan.created_at else None,
+                "completed_at": None,
+                "scan_type": db_scan.scan_type if hasattr(db_scan, 'scan_type') else "DLP",
+                "source": db_scan.source,
+                "scan_duration_ms": 0
+            }
+
         # --- SENTINEL TRACK (Malware Focus) ---
         if track == 'sentinel':
             # Cost: 1 Credit
@@ -199,10 +251,11 @@ async def upload_file(
                     cdr_result = {"status": "failed", "error": str(e)}
 
             # Create Scan Record (Sentinel)
+            sanitized_filename = file.filename.replace('\x00', '')
             db_scan = DLPScan(
                 user_id=current_user.id,
-                source=f"FILE:{file.filename}",
-                content=f"[SENTINEL SCAN]\nFile: {file.filename}\nSize: {file_size_mb:.2f}MB", 
+                source=f"FILE:{sanitized_filename}",
+                content=f"[SENTINEL SCAN]\nFile: {sanitized_filename}\nSize: {file_size_mb:.2f}MB", 
                 status=ScanStatus.COMPLETED
             )
             
@@ -337,10 +390,16 @@ async def upload_file(
             logging.getLogger(__name__).error(f"ERROR EXTRACTING TEXT: {str(e)}")
             content = f"Error extracting text: {str(e)}"
 
+        # Sanitize content for DB (Postgres doesn't allow NUL)
+        if content:
+            content = content.replace('\x00', '')
+        
+        sanitized_filename = file.filename.replace('\x00', '')
+
         # Create scan record
         db_scan = DLPScan(
             user_id=current_user.id,
-            source=f"FILE:{file.filename}",
+            source=f"FILE:{sanitized_filename}",
             content=content[:50000], # Limit DB storage
             status=ScanStatus.SCANNING
         )
@@ -651,9 +710,10 @@ async def upload_video(
 
     # 3. Create Scan Record using JSON Content
     # content stores the full JSON structure
+    sanitized_filename = file.filename.replace('\x00', '')
     db_scan = DLPScan(
         user_id=current_user.id,
-        source=f"ECHOVISION:{file.filename}",
+        source=f"ECHOVISION:{sanitized_filename}",
         content=json.dumps(result), 
         status=ScanStatus.SCANNING
     )
@@ -673,8 +733,13 @@ async def upload_video(
     db_scan.risk_level = scan_result['risk_level']
     db_scan.findings = scan_result['findings']
     db_scan.verdict = scan_result['verdict']
-    db_scan.ai_analysis = scan_result['ai_analysis']
-    db_scan.threat_score = scan_result.get('ai_analysis', {}).get('score', 0) if scan_result.get('ai_analysis') else 0
+    
+    if scan_result.get('ai_analysis'):
+        db_scan.ai_analysis = json.dumps(scan_result['ai_analysis'])
+        db_scan.threat_score = scan_result['ai_analysis'].get('score', 0)
+    else:
+        db_scan.threat_score = 0
+
     db_scan.completed_at = datetime.utcnow()
     db_scan.status = ScanStatus.COMPLETED
     
@@ -756,7 +821,7 @@ async def list_scans(
     if not is_admin:
         query = query.filter(DLPScan.user_id == current_user.id)
     
-    scans = query.order_by(DLPScan.created_at.desc()).offset(skip).limit(limit).all()
+    scans = query.options(joinedload(DLPScan.user)).order_by(DLPScan.created_at.desc()).offset(skip).limit(limit).all()
     return scans
 
 @router.get("/stats", response_model=ScanStats)

@@ -6,6 +6,7 @@ import SentinelTrack from '../components/dashboard/tracks/SentinelTrack';
 
 import GuardianTrack from '../components/dashboard/tracks/GuardianTrack';
 import SecurityTrack from '../components/dashboard/tracks/SecurityTrack';
+import OfflineTrack from '../components/dashboard/tracks/OfflineTrack';
 
 import OverviewTrack from '../components/dashboard/tracks/OverviewTrack';
 
@@ -53,6 +54,7 @@ const Dashboard = () => {
             case 'sentinel': return <SentinelTrack />;
             case 'guardian': return <GuardianTrack />;
             case 'security': return <SecurityTrack />;
+            case 'offline': return <OfflineTrack />;
             default: return <OverviewTrack />;
         }
     };

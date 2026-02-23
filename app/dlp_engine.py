@@ -111,7 +111,7 @@ class DLPEngine:
         ai_verdict = None
         print(f"DEBUG: Checking AI Trigger. use_ai={use_ai}, has_key={bool(settings.OPENAI_API_KEY)}, findings={len(findings)}, force_ai={force_ai}", flush=True)
         
-        if use_ai and settings.OPENAI_API_KEY and (findings or force_ai or raw_prompt):
+        if use_ai and (settings.OPENAI_API_KEY or settings.USE_LOCAL_ML) and (findings or force_ai or raw_prompt):
             print("DEBUG: Triggering AI Analysis...", flush=True)
             if getattr(settings, 'USE_LANGCHAIN_CISO', False) and not raw_prompt:
                 ai_verdict = await self._ai_analyze_ciso_langchain(content, file_path)
