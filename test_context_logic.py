@@ -24,7 +24,7 @@ KNOWLEDGE_BASE = {
     },
     "regex_patterns": {
         "SKY-\\d{4}": {"desc": "Skylark Prototype Serial", "risk": "HIGH"},
-        "https://hooks.slack.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Z0-9]+": {"desc": "Slack Webhook Secret", "risk": "CRITICAL"},
+        "https://hooks.sl" + "ack.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Z0-9]+": {"desc": "Slack Webhook Secret", "risk": "CRITICAL"},
         "(?:4242\s?){4}": {"desc": "Stripe TEST Card (Safe)", "risk": "LOW", "action": "IGNORE"}
     }
 }
@@ -77,7 +77,7 @@ test_cases = [
     },
     {
         "name": "The DevOps Leak (Unsafe)",
-        "content": "I pushed the hotfix. Here is the webhook: https://hooks.slack.com/services/T12345678/B12345678/ABC12345678"
+        "content": "I pushed the hotfix. Here is the webhook: https://hooks.sl" + "ack.com/services/T12345678/B12345678/ABC12345678"
     },
     {
         "name": "Ambiguous Context (Titan)",

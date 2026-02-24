@@ -76,7 +76,7 @@ const PipelineVisualizer = ({ scanId, initialStatus }) => {
                     <div className="absolute left-0 top-1/2 -mt-4 w-full h-1 bg-gray-700 z-0 rounded"></div>
 
                     {/* Active Progress Bar */}
-                    <div className="absolute left-0 top-1/2 -mt-4 h-1 bg-blue-500 z-0 rounded transition-all duration-500 ease-in-out" style={{ width: `${progress}%` }}></div>
+                    <div className="absolute left-0 top-1/2 -mt-4 h-1 bg-blue-500 z-0 rounded transition-all duration-500 ease-in-out" style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}></div>
 
                     <div className="flex justify-between relative z-10 w-full">
                         {STAGES.map((stage, idx) => {
@@ -110,10 +110,16 @@ const PipelineVisualizer = ({ scanId, initialStatus }) => {
             {status === 'COMPLETED' && (
                 <div className="mt-12 text-center pb-4">
                     <button
-                        onClick={() => window.location.href = '/dashboard'}
+                        onClick={() => window.location.href = `/results/${scanId}`}
                         className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-colors"
                     >
-                        View Results in Dashboard
+                        View Results
+                    </button>
+                    <button
+                        onClick={() => window.location.href = '/dashboard'}
+                        className="px-6 py-2 ml-4 bg-gray-600 hover:bg-gray-500 text-white font-bold rounded shadow-[0_0_15px_rgba(75,85,99,0.4)] transition-colors"
+                    >
+                        Back to Dashboard
                     </button>
                 </div>
             )}

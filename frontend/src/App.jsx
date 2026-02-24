@@ -12,6 +12,7 @@ import ApiDocs from './pages/ApiDocs';
 import FirewallOnboarding from './pages/FirewallOnboarding';
 import UserManagement from './pages/admin/UserManagement';
 import AIFirewall from './pages/admin/AIFirewall';
+import OfflineResult from './pages/OfflineResult';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/results/:id" element={<OfflineResult />} />
         <Route path="/about" element={<About />} />
         <Route path="/api/docs" element={<ApiDocs />} />
         <Route path="/firewall/onboarding" element={<FirewallOnboarding />} />
