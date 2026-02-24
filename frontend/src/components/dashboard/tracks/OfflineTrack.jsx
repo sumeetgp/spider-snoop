@@ -3,6 +3,7 @@ import PipelineVisualizer from './PipelineVisualizer';
 import { RefreshCw, Play, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import InputZone from '../InputZone';
 import StagingArea from '../StagingArea';
+import ScanResults from '../ScanResults';
 import { uploadFile } from '../../../services/api';
 
 const OfflineTrack = () => {
@@ -12,6 +13,8 @@ const OfflineTrack = () => {
     const [file, setFile] = useState(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState(null);
+    const [expandedScanId, setExpandedScanId] = useState(null);
+    const [scanDetails, setScanDetails] = useState({});
 
     const fetchOfflineScans = async () => {
         setLoading(true);
@@ -43,6 +46,29 @@ const OfflineTrack = () => {
     const handleFileSelect = (selectedFile) => {
         setFile(selectedFile);
         setError(null);
+    };
+
+    const handleViewResults = async (scanId) => {
+        if (expandedScanId === scanId) {
+            setExpandedScanId(null);
+            return;
+        }
+
+        if (!scanDetails[scanId]) {
+            try {
+                const token = localStorage.getItem('access_token');
+                const res = await fetch(`/api/scans/${scanId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setScanDetails(prev => ({ ...prev, [scanId]: data }));
+                }
+            } catch (err) {
+                console.error("Failed to fetch details", err);
+            }
+        }
+        setExpandedScanId(scanId);
     };
 
     const handleCancel = () => {
@@ -165,38 +191,60 @@ const OfflineTrack = () => {
                             if (cleanName.length > 30) cleanName = cleanName.substring(0, 27) + "...";
 
                             return (
-                                <tr key={scan.id} className="hover:bg-white/5 transition text-sm">
-                                    <td className="p-4">
-                                        {getStatusIcon(scan.status)}
-                                    </td>
-                                    <td className="p-4 font-mono text-gray-400">#{scan.id}</td>
-                                    <td className="p-4 font-bold text-gray-300">{cleanName}</td>
-                                    <td className="p-4">
-                                        <span className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-[#88FFFF]">
-                                            {scan.status}
-                                        </span>
-                                    </td>
-                                    <td className="p-4 text-xs text-gray-500">{new Date(scan.created_at).toLocaleString()}</td>
-                                    <td className="p-4">
-                                        {scan.status === 'COMPLETED' ? (
-                                            <button
-                                                onClick={() => window.location.href = `/results/${scan.id}`}
-                                                className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs transition shadow-[0_0_10px_rgba(34,197,94,0.4)]"
-                                            >
-                                                VIEW RESULTS
-                                            </button>
-                                        ) : scan.status === 'FAILED' ? (
-                                            <span className="text-red-500 font-bold text-xs opacity-50 cursor-not-allowed">ABORTED</span>
-                                        ) : (
-                                            <button
-                                                onClick={() => setActiveScanId(scan.id)}
-                                                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs transition"
-                                            >
-                                                MONITOR
-                                            </button>
-                                        )}
-                                    </td>
-                                </tr>
+                                <React.Fragment key={scan.id}>
+                                    <tr className="hover:bg-white/5 transition text-sm">
+                                        <td className="p-4">
+                                            {getStatusIcon(scan.status)}
+                                        </td>
+                                        <td className="p-4 font-mono text-gray-400">#{scan.id}</td>
+                                        <td className="p-4 font-bold text-gray-300">{cleanName}</td>
+                                        <td className="p-4">
+                                            <span className="px-2 py-1 bg-gray-800 border border-gray-700 rounded text-xs text-[#88FFFF]">
+                                                {scan.status}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-xs text-gray-500">{new Date(scan.created_at).toLocaleString()}</td>
+                                        <td className="p-4">
+                                            {scan.status === 'COMPLETED' ? (
+                                                <button
+                                                    onClick={() => handleViewResults(scan.id)}
+                                                    className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs transition shadow-[0_0_10px_rgba(34,197,94,0.4)]"
+                                                >
+                                                    {expandedScanId === scan.id ? 'HIDE RESULTS' : 'VIEW RESULTS'}
+                                                </button>
+                                            ) : scan.status === 'FAILED' ? (
+                                                <span className="text-red-500 font-bold text-xs opacity-50 cursor-not-allowed">ABORTED</span>
+                                            ) : (
+                                                <button
+                                                    onClick={() => setActiveScanId(scan.id)}
+                                                    className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold text-xs transition"
+                                                >
+                                                    MONITOR
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                    {expandedScanId === scan.id && (
+                                        <tr className="bg-[#161B22]/50 border-t border-[#30363d]">
+                                            <td colSpan="6" className="p-4">
+                                                {scanDetails[scan.id] ? (
+                                                    <div className="border border-gray-700 rounded-xl p-4 bg-[#0D1117] shadow-inner">
+                                                        <ScanResults
+                                                            type="guardian"
+                                                            data={scanDetails[scan.id]}
+                                                            onReset={() => setExpandedScanId(null)}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <div className="inline-block w-6 h-6 border-4 border-t-[#88FFFF] border-r-transparent border-b-[#88FFFF] border-l-transparent rounded-full animate-spin mb-2"></div>
+                                                        <p className="text-[#88FFFF] font-mono animate-pulse text-xs">LOADING_FINDINGS...</p>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             );
                         })}
                     </tbody>
