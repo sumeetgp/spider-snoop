@@ -179,7 +179,12 @@ const OfflineTrack = () => {
                                     <td className="p-4 text-xs text-gray-500">{new Date(scan.created_at).toLocaleString()}</td>
                                     <td className="p-4">
                                         {scan.status === 'COMPLETED' ? (
-                                            <span className="text-green-500 font-bold text-xs opacity-50 cursor-not-allowed">FINISHED</span>
+                                            <button
+                                                onClick={() => window.location.href = `/results/${scan.id}`}
+                                                className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white rounded font-bold text-xs transition shadow-[0_0_10px_rgba(34,197,94,0.4)]"
+                                            >
+                                                VIEW RESULTS
+                                            </button>
                                         ) : scan.status === 'FAILED' ? (
                                             <span className="text-red-500 font-bold text-xs opacity-50 cursor-not-allowed">ABORTED</span>
                                         ) : (

@@ -23,7 +23,7 @@ const PipelineVisualizer = ({ scanId, initialStatus }) => {
 
         const interval = setInterval(async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('access_token');
                 if (!token) return;
 
                 const res = await fetch(`/api/scans/${scanId}`, {
