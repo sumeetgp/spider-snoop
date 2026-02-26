@@ -154,10 +154,8 @@ async def upload_file(
         
         # Async Pipeline for Large Files (>10MB)
         if file_size_mb > 10.0:
-            import logging
             from app.tasks.scan_tasks import process_async_scan
-            
-            logger = logging.getLogger(__name__)
+
             logger.info(f"File {safe_filename} is {file_size_mb:.2f}MB. Initiating Offline Async Scan.")
             
             # 1. Upload Large File directly to DO Spaces persistent storage (Sync or Async Thread)
