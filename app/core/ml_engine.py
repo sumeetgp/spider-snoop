@@ -7,6 +7,7 @@ Wraps HuggingFace transformers with efficient loading and thread management.
 import os
 import logging
 import time
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ try:
 except ImportError as e:
     logger.warning(f"ML Import Verification Failed: {e}")
     ML_AVAILABLE = False
-    # Mock torch for type hints or simple usage if needed, or just skip
     torch = None
 
 from typing import Dict, Any, List, Optional
@@ -29,176 +29,181 @@ logger = logging.getLogger(__name__)
 if ML_AVAILABLE:
     class LocalMLEngine:
         _instance = None
+        _lock = threading.Lock()
         _models: Dict[str, Any] = {}
         _tokenizers: Dict[str, Any] = {}
-        
+
         # Model Registry
         MODELS = {
-            "dlp": "distilbert-base-uncased", # Will fine-tune or use zero-shot logic
-            "malware": "distilbert-base-uncased", 
+            "dlp": "distilbert-base-uncased",
+            "malware": "distilbert-base-uncased",
             "code": "microsoft/codebert-base",
-            "zero_shot": "all-MiniLM-L6-v2" # Good default for sentence similarity
+            # We use a fast, small NLI model by default for local dev/testing.
+            # In production (8+ cores or GPU), you can replace this with:
+            # "MoritzLaurer/deberta-v3-large-zeroshot-v2" or "facebook/bart-large-mnli"
+            "zero_shot": "cross-encoder/nli-deberta-v3-small"
         }
 
         def __new__(cls):
-            if cls._instance is None:
-                cls._instance = super(LocalMLEngine, cls).__new__(cls)
-                cls._instance._initialize()
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = super(LocalMLEngine, cls).__new__(cls)
+                    cls._instance._initialize()
             return cls._instance
 
         def _initialize(self):
             """Setup CPU optimizations."""
             # Force CPU
             self.device = torch.device("cpu")
-            
+
             # CPU Thread Pinning (prevent hoarding)
-            torch.set_num_threads(2) 
+            torch.set_num_threads(2)
             torch.set_num_interop_threads(1)
-            
+
             logger.info("LocalMLEngine initialized on CPU with limited threads.")
 
         def get_model(self, task: str):
             """Lazy load model for specific task."""
             if task not in self.MODELS:
                 raise ValueError(f"Unknown task: {task}")
-                
+
             model_name = self.MODELS[task]
-            
+
             if task not in self._models:
                 logger.info(f"Loading model for {task}: {model_name}...")
                 start_time = time.time()
-                
+
                 try:
                     # Check for local offline model
                     safe_name = model_name.replace("/", "_")
                     local_path = os.path.join("models", safe_name)
-                    
+
                     path_to_load = local_path if os.path.exists(local_path) else model_name
                     if path_to_load == local_path:
                         logger.info(f"files found at {local_path}, loading from local storage.")
-                    
+
                     if task == "zero_shot":
-                         # Load as SentenceTransformer
-                         self._models[task] = SentenceTransformer(path_to_load, device='cpu')
+                        # Load as a proper zero-shot classification pipeline
+                        from transformers import pipeline
+                        self._models[task] = pipeline("zero-shot-classification", model=path_to_load, device=self.device)
                     else:
                         # Load Tokenizer
                         self._tokenizers[task] = AutoTokenizer.from_pretrained(path_to_load)
-                        
+
                         # Load Model (Quantized/Optimized if possible)
                         self._models[task] = AutoModelForSequenceClassification.from_pretrained(
-                            path_to_load, 
-                            num_labels=2 # Default, adjusted per task logic
+                            path_to_load,
+                            num_labels=2
                         ).to(self.device)
-                        self._models[task].eval() # Inference mode
-                    
+                        self._models[task].eval()
+
                     logger.info(f"Model loaded in {time.time() - start_time:.2f}s")
                 except Exception as e:
                     logger.error(f"Failed to load model {model_name}: {e}")
                     raise
-    
+
             # Return both (or just model if no tokenizer needed)
             tokenizer = self._tokenizers.get(task)
             return self._models[task], tokenizer
-    
+
         def classify_text(self, task: str, text: str, labels: List[str]) -> Dict[str, Any]:
-            """
-            Generic text classification. 
-            For zero-shot logic with base models, we might need mapped heads or pipelines.
-            For now, this assumes a classification head matches the labels count or we use a zero-shot pipeline.
-            
-            To keep it deterministic & simple for Phase 1, we return raw scores normalized.
-            """
+            """Generic text classification."""
             model, tokenizer = self.get_model(task)
-            
-            # Truncate to max length
+
             inputs = tokenizer(
-                text, 
-                return_tensors="pt", 
-                truncation=True, 
+                text,
+                return_tensors="pt",
+                truncation=True,
                 max_length=512,
                 padding=True
             ).to(self.device)
-            
+
             with torch.no_grad():
                 outputs = model(**inputs)
                 probs = torch.nn.functional.softmax(outputs.logits, dim=-1)
-                
-            # Mock mapping for base models until fine-tuned
-            # In real implementation, we'd load a specifically trained head
+
             confidence, predicted_idx = torch.max(probs, dim=1)
-            
+
             return {
                 "label_index": predicted_idx.item(),
                 "confidence": confidence.item(),
                 "logits": probs.tolist()[0]
             }
-    
+
         def warmup(self):
             """Warm up models to prevent latency on first user request."""
-            logger.info("Warming up ML Message...")
+            logger.info("Warming up ML engine...")
             try:
-                self.compute_similarity("test warmup", ["safe", "unsafe"])
-            except:
-                pass
-    
-        def compute_similarity(self, text: str, labels: List[str]) -> Dict[str, Any]:
+                self.zero_shot_classify("test warmup", ["safe", "unsafe"])
+                logger.info("ML engine warmup complete.")
+            except Exception as e:
+                logger.error(f"ML warmup failed: {e}")
+
+        def zero_shot_classify(self, text: str, labels: List[str]) -> Dict[str, Any]:
             """
-            Zero-shot classification via semantic similarity using SentenceTransformer.
-            Returns label with highest similarity score.
+            Zero-shot classification via NLI pipeline.
+            Returns the top label, confidence, inference time, and all probability scores.
             """
+            start_time = time.time()
             try:
-                model, _ = self.get_model("zero_shot")
-                
-                # Encode text and labels
-                text_emb = model.encode(text, convert_to_tensor=True)
-                # We cache label embeddings in a real app, but for now encode on fly
-                label_embs = model.encode(labels, convert_to_tensor=True)
-                
-                # Compute cosine similarity
-                scores = util.cos_sim(text_emb, label_embs)[0]
-                
-                # Find best match
-                best_score_idx = torch.argmax(scores).item()
-                best_score = scores[best_score_idx].item()
-                
+                classifier, _ = self.get_model("zero_shot")
+
+                result = classifier(text, candidate_labels=labels, multi_label=False)
+
+                inference_time_ms = int((time.time() - start_time) * 1000)
+
+                best_label = result['labels'][0]
+                best_score = result['scores'][0]
+                all_scores = {label: score for label, score in zip(result['labels'], result['scores'])}
+
                 return {
-                    "label": labels[best_score_idx],
+                    "label": best_label,
                     "confidence": best_score,
-                    "all_scores": {l: s.item() for l, s in zip(labels, scores)}
+                    "all_scores": all_scores,
+                    "inference_time_ms": inference_time_ms
                 }
             except Exception as e:
-                logger.error(f"Compute similarity failed: {e}")
-                return {"label": "UNKNOWN", "confidence": 0.0}
+                logger.error(f"Zero-shot classification failed: {e}")
+                fallback_time = int((time.time() - start_time) * 1000)
+                return {
+                    "label": "ERROR",
+                    "confidence": 0.0,
+                    "all_scores": {},
+                    "inference_time_ms": fallback_time,
+                    "error": True
+                }
 
 else:
     class MockMLEngine:
         def __init__(self):
             logger.warning("ML Dependencies missing. Providing Mock ML Engine.")
-            
-        def compute_similarity(self, text: str, labels: List[str]) -> Dict[str, Any]:
-             # Simple keyword heuristic fallback
-             text_lower = text.lower()
-             best_label = "safe non-sensitive code documentation"
-             confidence = 0.95
-             
-             if "password" in text_lower or "credential" in text_lower or "key" in text_lower:
-                 best_label = "actionable production credential secret key"
-             elif "eval(" in text_lower or "exec(" in text_lower or "pickle" in text_lower:
-                 best_label = "vulnerable unsafe code execution exploit"
-             elif "test" in text_lower or "example" in text_lower:
-                 best_label = "dummy example data placeholder for testing"
-                 
-             return {
+
+        def zero_shot_classify(self, text: str, labels: List[str]) -> Dict[str, Any]:
+            start_time = time.time()
+            text_lower = text.lower()
+            best_label = "safe non-sensitive code documentation"
+            confidence = 0.95
+
+            if "password" in text_lower or "credential" in text_lower or "key" in text_lower:
+                best_label = "data_exfiltration"
+            elif "eval(" in text_lower or "exec(" in text_lower or "pickle" in text_lower:
+                best_label = "insider_risk"
+            elif "test" in text_lower or "example" in text_lower:
+                best_label = "benign_business"
+
+            inference_time_ms = int((time.time() - start_time) * 1000)
+            return {
                 "label": best_label,
                 "confidence": confidence,
-                "all_scores": {}
+                "all_scores": {best_label: confidence},
+                "inference_time_ms": inference_time_ms
             }
-            
+
         def classify_text(self, *args, **kwargs):
-             return {"label_index": 0, "confidence": 0.0}
-             
+            return {"label_index": 0, "confidence": 0.0, "logits": [1.0, 0.0]}
+
         def warmup(self):
-             pass
+            pass
 
 # Global accessor
 def get_ml_engine():

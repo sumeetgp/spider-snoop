@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -19,6 +20,7 @@ from werkzeug.utils import secure_filename
 
 router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
+logger = logging.getLogger(__name__)
 
 
 
@@ -228,7 +230,7 @@ async def scan_code(
                                  'severity': severity
                              })
             except Exception as e:
-                print(f"Secret Scan Error: {e}")
+                logger.warning(f"Secret Scan Error: {e}")
     
             # B. AI Analysis with RAG Prompt
             # Note: Using standard string concatenation to avoid f-string brace escaping hell with JSON
@@ -280,7 +282,7 @@ async def scan_code(
         
         
         # C. Parse Raw Report for Structured Findings (Deterministic)
-        print(f"DEBUG: Starting Code Security Scan for {file.filename}") # Debug persistence
+        logger.debug(f"Starting Code Security Scan for {file.filename}")
         report_findings = []
         
         current_pkg_name = "Unknown"
@@ -396,7 +398,7 @@ async def scan_code(
         ai_data = ai_result.get('ai_analysis')
         
         # Debug Log
-        print(f"DEBUG_CODE_SEC: Raw AI Result Type: {type(ai_data)}")
+        logger.debug(f"Raw AI Result Type: {type(ai_data)}")
         
         if isinstance(ai_data, str):
             try:
@@ -408,10 +410,10 @@ async def scan_code(
                     import ast
                     ai_data = ast.literal_eval(ai_data)
                 except:
-                    print("DEBUG_CODE_SEC: Failed to parse AI String")
+                    logger.debug("Failed to parse AI result string")
                     ai_data = {}
         
-        print(f"DEBUG_CODE_SEC: Parsed AI Data Keys: {ai_data.keys() if isinstance(ai_data, dict) else 'NotDict'}")
+        logger.debug(f"Parsed AI Data Keys: {ai_data.keys() if isinstance(ai_data, dict) else 'NotDict'}")
 
         # Intelligent Unwrapping
         # Goal: Find the dict that has 'remediation' or 'summary'
@@ -422,11 +424,11 @@ async def scan_code(
              # 2. Check wrappers
              elif "ai_analysis" in ai_data and isinstance(ai_data["ai_analysis"], dict):
                  ai_data = ai_data["ai_analysis"]
-                 print(f"DEBUG_CODE_SEC: Unwrapped ai_analysis. New Keys: {ai_data.keys()}")
+                 logger.debug(f"Unwrapped ai_analysis. New Keys: {ai_data.keys()}")
                  # Handle double wrap
                  if "ai_analysis" in ai_data and isinstance(ai_data["ai_analysis"], dict):
                       ai_data = ai_data["ai_analysis"]
-                      print("DEBUG_CODE_SEC: Unwrapped double ai_analysis")
+                      logger.debug("Unwrapped double ai_analysis")
              
              # 3. Check if 'summary' is the only thing and remediation is missing?
              # If remediation missing, maybe LLM failed.
@@ -455,7 +457,7 @@ async def scan_code(
         # ALWAYS Generate Synthetic Remediation (Aggregated)
         # We prefer our deterministic aggregation over the AI's list for table consistency.
         if report_findings:
-            print(f"DEBUG_CODE_SEC: Force Generating Aggregated Remediation from {len(report_findings)} findings")
+            logger.debug(f"Force Generating Aggregated Remediation from {len(report_findings)} findings")
             
             aggregated = {}
             severity_map = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "UNKNOWN": 0}

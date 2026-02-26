@@ -1,6 +1,9 @@
+import collections
 import logging
 import math
 import re
+
+from app.config import settings
 try:
     from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
     from presidio_anonymizer import AnonymizerEngine
@@ -19,10 +22,10 @@ class PresidioEngine:
     def __init__(self):
         if AnalyzerEngine:
             from presidio_analyzer.nlp_engine import NlpEngineProvider
-            # Explicitly configure to use the smaller, faster model downloaded in Dockerfile
+            # Explicitly configure to use the HuggingFace transformer pipeline for NER
             configuration = {
-                "nlp_engine_name": "spacy",
-                "models": [{"lang_code": "en", "model_name": "en_core_web_sm"}],
+                "nlp_engine_name": "transformers",
+                "models": [{"lang_code": "en", "model_name": {"spacy": "en_core_web_sm", "transformers": "dslim/bert-base-NER"}}],
             }
             provider = NlpEngineProvider(nlp_configuration=configuration)
             nlp_engine = provider.create_engine()
@@ -119,11 +122,12 @@ class PresidioEngine:
         if not data:
             return 0.0
         
+        counter = collections.Counter(data)
+        length = len(data)
         entropy = 0.0
-        for x in range(256):
-            p_x = float(data.count(chr(x))) / len(data)
-            if p_x > 0:
-                entropy += - p_x * math.log(p_x, 2)
+        for count in counter.values():
+            p_x = count / length
+            entropy -= p_x * math.log(p_x, 2)
         return entropy
 
     def _active_verify_aws(self, key_id: str, context_text: str) -> str:
@@ -145,11 +149,14 @@ class PresidioEngine:
             import boto3
             from botocore.exceptions import ClientError
             
+            from botocore.config import Config
             session = boto3.Session(
-                aws_access_key_id=key_id, 
+                aws_access_key_id=key_id,
                 aws_secret_access_key=secret
             )
-            sts_client = session.client('sts')
+            sts_client = session.client(
+                'sts', config=Config(connect_timeout=5, read_timeout=5)
+            )
             id_info = sts_client.get_caller_identity()
             
             return f"🚨 LIVE & CRITICAL! Account: {id_info['Account']}"
@@ -182,8 +189,8 @@ class PresidioEngine:
 
         findings = []
         try:
-            results = self.analyzer.analyze(text=text, language='en', score_threshold=0.4)
-            
+            results = self.analyzer.analyze(text=text, language='en', score_threshold=settings.PRESIDIO_SCORE_THRESHOLD)
+
             for result in results:
                 entity_val = text[result.start:result.end]
                 
@@ -216,8 +223,8 @@ class PresidioEngine:
                     "severity": severity
                 }
                 
-                # --- LEVEL 4: ACTIVE VERIFICATION (Optional) ---
-                if active_verification and result.entity_type == "AWS_KEY_ID":
+                # --- LEVEL 4: ACTIVE VERIFICATION (Optional, gated by settings) ---
+                if active_verification and result.entity_type == "AWS_KEY_ID" and settings.ENABLE_ACTIVE_AWS_VERIFICATION:
                     # Extract context window to find secret key
                     context_window = text[result.start:min(len(text), result.end + 150)]
                     verification_result = self._active_verify_aws(entity_val, context_window)
@@ -250,8 +257,8 @@ class PresidioEngine:
             
         try:
             # Analyze first
-            results = self.analyzer.analyze(text=text, language='en', score_threshold=0.4)
-            
+            results = self.analyzer.analyze(text=text, language='en', score_threshold=settings.PRESIDIO_SCORE_THRESHOLD)
+
             # Define operators (default to 'replace')
             # We can customize this to use generic replacements like <PASSPORT>
             

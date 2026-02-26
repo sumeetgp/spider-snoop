@@ -1,10 +1,13 @@
 """DLP Engine - Core scanning logic"""
+import logging
 import re
 import asyncio
 from typing import Dict, List, Any
 from datetime import datetime
 import openai
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 if settings.OPENAI_API_KEY:
     openai.api_key = settings.OPENAI_API_KEY
@@ -46,7 +49,7 @@ class DLPEngine:
             from app.core.presidio_engine import PresidioEngine
             self.presidio = PresidioEngine()
         except Exception as e:
-            print(f"Using MockEngine due to import error: {e}")
+            logger.warning(f"Using MockEngine due to import error: {e}")
             self.presidio = MockEngine()
         
         self.mcp_session = mcp_session
@@ -109,15 +112,15 @@ class DLPEngine:
 
         # AI-based detection (optional)
         ai_verdict = None
-        print(f"DEBUG: Checking AI Trigger. use_ai={use_ai}, has_key={bool(settings.OPENAI_API_KEY)}, findings={len(findings)}, force_ai={force_ai}", flush=True)
+        logger.debug(f"Checking AI Trigger. use_ai={use_ai}, has_key={bool(settings.OPENAI_API_KEY)}, findings={len(findings)}, force_ai={force_ai}")
         
         if use_ai and (settings.OPENAI_API_KEY or settings.USE_LOCAL_ML) and (findings or force_ai or raw_prompt):
-            print("DEBUG: Triggering AI Analysis...", flush=True)
+            logger.debug("Triggering AI Analysis...")
             if getattr(settings, 'USE_LANGCHAIN_CISO', False) and not raw_prompt:
                 ai_verdict = await self._ai_analyze_ciso_langchain(content, file_path)
             else:
                 ai_verdict = await self._ai_analyze(content, findings, raw_prompt=raw_prompt)
-            print(f"DEBUG: AI Analysis Complete. Verdict: {ai_verdict.get('verdict') if ai_verdict else 'None'}", flush=True)
+            logger.debug(f"AI Analysis Complete. Verdict: {ai_verdict.get('verdict') if ai_verdict else 'None'}")
         
         # Calculate duration
         duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
@@ -186,7 +189,7 @@ class DLPEngine:
             if cache_key in self._cache:
                 # Move to end (LRU)
                 self._cache.move_to_end(cache_key)
-                print(f"⚡ CACHE HIT: Reusing AI analysis for {cache_key[:8]}")
+                logger.debug(f"Cache hit: reusing AI analysis for {cache_key[:8]}")
                 return self._cache[cache_key]
 
             from collections import defaultdict
@@ -226,43 +229,28 @@ class DLPEngine:
             
             # Fallback to Local ML or OpenAI
             if settings.USE_LOCAL_ML or not settings.OPENAI_API_KEY:
-                print(f"DEBUG: Using LOCAL ML ENGINE (Zero-Shot) for Analysis.", flush=True)
+                logger.debug("Using LOCAL ML ENGINE (Zero-Shot) for Analysis.")
                 from app.core.ml_engine import get_ml_engine
                 engine = get_ml_engine()
                 
-                # Zero-shot classification via Semantic Similarity with Rich Labels
-                l_safe = "safe public general business document code documentation README"
-                l_sensitive = "sensitive confidential private key password secret credential passport ssn credit card financial data"
-                labels = [l_safe, l_sensitive] 
+                # Zero-shot classification via NLI
+                labels = ["data_exfiltration", "insider_risk", "accidental_sharing", "benign_business"]
                 
-                ml_res = engine.compute_similarity(content[:512], labels)
+                ml_res = engine.zero_shot_classify(content[:512], labels)
+                best_label = ml_res.get("label", "benign_business")
+                confidence = ml_res.get("confidence", 0.0)
                 
-                # Interpret Result with Softmax Scaling (Temperature ~20)
-                # Raw cosine similarity is low (0.1-0.4), so we scale it to get a probability-like distribution
-                import math
-                scale_factor = 20.0
-                scores = ml_res.get('all_scores', {})
+                is_sensitive = best_label in ["data_exfiltration", "insider_risk", "accidental_sharing"]
                 
-                s_safe = scores.get(l_safe, 0)
-                s_sensitive = scores.get(l_sensitive, 0)
-                
-                # Softmax: e^(x*scale) / sum(e^(x*scale))
-                exp_safe = math.exp(s_safe * scale_factor)
-                exp_sens = math.exp(s_sensitive * scale_factor)
-                total = exp_safe + exp_sens + 1e-9
-                
-                conf_safe = exp_safe / total
-                conf_sensitive = exp_sens / total
-                
-                is_sensitive = (conf_sensitive > conf_safe)
-                confidence = conf_sensitive if is_sensitive else conf_safe
-
-                verdict = "BLOCK" if is_sensitive and confidence > 0.6 else "REVIEW"
-                if not is_sensitive: verdict = "ALLOW"
-                
+                verdict = "REVIEW"
+                if best_label in ["data_exfiltration", "insider_risk"] and confidence > 0.6:
+                    verdict = "BLOCK"
+                elif best_label == "benign_business":
+                    verdict = "ALLOW"
+                    
                 score = int(confidence * 100) if is_sensitive else 0
                 
-                display_label = "Confirmed Sensitive Data" if is_sensitive else "Safe Content"
+                display_label = best_label.replace("_", " ").title()
                 
                 return {
                     "verdict": verdict,
@@ -272,9 +260,11 @@ class DLPEngine:
                     "compliance_alerts": [],
                     "remediation": [],
                     # Structured Data for UI
-                    "ml_model": "DistilBERT (Zero-Shot)",
+                    "ml_model": "DeBERTa-v3 (Zero-Shot NLI)",
                     "confidence": confidence,
-                    "inference_label": display_label
+                    "inference_label": best_label,
+                    "all_scores": ml_res.get("all_scores", {}),
+                    "inference_time_ms": ml_res.get("inference_time_ms", 0)
                 }
 
             client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)

@@ -1,7 +1,7 @@
 """API Routes - Dashboard"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import cast, func, Date as SQLDate
 from datetime import datetime, timedelta
 
 from app.database import get_db
@@ -55,31 +55,34 @@ async def get_dashboard_overview(
         total_users = 1
         active_users = 1
     
-    # Scan trends (last 7 days)
+    # Scan trends (last 7 days) — single aggregated query
+    week_ago_trend = today_start - timedelta(days=6)
+    trend_q = db.query(
+        cast(DLPScan.created_at, SQLDate).label("day"),
+        func.count(DLPScan.id).label("count")
+    ).filter(DLPScan.created_at >= week_ago_trend)
+    trend_q = apply_filter(trend_q)
+    trend_rows = trend_q.group_by(cast(DLPScan.created_at, SQLDate)).all()
+
+    trend_map = {str(row.day): row.count for row in trend_rows}
     scan_trends = []
-    for i in range(7):
-        day_start = today_start - timedelta(days=i)
-        day_end = day_start + timedelta(days=1)
-        
-        q = db.query(func.count(DLPScan.id)).filter(
-            DLPScan.created_at >= day_start,
-            DLPScan.created_at < day_end
-        )
-        count = apply_filter(q).scalar()
-        
-        scan_trends.append({
-            'date': day_start.strftime('%Y-%m-%d'),
-            'count': count
-        })
-    
-    scan_trends.reverse()
-    
-    # Risk distribution
-    risk_distribution = {}
-    for risk_level in RiskLevel:
-        q = db.query(func.count(DLPScan.id)).filter(DLPScan.risk_level == risk_level)
-        count = apply_filter(q).scalar()
-        risk_distribution[risk_level.value] = count
+    for i in range(6, -1, -1):
+        day = today_start - timedelta(days=i)
+        day_str = day.strftime('%Y-%m-%d')
+        scan_trends.append({'date': day_str, 'count': trend_map.get(day_str, 0)})
+
+    # Risk distribution — single aggregated query
+    risk_q = db.query(
+        DLPScan.risk_level,
+        func.count(DLPScan.id).label("count")
+    )
+    risk_q = apply_filter(risk_q)
+    risk_rows = risk_q.group_by(DLPScan.risk_level).all()
+
+    risk_distribution = {level.value: 0 for level in RiskLevel}
+    for row in risk_rows:
+        if row.risk_level is not None:
+            risk_distribution[row.risk_level.value] = row.count
     
     return {
         'total_scans': total_scans,

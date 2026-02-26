@@ -1,9 +1,11 @@
 """API Routes - DLP Scanning"""
+import logging
 from typing import List
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, File, UploadFile, Query
 from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
+from werkzeug.utils import secure_filename
 
 from app.database import get_db
 from app.models.user import User, UserRole
@@ -18,6 +20,7 @@ from app.utils.limiter import limiter, get_rate_limit_key
 from fastapi import Request
 
 router = APIRouter(prefix="/api/scans", tags=["DLP Scanning"])
+logger = logging.getLogger(__name__)
 
 _dlp_engine_instance = None
 
@@ -134,9 +137,12 @@ async def upload_file(
     from app.cdr_engine import CDREngine
     from app.utils.storage import StorageManager
     
+    # Sanitize filename to prevent path traversal and NUL byte injection
+    safe_filename = secure_filename(file.filename or "") or f"unknown_file"
+
     # Create temp file
     os.makedirs("storage", exist_ok=True)
-    file_ext = os.path.splitext(file.filename)[1].lower()
+    file_ext = os.path.splitext(safe_filename)[1].lower()
     temp_filename = f"storage/temp_{uuid.uuid4()}{file_ext}"
     
     try:
@@ -152,7 +158,7 @@ async def upload_file(
             from app.tasks.scan_tasks import process_async_scan
             
             logger = logging.getLogger(__name__)
-            logger.info(f"File {file.filename} is {file_size_mb:.2f}MB. Initiating Offline Async Scan.")
+            logger.info(f"File {safe_filename} is {file_size_mb:.2f}MB. Initiating Offline Async Scan.")
             
             # 1. Upload Large File directly to DO Spaces persistent storage (Sync or Async Thread)
             storage = StorageManager()
@@ -168,7 +174,7 @@ async def upload_file(
             db_scan = DLPScan(
                 user_id=current_user.id,
                 source=f"OFFLINE: {public_url}",
-                content=f"[ASYNC UPLOAD] {file.filename} ({file_size_mb:.2f}MB)",
+                content=f"[ASYNC UPLOAD] {safe_filename} ({file_size_mb:.2f}MB)",
                 status=ScanStatus.UPLOADED
             )
             db.add(db_scan)
@@ -251,7 +257,7 @@ async def upload_file(
                     cdr_result = {"status": "failed", "error": str(e)}
 
             # Create Scan Record (Sentinel)
-            sanitized_filename = file.filename.replace('\x00', '')
+            sanitized_filename = secure_filename(file.filename or "") or "unknown_file"
             db_scan = DLPScan(
                 user_id=current_user.id,
                 source=f"FILE:{sanitized_filename}",
@@ -312,7 +318,7 @@ async def upload_file(
 
         # 1. Extract Text Content (for Regex/AI)
         content = ""
-        filename = file.filename.lower()
+        filename = safe_filename.lower()
         
         try:
             if filename.endswith(('.docx', '.docm')):
@@ -390,16 +396,19 @@ async def upload_file(
             logging.getLogger(__name__).error(f"ERROR EXTRACTING TEXT: {str(e)}")
             content = f"Error extracting text: {str(e)}"
 
+        # Enforce maximum character limit for synchronous scanning to prevent Nginx 504 Gateway Timeouts
+        # 100,000 characters natively limits the Presidio pipeline to ~3 seconds max.
+        if content and len(content) > 100000:
+            content = content[:100000] + "\n[...Truncated due to synchronous file size limits...]"
+
         # Sanitize content for DB (Postgres doesn't allow NUL)
         if content:
             content = content.replace('\x00', '')
-        
-        sanitized_filename = file.filename.replace('\x00', '')
 
         # Create scan record
         db_scan = DLPScan(
             user_id=current_user.id,
-            source=f"FILE:{sanitized_filename}",
+            source=f"API_UPLOAD:{safe_filename}",
             content=content[:50000], # Limit DB storage
             status=ScanStatus.SCANNING
         )
@@ -443,7 +452,7 @@ async def upload_file(
         ]
         
         # --- VERDICT & SCORE SANITIZATION (Before DB Assignment) ---
-        print(f"DEBUG: Sanitize Start. Verdict: {result.get('verdict')}, Score: {result.get('ai_analysis', {}).get('score')}", flush=True)
+        logger.debug(f"Sanitize Start. Verdict: {result.get('verdict')}, Score: {result.get('ai_analysis', {}).get('score')}")
 
         # 1. Sanitize Verdict String (Handle any position)
         if result.get('verdict'):
@@ -481,12 +490,23 @@ async def upload_file(
              result['ai_analysis']['verdict'] = result['verdict']
              result['ai_analysis']['score'] = final_score
 
+        # Recursively sanitize data of NUL bytes to prevent PostgreSQL crashes
+        def strip_nul(d):
+            if isinstance(d, dict): return {k: strip_nul(v) for k, v in d.items()}
+            elif isinstance(d, list): return [strip_nul(v) for v in d]
+            elif isinstance(d, str): return d.replace('\x00', '').replace('\u0000', '')
+            return d
+            
+        safe_findings = strip_nul(result.get('findings', []))
+        safe_verdict = strip_nul(result.get('verdict', ''))
+        result['ai_analysis'] = strip_nul(result.get('ai_analysis'))
+
         # --- UPDATE DB RECORD ---
-        print(f"DEBUG: Assigning to DB. Score: {final_score}, Verdict: {result['verdict']}", flush=True)
+        logger.debug(f"Assigning to DB. Score: {final_score}, Verdict: {safe_verdict}")
         db_scan.status = ScanStatus.COMPLETED
-        db_scan.risk_level = result['risk_level']
-        db_scan.findings = result['findings']
-        db_scan.verdict = result['verdict']
+        db_scan.risk_level = result.get('risk_level', 'LOW')
+        db_scan.findings = safe_findings
+        db_scan.verdict = safe_verdict
         db_scan.threat_score = final_score
         
         # Ensure Duration
@@ -598,9 +618,15 @@ async def upload_file(
         raise
     except Exception as e:
         if 'db_scan' in locals():
+            db.rollback() # Clear any pending transaction crashes
             db_scan.status = ScanStatus.FAILED
-            db_scan.verdict = f"Scan failed: {str(e)}"
-            db.commit()
+            db_scan.verdict = f"Scan failed: {str(e)[:200]}"
+            try:
+                db.commit()
+            except Exception:
+                db.rollback()
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
     finally:
         # Cleanup Temp File
@@ -648,8 +674,9 @@ async def upload_video(
     # Ensure storage directory exists
     os.makedirs("storage", exist_ok=True)
     
-    # Save with unique name
-    stored_filename = f"storage/{current_user.id}_{int(datetime.utcnow().timestamp())}_{file.filename}"
+    # Save with unique name (secure_filename prevents path traversal)
+    _safe_basename = secure_filename(file.filename or "") or f"unnamed_{uuid.uuid4()}"
+    stored_filename = f"storage/{current_user.id}_{int(datetime.utcnow().timestamp())}_{_safe_basename}"
     
     try:
         with open(stored_filename, "wb") as buffer:
@@ -710,7 +737,7 @@ async def upload_video(
 
     # 3. Create Scan Record using JSON Content
     # content stores the full JSON structure
-    sanitized_filename = file.filename.replace('\x00', '')
+    sanitized_filename = secure_filename(file.filename or "") or "unknown_file"
     db_scan = DLPScan(
         user_id=current_user.id,
         source=f"ECHOVISION:{sanitized_filename}",

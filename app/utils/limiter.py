@@ -31,8 +31,8 @@ def get_rate_limit_key(request: Request) -> str:
                 
             if user_id:
                 return f"user:{user_id}"
-        except JWTError:
-            pass # Invalid token, fall back to IP
+        except JWTError as e:
+            logger.debug(f"Invalid JWT in rate limit key: {str(e)[:50]}")
             
     return get_remote_address(request)
 

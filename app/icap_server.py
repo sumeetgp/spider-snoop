@@ -132,7 +132,7 @@ class ICAPServer:
         except UnicodeDecodeError:
              text_content = "[BINARY_DATA]" 
         
-        scan_result = await self.dlp_engine.scan(text_content)
+        scan_result = await asyncio.wait_for(self.dlp_engine.scan(text_content), timeout=10.0)
         scan_duration = (datetime.utcnow() - start_time).total_seconds() * 1000
         
         logger.info(f"Scan completed in {scan_duration}ms - Verdict: {scan_result['verdict']}")
@@ -151,11 +151,11 @@ class ICAPServer:
         except UnicodeDecodeError:
             text_content = "[BINARY_DATA]"
             
-        scan_result = await self.dlp_engine.scan(text_content)
-        
+        scan_result = await asyncio.wait_for(self.dlp_engine.scan(text_content), timeout=10.0)
+
         if scan_result['risk_level'] in ['HIGH', 'CRITICAL']:
             return self.blocked_response(scan_result)
-        
+
         return self.no_modification_response()
     
     def handle_options(self) -> bytes:

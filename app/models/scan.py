@@ -33,14 +33,14 @@ class DLPScan(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     source = Column(String, nullable=False)  # ICAP, API, Manual
     content = Column(Text, nullable=False)
-    status = Column(Enum(ScanStatus), default=ScanStatus.PENDING)
-    risk_level = Column(Enum(RiskLevel), nullable=True)
+    status = Column(Enum(ScanStatus), default=ScanStatus.PENDING, index=True)
+    risk_level = Column(Enum(RiskLevel), nullable=True, index=True)
     findings = Column(JSON, nullable=True)  # Detailed findings
     verdict = Column(String, nullable=True)
     ai_analysis = Column(Text, nullable=True)
     threat_score = Column(Integer, default=0)
     scan_duration_ms = Column(Integer, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     completed_at = Column(DateTime(timezone=True), nullable=True)
     
     @property

@@ -4,6 +4,7 @@ File Security Engine
 Orchestrator for Path 1: Deterministic File & Malware Scanner.
 Combines Signatures (ClamAV/YARA), Static Heuristics, and ML Context.
 """
+import asyncio
 import logging
 import os
 import shutil
@@ -32,22 +33,24 @@ class FileSecurityEngine:
         logger.info(f"Starting File Security Scan for: {file_path}")
         
         # 1. Foundation: Signatures (ClamAV / YARA)
-        is_clean_sig, findings_sig = await self.file_guard.scan_file(file_path)
-        
-        # 2. Metadata & Static Analysis
-        metadata = self.metadata_extractor.extract(file_path)
-        static_analysis = self.static_analyzer.analyze(file_path)
-        
+        is_clean_sig, findings_sig = await asyncio.wait_for(
+            self.file_guard.scan_file(file_path), timeout=30.0
+        )
+
+        # 2. Metadata & Static Analysis (run in thread pool to avoid blocking the event loop)
+        metadata = await asyncio.to_thread(self.metadata_extractor.extract, file_path)
+        static_analysis = await asyncio.to_thread(self.static_analyzer.analyze, file_path)
+
         # 3. ML Context Analysis
         # Enriched with metadata and static signals
         # We append static findings to the context text for the ML model
         # e.g. "Entropy: 7.8 (Packed). Magic Mismatch: True."
-        
+
         enrichment_str = ""
         if static_analysis.get("is_packed"): enrichment_str += "High Entropy Packed File. "
         if not static_analysis.get("magic_match"): enrichment_str += "File extension does not match content. "
-        
-        final_context_text = f"{enrichment_str} {extracted_text}"
+
+        final_context_text = f"{enrichment_str} {extracted_text}"[:4096]
         
         ml_result = self.context_classifier.classify(metadata, final_context_text)
         

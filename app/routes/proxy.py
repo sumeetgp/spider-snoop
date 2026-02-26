@@ -1,7 +1,10 @@
+import logging
 from fastapi import APIRouter, Request, Response, HTTPException, Depends, BackgroundTasks
 import httpx
 import os
 import json
+
+logger = logging.getLogger(__name__)
 from sqlalchemy.orm import Session
 from app.config import settings
 from app.utils.auth import get_current_active_user
@@ -37,7 +40,7 @@ def log_proxy_action(
         db.add(log_entry)
         db.commit()
     except Exception as e:
-        print(f"Audit Log Failed: {e}")
+        logger.error(f"Audit Log Failed: {e}")
 
 @router.api_route("/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def proxy_entrypoint(

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # Application
     APP_NAME: str = "SPIDERCOB DLP"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     
     # Security
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: Optional[str] = os.getenv("OPENAI_API_KEY")
     USE_LANGCHAIN_CISO: bool = False
     USE_LOCAL_ML: bool = True
+
+    # Security scanning behaviour
+    ENABLE_ACTIVE_AWS_VERIFICATION: bool = False  # Makes live STS API calls — off by default
+    PRESIDIO_SCORE_THRESHOLD: float = 0.4
+
+    # File size limits (MB)
+    MAX_FILE_SIZE_MB_SENTINEL: int = 50
+    MAX_FILE_SIZE_MB_GUARDIAN: int = 10
+    MAX_FILE_SIZE_MB_VIDEO: int = 50
 
     # Storage (DigitalOcean Spaces)
     DO_SPACES_KEY: Optional[str] = os.getenv("DO_SPACES_KEY")

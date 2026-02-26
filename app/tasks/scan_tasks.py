@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 storage_manager = StorageManager()
 
 # Soft timeout at 5 minutes exactly, Hard kill at 5 mins + 10s
-@celery_app.task(bind=True, soft_time_limit=300, time_limit=310, max_retries=1)
+@celery_app.task(bind=True, soft_time_limit=300, time_limit=310, max_retries=3, autoretry_for=(Exception,), retry_backoff=True)
 def process_async_scan(self, scan_id: int, file_url: str):
     """
     Background worker that runs the full scan lifecycle decoupled from the API request.
@@ -80,6 +80,7 @@ def process_async_scan(self, scan_id: int, file_url: str):
 
     except Exception as e:
         logger.error(f"Async Scan Error: {e}")
+        db.rollback()
         scan.status = ScanStatus.FAILED
         scan.verdict = f"FAILED: System Error ({str(e)})"
         scan.completed_at = datetime.utcnow()
@@ -87,5 +88,8 @@ def process_async_scan(self, scan_id: int, file_url: str):
 
     finally:
         # ALWAYS delete the ephemeral heavy file from remote DigitalOcean space
-        storage_manager.delete_file(file_url)
+        try:
+            storage_manager.delete_file(file_url)
+        except Exception as e:
+            logger.warning(f"Failed to delete file from storage after scan {scan_id}: {e}")
         db.close()

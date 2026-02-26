@@ -38,6 +38,14 @@ async def lifespan(app: FastAPI):
     # Create database tables
     # Base.metadata.create_all(bind=engine) # Handled by Alembic in production
     logger.info("Database initialized")
+
+    # Warm up ML engine eagerly so the first scan request is not slow
+    try:
+        from app.core.ml_engine import get_ml_engine
+        await asyncio.to_thread(get_ml_engine().warmup)
+        logger.info("ML engine warmed up successfully")
+    except Exception as e:
+        logger.warning(f"ML engine warmup failed (non-fatal): {e}")
     
     # Start ICAP server in background
     try:

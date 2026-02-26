@@ -1,7 +1,8 @@
 """API Routes - Authentication"""
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from fastapi.security import OAuth2PasswordRequestForm
+from app.utils.limiter import limiter
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -17,7 +18,8 @@ class ForgotPasswordRequest(BaseModel):
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 @router.post("/login", response_model=Token)
-async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, response: Response, form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     """
     Login to get an access token.
     
@@ -64,7 +66,8 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/register", response_model=Token)
-async def register(response: Response, user_data: UserCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def register(request: Request, response: Response, user_data: UserCreate, db: Session = Depends(get_db)):
     """Public registration endpoint"""
     # Check existing user
     if db.query(User).filter(User.email == user_data.email).first():
@@ -119,7 +122,8 @@ async def logout(response: Response):
 
 # Password Reset Endpoints
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
     Request a password reset token.
     Sends an email with reset link via SMTP2GO.
@@ -129,8 +133,8 @@ async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(
     from datetime import datetime, timedelta
     import os
     
-    email = request.email
-    
+    email = body.email
+
     # Find user by email
     user = db.query(User).filter(User.email == email).first()
     
@@ -220,7 +224,8 @@ async def verify_reset_token(token: str, db: Session = Depends(get_db)):
     }
 
 @router.post("/reset-password")
-async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def reset_password(request: Request, token: str, new_password: str, db: Session = Depends(get_db)):
     """Reset password using a valid token"""
     from app.models.password_reset_token import PasswordResetToken
     

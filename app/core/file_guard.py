@@ -13,6 +13,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+CLAMAV_TIMEOUT = 30  # seconds
+
 class FileGuard:
     def __init__(self, clamav_host='clamav', clamav_port=3310, rules_path='rules'):
         self.clamav_host = clamav_host
@@ -27,7 +29,7 @@ class FileGuard:
         try:
             # EICAR test to check connection? No, just init object.
             # Using EICAR later for health check if needed.
-            cd = clamd.ClamdNetworkSocket(self.clamav_host, self.clamav_port)
+            cd = clamd.ClamdNetworkSocket(self.clamav_host, self.clamav_port, timeout=CLAMAV_TIMEOUT)
             return cd
         except Exception as e:
             logger.warning(f"ClamAV not reachable at {self.clamav_host}:{self.clamav_port}. Error: {e}")
@@ -86,7 +88,7 @@ class FileGuard:
                      if "EICAR-STANDARD-ANTIVIRUS-TEST-FILE" in content:
                          is_safe = False
                          findings.append("ClamAV: Eicar-Test-Signature")
-             except:
+             except Exception:
                  pass
 
         # 2. YARA
