@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # Security scanning behaviour
     ENABLE_ACTIVE_AWS_VERIFICATION: bool = False  # Makes live STS API calls — off by default
     PRESIDIO_SCORE_THRESHOLD: float = 0.4
+    # Caps how many chars are fed into the Presidio transformer to keep CPU latency sane.
+    # 20 000 chars ≈ 8 pages ≈ ~12 BERT inference chunks ≈ 3-5 s on CPU.
+    PRESIDIO_MAX_CONTENT_CHARS: int = 20000
 
     # File size limits (MB)
     MAX_FILE_SIZE_MB_SENTINEL: int = 50

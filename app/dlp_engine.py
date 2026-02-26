@@ -90,8 +90,12 @@ class DLPEngine:
                     risk_level = "MEDIUM"
 
         # 2. Presidio NER (Contextual)
+        # Truncate to PRESIDIO_MAX_CONTENT_CHARS to cap transformer inference time.
+        # Run in a thread so the CPU-bound NER doesn't block the async event loop.
         if self.presidio.enabled and not skip_presidio:
-            presidio_findings = self.presidio.scan(content)
+            presidio_findings = await asyncio.to_thread(
+                self.presidio.scan, content[:settings.PRESIDIO_MAX_CONTENT_CHARS]
+            )
             for pf in presidio_findings:
                 # Add to findings list
                 findings.append({
