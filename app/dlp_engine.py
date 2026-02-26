@@ -236,26 +236,45 @@ class DLPEngine:
                 logger.debug("Using LOCAL ML ENGINE (Zero-Shot) for Analysis.")
                 from app.core.ml_engine import get_ml_engine
                 engine = get_ml_engine()
-                
-                # Zero-shot classification via NLI
-                labels = ["data_exfiltration", "insider_risk", "accidental_sharing", "benign_business"]
-                
-                ml_res = engine.zero_shot_classify(content[:512], labels)
-                best_label = ml_res.get("label", "benign_business")
+
+                # Descriptive NLI hypotheses — the model compares text against these
+                # natural-language statements rather than single-word category codes.
+                # The safe label is always last so index < len-1 means sensitive.
+                _SENSITIVE_LABELS = [
+                    "credentials or secrets such as API keys, passwords, tokens, or private keys",
+                    "sensitive personal information such as names, SSN, passport numbers, or medical data",
+                    "financial data such as credit card numbers, bank accounts, or payment records",
+                ]
+                _SAFE_LABEL = "safe general business or technical content with no sensitive data"
+                labels = _SENSITIVE_LABELS + [_SAFE_LABEL]
+
+                # Prepend already-detected finding types as extra context for the model.
+                findings_ctx = ""
+                if findings:
+                    types = ", ".join(list({f["type"] for f in findings})[:5])
+                    findings_ctx = f"Already detected: {types}. "
+
+                ml_res = engine.zero_shot_classify(
+                    findings_ctx + content[:1500],
+                    labels,
+                    hypothesis_template="This text contains {}."
+                )
+                best_label = ml_res.get("label", _SAFE_LABEL)
                 confidence = ml_res.get("confidence", 0.0)
-                
-                is_sensitive = best_label in ["data_exfiltration", "insider_risk", "accidental_sharing"]
-                
+
+                is_sensitive = best_label != _SAFE_LABEL
+
                 verdict = "REVIEW"
-                if best_label in ["data_exfiltration", "insider_risk"] and confidence > 0.6:
+                if is_sensitive and confidence > 0.6:
                     verdict = "BLOCK"
-                elif best_label == "benign_business":
+                elif not is_sensitive:
                     verdict = "ALLOW"
-                    
+
                 score = int(confidence * 100) if is_sensitive else 0
-                
-                display_label = best_label.replace("_", " ").title()
-                
+
+                # Shorten the winning label for display (strip after first comma)
+                display_label = best_label.split(",")[0].strip().title()
+
                 return {
                     "verdict": verdict,
                     "score": score,

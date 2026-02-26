@@ -139,7 +139,7 @@ if ML_AVAILABLE:
             except Exception as e:
                 logger.error(f"ML warmup failed: {e}")
 
-        def zero_shot_classify(self, text: str, labels: List[str]) -> Dict[str, Any]:
+        def zero_shot_classify(self, text: str, labels: List[str], hypothesis_template: str = "This example is {}.") -> Dict[str, Any]:
             """
             Zero-shot classification via NLI pipeline.
             Returns the top label, confidence, inference time, and all probability scores.
@@ -148,7 +148,7 @@ if ML_AVAILABLE:
             try:
                 classifier, _ = self.get_model("zero_shot")
 
-                result = classifier(text, candidate_labels=labels, multi_label=False)
+                result = classifier(text, candidate_labels=labels, multi_label=False, hypothesis_template=hypothesis_template)
 
                 inference_time_ms = int((time.time() - start_time) * 1000)
 
@@ -178,18 +178,19 @@ else:
         def __init__(self):
             logger.warning("ML Dependencies missing. Providing Mock ML Engine.")
 
-        def zero_shot_classify(self, text: str, labels: List[str]) -> Dict[str, Any]:
+        def zero_shot_classify(self, text: str, labels: List[str], hypothesis_template: str = "This example is {}.") -> Dict[str, Any]:
             start_time = time.time()
             text_lower = text.lower()
-            best_label = "safe non-sensitive code documentation"
+            safe_label = labels[-1] if labels else "safe"
+            best_label = safe_label
             confidence = 0.95
 
-            if "password" in text_lower or "credential" in text_lower or "key" in text_lower:
-                best_label = "data_exfiltration"
-            elif "eval(" in text_lower or "exec(" in text_lower or "pickle" in text_lower:
-                best_label = "insider_risk"
-            elif "test" in text_lower or "example" in text_lower:
-                best_label = "benign_business"
+            if "password" in text_lower or "credential" in text_lower or "api key" in text_lower or "private key" in text_lower:
+                best_label = labels[0] if len(labels) > 0 else safe_label
+            elif "ssn" in text_lower or "passport" in text_lower or "social security" in text_lower:
+                best_label = labels[1] if len(labels) > 1 else safe_label
+            elif "credit card" in text_lower or "bank account" in text_lower or "iban" in text_lower:
+                best_label = labels[2] if len(labels) > 2 else safe_label
 
             inference_time_ms = int((time.time() - start_time) * 1000)
             return {
