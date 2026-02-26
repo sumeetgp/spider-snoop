@@ -267,6 +267,76 @@ class DLPPatternMatcher:
         except Exception:
             return False
     
+    def _extract_word_window(self, text: str, match_start: int, match_end: int, window: int = 50) -> str:
+        """
+        Extract ±window words surrounding the match position.
+        Uses a generous char slack to avoid splitting UTF-8 mid-word.
+        """
+        char_slack = window * 9          # ~9 chars/word average
+        pre_text  = text[max(0, match_start - char_slack):match_start]
+        post_text = text[match_end:min(len(text), match_end + char_slack)]
+        pre_words  = pre_text.split()[-window:]
+        post_words = post_text.split()[:window]
+        return ' '.join(pre_words) + ' ' + text[match_start:match_end] + ' ' + ' '.join(post_words)
+
+    def _score_context(self, pattern_name: str, context: str) -> tuple:
+        """
+        Contextual confidence score [0.0–1.0] based on surrounding words.
+
+        Rules applied in order:
+        1. Keyword proximity boost  — real-usage signals raise the score
+        2. Code-block / example penalty — doc/test context lowers the score
+        3. Financial context boost  — payment words near financial patterns raise it
+
+        Returns (score: float, reasons: list[str])
+        """
+        ctx_lower = context.lower()
+        score = 0.5         # neutral baseline
+        reasons = []
+
+        # ── 1. KEYWORD PROXIMITY BOOST ────────────────────────────────────────
+        _PROXIMITY_KEYWORDS = {
+            "production", "prod", "live", "real", "secret", "private",
+            "api_key", "access_key", "token", "credential", "password",
+            "authorization", "authenticate", "config", "env", "environment",
+            "deploy", "deployed", "server", "database", "connection",
+        }
+        boost_hits = [kw for kw in _PROXIMITY_KEYWORDS if kw in ctx_lower]
+        if boost_hits:
+            boost = round(min(0.30, len(boost_hits) * 0.06), 3)
+            score += boost
+            reasons.append(f"proximity_boost({','.join(boost_hits[:3])})+{boost}")
+
+        # ── 2. CODE-BLOCK / EXAMPLE DETECTION PENALTY ────────────────────────
+        _CODE_PENALTY_KEYWORDS = {
+            "example", "sample", "placeholder", "dummy", "fake", "test",
+            "mock", "demo", "tutorial", "docs", "documentation", "readme",
+            "your_", "_here", "replace_", "xxx", "todo",
+        }
+        penalty_hits = [kw for kw in _CODE_PENALTY_KEYWORDS if kw in ctx_lower]
+        code_fence   = ctx_lower.count("```") >= 2 or ctx_lower.count("~~~") >= 2
+        if penalty_hits or code_fence:
+            penalty = round(min(0.40, len(penalty_hits) * 0.07 + (0.15 if code_fence else 0)), 3)
+            score  -= penalty
+            hit_desc = ','.join(penalty_hits[:3]) + (",code_fence" if code_fence else "")
+            reasons.append(f"code_block_penalty({hit_desc})-{penalty}")
+
+        # ── 3. FINANCIAL CONTEXT BOOST ────────────────────────────────────────
+        _FINANCIAL_PATTERNS = {"credit_card", "bank_account", "iban", "routing_number"}
+        if pattern_name in _FINANCIAL_PATTERNS:
+            _FINANCIAL_KEYWORDS = {
+                "payment", "billing", "invoice", "transaction", "charge",
+                "purchase", "order", "checkout", "card", "bank", "financial",
+                "amount", "total", "price", "customer", "merchant", "receipt",
+            }
+            fin_hits = [kw for kw in _FINANCIAL_KEYWORDS if kw in ctx_lower]
+            if fin_hits:
+                boost = round(min(0.25, len(fin_hits) * 0.05), 3)
+                score += boost
+                reasons.append(f"financial_context_boost({','.join(fin_hits[:3])})+{boost}")
+
+        return round(max(0.0, min(1.0, score)), 3), reasons
+
     def _calculate_entropy(self, data: str) -> float:
         """
         Calculate Shannon Entropy to detect random keys vs words.
@@ -328,22 +398,31 @@ class DLPPatternMatcher:
                 
                 # Mask sensitive data in output
                 masked_value = self._mask_value(matched_text, pattern_name)
-                
-                # Extract Context Window (±100 chars)
-                start_context = max(0, match.start() - 100)
-                end_context = min(len(text), match.end() + 100)
-                context_window = text[start_context:end_context]
-                
+
+                # ── Context windows ───────────────────────────────────────────
+                # Legacy ±100-char window (backward compat)
+                start_ctx = max(0, match.start() - 100)
+                end_ctx   = min(len(text), match.end() + 100)
+                context_window = text[start_ctx:end_ctx]
+
+                # New ±50-word window for scoring
+                word_window = self._extract_word_window(text, match.start(), match.end(), window=50)
+                ctx_score, ctx_reasons = self._score_context(pattern_name, word_window)
+
                 finding = {
                     "type": pattern_name,
                     "description": pattern_info["description"],
                     "value": masked_value,
                     "position": f"char {match.start()}-{match.end()}",
                     "severity": pattern_info["severity"],
-                    "context": context_window
+                    "context": context_window,
+                    # ── Context window scoring ─────────────────────────────────
+                    "context_snippet": word_window[:500],       # ±50-word excerpt
+                    "context_score": ctx_score,                 # float [0.0–1.0]
+                    "context_score_reasons": ctx_reasons,       # list[str]
                 }
 
-                # Context keyword boost (e.g. "aws", "secret" near an AWS key)
+                # Pattern-level context keyword boost (e.g. AWS nearby signals)
                 if "context_keywords" in pattern_info:
                     ctx_lower = context_window.lower()
                     matched_ctx = [kw for kw in pattern_info["context_keywords"] if kw in ctx_lower]

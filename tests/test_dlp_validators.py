@@ -195,3 +195,96 @@ class TestJWTValidator:
         results = matcher.scan(text)
         jwt_findings = [f for f in results["HIGH"] if f["type"] == "jwt_token"]
         assert len(jwt_findings) == 0, "Fake JWT (no alg/typ) must be filtered out"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CONTEXT WINDOW SCORING
+# ─────────────────────────────────────────────────────────────────────────────
+
+class TestContextWindowScoring:
+    # ── _extract_word_window ──────────────────────────────────────────────────
+    def test_word_window_contains_match(self, matcher):
+        text = "one two three SECRET_VALUE four five six"
+        snippet = matcher._extract_word_window(text, 14, 26, window=3)
+        assert "SECRET_VALUE" in snippet
+
+    def test_word_window_limits_to_n_words(self, matcher):
+        words = ["word"] * 200
+        text = " ".join(words[:100]) + " TARGET " + " ".join(words[100:])
+        idx = text.index("TARGET")
+        snippet = matcher._extract_word_window(text, idx, idx + 6, window=10)
+        # Should have at most 10 words before + TARGET + 10 words after = 21 tokens
+        assert len(snippet.split()) <= 22
+
+    # ── _score_context: proximity boost ──────────────────────────────────────
+    def test_proximity_boost_raises_score(self, matcher):
+        production_ctx = "production api_key = SENSITIVE_VALUE environment=live"
+        neutral_ctx    = "the quick brown fox jumped over the lazy dog"
+        prod_score, prod_reasons = matcher._score_context("aws_access_key", production_ctx)
+        neutral_score, _         = matcher._score_context("aws_access_key", neutral_ctx)
+        assert prod_score > neutral_score, "Production keywords must raise context score"
+        assert any("proximity_boost" in r for r in prod_reasons)
+
+    # ── _score_context: code-block penalty ───────────────────────────────────
+    def test_code_block_penalty_lowers_score(self, matcher):
+        example_ctx = "example placeholder your_api_key_here replace_ dummy value"
+        base_score, _ = matcher._score_context("aws_access_key", "some neutral text")
+        ex_score, reasons = matcher._score_context("aws_access_key", example_ctx)
+        assert ex_score < base_score, "Example/placeholder context must lower score"
+        assert any("code_block_penalty" in r for r in reasons)
+
+    def test_code_fence_penalty_applied(self, matcher):
+        fenced_ctx = "```\naws_access_key = AKIAIOSFODNN7EXAMPLE\n```"
+        score, reasons = matcher._score_context("aws_access_key", fenced_ctx)
+        assert any("code_fence" in r for r in reasons), "Markdown code fence must trigger penalty"
+
+    # ── _score_context: financial context boost ───────────────────────────────
+    def test_financial_boost_for_card_patterns(self, matcher):
+        plain_ctx    = "the number was mentioned in the document"
+        finance_ctx  = "payment billing transaction card checkout customer purchase"
+        plain_score, _  = matcher._score_context("credit_card", plain_ctx)
+        fin_score, reasons = matcher._score_context("credit_card", finance_ctx)
+        assert fin_score > plain_score, "Financial keywords must boost credit_card score"
+        assert any("financial_context_boost" in r for r in reasons)
+
+    def test_financial_boost_not_applied_to_non_financial(self, matcher):
+        finance_ctx = "payment billing transaction card checkout customer"
+        _, reasons = matcher._score_context("aws_access_key", finance_ctx)
+        assert not any("financial_context_boost" in r for r in reasons), \
+            "Financial boost must only apply to financial pattern types"
+
+    # ── score clamped to [0.0, 1.0] ──────────────────────────────────────────
+    def test_score_never_exceeds_bounds(self, matcher):
+        extreme_boost = " ".join(["production", "live", "secret", "deploy",
+                                  "env", "config", "credential", "api_key"] * 5)
+        extreme_penalty = " ".join(["example", "dummy", "test", "mock",
+                                    "placeholder", "fake", "readme"] * 5)
+        score_high, _ = matcher._score_context("credit_card", extreme_boost + " payment billing")
+        score_low,  _ = matcher._score_context("credit_card", extreme_penalty)
+        assert 0.0 <= score_high <= 1.0
+        assert 0.0 <= score_low  <= 1.0
+
+    # ── scan() integration: fields present on every finding ──────────────────
+    def test_scan_findings_have_context_score_fields(self, matcher):
+        text = "Customer card: 4111-1111-1111-1111 payment total billing"
+        findings = matcher.scan(text)["CRITICAL"]
+        cc = [f for f in findings if f["type"] == "credit_card"]
+        assert len(cc) >= 1, "Should detect the card"
+        f = cc[0]
+        assert "context_snippet"       in f, "context_snippet must be present"
+        assert "context_score"         in f, "context_score must be present"
+        assert "context_score_reasons" in f, "context_score_reasons must be present"
+        assert isinstance(f["context_score"], float)
+        assert 0.0 <= f["context_score"] <= 1.0
+
+    def test_financial_context_score_higher_than_neutral(self, matcher):
+        # Same card, different surrounding text
+        financial_text = "payment billing transaction 4111-1111-1111-1111 customer purchase checkout"
+        neutral_text   = "random words here 4111-1111-1111-1111 more random words here"
+        fin_findings  = matcher.scan(financial_text)["CRITICAL"]
+        neut_findings = matcher.scan(neutral_text)["CRITICAL"]
+        fin_cc   = [f for f in fin_findings  if f["type"] == "credit_card"]
+        neut_cc  = [f for f in neut_findings if f["type"] == "credit_card"]
+        if fin_cc and neut_cc:
+            assert fin_cc[0]["context_score"] >= neut_cc[0]["context_score"], \
+                "Financial context must produce equal or higher score than neutral"
