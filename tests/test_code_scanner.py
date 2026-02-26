@@ -65,7 +65,8 @@ db_password = 'supersecret123!'
         assert "db_connection_string" in secret_types, "DB connection string must be flagged"
 
     def test_detects_google_api_key(self, scanner):
-        code = "MAPS_KEY = 'AIzaSyD-9tSrke72I6e0DVxC3rnHBIEXAMPLEKEY'"
+        # Pattern: AIza + exactly 35 [A-Za-z0-9_-] chars = 39 chars total
+        code = "MAPS_KEY = 'AIzaSyD-9tSrke72I6e0DVxC3rnHBIEXAMPLEKE'"
         result = run(scanner.scan_file("app.js", code))
         secret_types = [f["type"] for f in result["findings"] if f["category"] == "SECRET"]
         assert "google_api_key" in secret_types, "Google API key must be flagged"
