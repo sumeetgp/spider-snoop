@@ -1,3 +1,5 @@
+import base64
+import json
 import re
 import math
 from typing import Dict, List
@@ -13,12 +15,13 @@ class DLPPatternMatcher:
                 "pattern": r'\b(?:\d{4}[-\s]?){3}\d{4}\b',
                 "severity": "CRITICAL",
                 "description": "Credit Card Number",
-                "validator": self._validate_luhn
+                "validator": self._validate_credit_card  # Luhn + length + BIN prefix
             },
             "ssn": {
                 "pattern": r'\b\d{3}-\d{2}-\d{4}\b',
                 "severity": "CRITICAL",
-                "description": "Social Security Number"
+                "description": "Social Security Number",
+                "validator": self._validate_ssn  # rejects 000/666/9xx, all-same digits
             },
             "bank_account": {
                 "pattern": r'\b\d{8,17}\b',
@@ -82,9 +85,10 @@ class DLPPatternMatcher:
             
             # API Keys & Secrets
             "aws_access_key": {
-                "pattern": r'\b(AKIA[0-9A-Z]{16})\b',
+                "pattern": r'\b((?:AKIA|ASIA)[0-9A-Z]{16})\b',
                 "severity": "CRITICAL",
-                "description": "AWS Access Key ID"
+                "description": "AWS Access Key ID",
+                "context_keywords": ["aws", "access_key", "secret", "boto", "credentials", "amazon"]
             },
             "aws_secret_key": {
                 "pattern": r'\b[A-Za-z0-9/+=]{40}\b',
@@ -129,7 +133,8 @@ class DLPPatternMatcher:
             "jwt_token": {
                 "pattern": r'\beyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*\b',
                 "severity": "HIGH",
-                "description": "JWT Token"
+                "description": "JWT Token",
+                "validator": self._validate_jwt  # base64 decode + JSON header check
             },
             
             # Cryptographic Materials
@@ -208,6 +213,59 @@ class DLPPatternMatcher:
                     digit -= 9
             checksum += digit
         return checksum % 10 == 0
+
+    def _validate_credit_card(self, number: str) -> bool:
+        """Validate credit card: length (13-19 digits) + BIN prefix + Luhn."""
+        d = re.sub(r'\D', '', number)
+        if not (13 <= len(d) <= 19):
+            return False
+        # BIN prefix check — major networks only
+        valid_prefix = (
+            d[0] == '4'                                              # Visa
+            or d[:2] in ('34', '37')                                 # Amex
+            or (len(d) >= 2 and 51 <= int(d[:2]) <= 55)             # Mastercard classic
+            or (len(d) >= 4 and 2221 <= int(d[:4]) <= 2720)         # Mastercard 2-series
+            or d[:4] == '6011' or d[:2] in ('64', '65')             # Discover
+            or (len(d) >= 3 and 300 <= int(d[:3]) <= 305)           # Diners Club
+            or d[:2] in ('36', '38')                                 # Diners Club intl
+            or (len(d) >= 4 and 3528 <= int(d[:4]) <= 3589)         # JCB
+        )
+        return valid_prefix and self._validate_luhn(number)
+
+    def _validate_ssn(self, ssn: str) -> bool:
+        """Validate SSN: reject known-invalid area/group/serial and repeated patterns."""
+        digits = re.sub(r'\D', '', ssn)
+        if len(digits) != 9:
+            return False
+        area   = int(digits[:3])
+        group  = int(digits[3:5])
+        serial = int(digits[5:])
+        # FICA rules: 000, 666, and 900-999 area numbers are never assigned
+        if area == 0 or area == 666 or area >= 900:
+            return False
+        # Group and serial all-zeros are invalid
+        if group == 0 or serial == 0:
+            return False
+        # Reject trivially fake patterns: all same digit or sequential
+        if len(set(digits)) == 1:
+            return False
+        if digits == '123456789':
+            return False
+        return True
+
+    def _validate_jwt(self, token: str) -> bool:
+        """Validate JWT: must have 3 dot-separated parts and a decodeable JSON header."""
+        parts = token.split('.')
+        if len(parts) != 3:
+            return False
+        try:
+            # URL-safe base64 — restore padding
+            padded = parts[0] + '=' * (-len(parts[0]) % 4)
+            header = json.loads(base64.urlsafe_b64decode(padded))
+            # A real JWT header is a dict containing 'alg' and/or 'typ'
+            return isinstance(header, dict) and ('alg' in header or 'typ' in header)
+        except Exception:
+            return False
     
     def _calculate_entropy(self, data: str) -> float:
         """
@@ -284,7 +342,15 @@ class DLPPatternMatcher:
                     "severity": pattern_info["severity"],
                     "context": context_window
                 }
-                
+
+                # Context keyword boost (e.g. "aws", "secret" near an AWS key)
+                if "context_keywords" in pattern_info:
+                    ctx_lower = context_window.lower()
+                    matched_ctx = [kw for kw in pattern_info["context_keywords"] if kw in ctx_lower]
+                    if matched_ctx:
+                        finding["context_match"] = True
+                        finding["context_keywords_found"] = matched_ctx
+
                 results[pattern_info["severity"]].append(finding)
         
         # Scan for sensitive keywords
