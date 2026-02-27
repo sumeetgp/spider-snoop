@@ -15,7 +15,7 @@ const Navbar = ({ toggleMobileMenu, user, onLogout }) => {
             <div className="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
                 <a href="/#features" className="hover:text-white transition">Capabilities</a>
                 <a href="/api/docs" className="hover:text-white transition">API Docs</a>
-                <Link to="/icap" className="hover:text-white transition">ICAP Server</Link>
+                <a href="/icap" className="hover:text-white transition">ICAP Server</a>
                 <Link to="/about" className="hover:text-white transition">About Us</Link>
             </div>
 

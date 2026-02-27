@@ -35,9 +35,9 @@ const MobileMenu = ({ isOpen, onClose, activeTrack, setActiveTrack, onLogout, cr
             <div className="flex flex-col gap-6 text-xl font-bold text-gray-400">
                 <a href="/" className="hover:text-white transition">Home</a>
                 <a href="#features" className="hover:text-white transition">Capabilities</a>
-                <a href="/enterprise" className="hover:text-white transition">Enterprise</a>
                 <a href="/about" className="hover:text-white transition">About Us</a>
                 <a href="/api/docs" className="hover:text-white transition">API Docs</a>
+                <a href="/icap" className="hover:text-white transition">ICAP Server</a>
 
                 <div className="h-px bg-white/10 my-2"></div>
 
