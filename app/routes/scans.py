@@ -418,33 +418,50 @@ async def upload_file(
         # We assume dlp_engine.scan can take file_path argument now
         result = await dlp_engine.scan(content, file_path=temp_filename, force_ai=True)
         
-        # --- AGGREGATE FINDINGS (Match Production Format) ---
-        # Production shows "person x58" instead of 58 individual rows
+        # --- AGGREGATE FINDINGS (Confidence-Aware) ---
         from collections import defaultdict
         import json
-        
-        aggregated = defaultdict(lambda: {"count": 0, "severity": "UNKNOWN", "detail": None})
+
+        severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "UNKNOWN": 0}
+
+        aggregated = defaultdict(lambda: {
+            "count": 0, "severity": "UNKNOWN",
+            "confidence": 0.0, "validated": False,
+            "context_score": 0.0, "value": "",
+        })
         for finding in result.get('findings', []):
             key = finding.get('type', 'unknown')
             aggregated[key]["count"] += finding.get('count', 1)
-            
-            # Preserve highest severity
-            current_sev = aggregated[key]["severity"]
+
+            # Keep highest severity
             new_sev = finding.get('severity', 'UNKNOWN')
-            severity_order = {"CRITICAL": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1, "UNKNOWN": 0}
-            if severity_order.get(new_sev, 0) > severity_order.get(current_sev, 0):
+            if severity_order.get(new_sev, 0) > severity_order.get(aggregated[key]["severity"], 0):
                 aggregated[key]["severity"] = new_sev
-            
-            # Preserve metadata (score) from first occurrence
-            if aggregated[key]["detail"] is None and finding.get('metadata'):
-                aggregated[key]["detail"] = json.dumps(finding['metadata'])
-        
-        # Convert back to list format
+
+            # Keep max confidence and context_score
+            if finding.get('confidence', 0.0) > aggregated[key]["confidence"]:
+                aggregated[key]["confidence"] = finding['confidence']
+            if finding.get('context_score', 0.0) > aggregated[key]["context_score"]:
+                aggregated[key]["context_score"] = finding['context_score']
+
+            # validated = True if any occurrence passed a validator
+            if finding.get('validated'):
+                aggregated[key]["validated"] = True
+
+            # Keep first non-empty masked value
+            if not aggregated[key]["value"] and finding.get('value'):
+                aggregated[key]["value"] = finding['value']
+
+        # Convert to enriched list format
         result['findings'] = [
             {
-                "type": f"{ftype} x{data['count']}" if data['count'] > 1 else ftype,
+                "type": ftype,
                 "severity": data['severity'],
-                "detail": data['detail'] or ""
+                "count": data['count'],
+                "value": data['value'],
+                "confidence": data['confidence'],
+                "validated": data['validated'],
+                "context_score": data['context_score'],
             }
             for ftype, data in aggregated.items()
         ]

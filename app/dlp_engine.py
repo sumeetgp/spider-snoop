@@ -9,6 +9,26 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
+
+def _mask_value(ptype: str, value: str) -> str:
+    """Return a redacted representation of a sensitive value safe for storage."""
+    if not value:
+        return ''
+    if ptype == 'credit_card':
+        digits = re.sub(r'\D', '', value)
+        return f"****{digits[-4:]}" if len(digits) >= 4 else '****'
+    if ptype == 'ssn':
+        return '***-**-' + value[-4:] if len(value) >= 4 else '***-**-****'
+    if ptype in ('aws_access_key', 'github_token', 'google_api_key'):
+        return value[:4] + '****' if len(value) >= 4 else '****'
+    if ptype in ('password_in_code', 'db_connection_string'):
+        return value[:3] + '****' if len(value) >= 3 else '****'
+    # generic: show first 2 + mask + last 2
+    if len(value) > 8:
+        return value[:2] + '****' + value[-2:]
+    return '****'
+
+
 if settings.OPENAI_API_KEY:
     openai.api_key = settings.OPENAI_API_KEY
 
@@ -74,11 +94,16 @@ class DLPEngine:
         # Flatten findings from the matcher
         for severity, items in scan_results.items():
             for item in items:
+                ctx_score = round(float(item.get('context_score', 0.5)), 4)
                 findings.append({
                     'type': item['type'],
-                    'matches': [item['value']],
+                    'value': _mask_value(item['type'], item.get('value', '')),
+                    'matches': [item.get('value', '')],
                     'count': 1,
-                    'severity': severity
+                    'severity': severity,
+                    'confidence': ctx_score,
+                    'validated': True,
+                    'context_score': ctx_score,
                 })
                 
                 # Update overall risk level for Regex
@@ -97,13 +122,18 @@ class DLPEngine:
                 self.presidio.scan, content[:settings.PRESIDIO_MAX_CONTENT_CHARS]
             )
             for pf in presidio_findings:
+                pf_conf = round(float(pf.get('score', 0.5)), 4)
                 # Add to findings list
                 findings.append({
                     'type': pf['type'],
-                    'matches': [pf['value']],
+                    'value': _mask_value(pf['type'], pf.get('value', '')),
+                    'matches': [pf.get('value', '')],
                     'count': 1,
                     'severity': pf['severity'],
-                    'metadata': {'score': pf['score']} 
+                    'confidence': pf_conf,
+                    'validated': False,
+                    'context_score': pf_conf,
+                    'metadata': {'score': pf['score']}
                 })
                 
                 # Update risk level based on Presidio

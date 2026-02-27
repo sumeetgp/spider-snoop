@@ -138,16 +138,28 @@ const ScanResults = ({ type, data, onReset }) => {
 
                                 {/* 2. AI Assessment (Verdict & Confidence) */}
                                 <div className="bg-gray-800/50 rounded p-3 border border-gray-700">
-                                    <div className="text-[10px] uppercase text-gray-500 font-bold mb-2">AI Assessment</div>
+                                    <div className="flex justify-between items-center mb-2">
+                                        <div className="text-[10px] uppercase text-gray-500 font-bold">AI Assessment</div>
+                                        {data.ml_model && (
+                                            <div className="text-[9px] bg-[#88FFFF]/10 text-[#88FFFF] px-2 py-0.5 rounded border border-[#88FFFF]/30 font-mono">
+                                                {data.ml_model} {data.inference_time_ms ? `(${data.inference_time_ms}ms)` : ''}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div className="flex flex-col gap-2">
                                         <div className="text-xs text-gray-300">{data.aiInsight.split('(')[0] || data.aiInsight}</div>
-                                        {/* Parse Confidence from string */}
+                                        {/* Parse Confidence from string or direct prop */}
                                         {(() => {
-                                            const match = data.aiInsight.match(/Confidence:\s*(\d+(\.\d+)?)/);
-                                            const confidence = match ? parseFloat(match[1]) : 0;
-                                            const percent = Math.round(confidence * 100);
-                                            // Handle edge case where confidence is already percent (unlikely in this backend but possible)
-                                            const displayPercent = confidence <= 1 ? percent : Math.round(confidence);
+                                            let displayPercent = 0;
+                                            if (data.all_scores && Object.keys(data.all_scores).length > 0) {
+                                                const maxScore = Math.max(...Object.values(data.all_scores));
+                                                displayPercent = Math.round(maxScore * 100);
+                                            } else {
+                                                const match = data.aiInsight.match(/Confidence:\s*(\d+(\.\d+)?)/);
+                                                const confidence = match ? parseFloat(match[1]) : 0;
+                                                const percent = Math.round(confidence * 100);
+                                                displayPercent = confidence <= 1 ? percent : Math.round(confidence);
+                                            }
 
                                             return (
                                                 <div className="w-full">
@@ -161,6 +173,26 @@ const ScanResults = ({ type, data, onReset }) => {
                                                             style={{ width: `${displayPercent}%` }}
                                                         ></div>
                                                     </div>
+
+                                                    {/* Zero-Shot Probabilities */}
+                                                    {data.all_scores && Object.keys(data.all_scores).length > 0 && (
+                                                        <div className="mt-4 pt-3 border-t border-gray-700/50">
+                                                            <div className="text-[9px] uppercase text-gray-500 mb-2 font-bold tracking-wider">Zero-Shot Intent Probabilities</div>
+                                                            <div className="grid grid-cols-1 gap-1.5">
+                                                                {Object.entries(data.all_scores).sort((a, b) => b[1] - a[1]).map(([label, score], idx) => (
+                                                                    <div key={idx} className="flex justify-between items-center text-[10px]">
+                                                                        <span className="text-gray-400 capitalize">{label.replace(/_/g, ' ')}</span>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                                                <div className={`h-full ${idx === 0 ? 'bg-[#88FFFF]' : 'bg-gray-600'}`} style={{ width: `${Math.round(score * 100)}%` }}></div>
+                                                                            </div>
+                                                                            <span className="font-mono text-gray-300 w-6 text-right">{Math.round(score * 100)}%</span>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })()}
@@ -195,20 +227,46 @@ const ScanResults = ({ type, data, onReset }) => {
                             <tr>
                                 <th className="p-4">Type</th>
                                 <th className="p-4">Severity</th>
-                                <th className="p-4">Detail</th>
+                                <th className="p-4">Value</th>
+                                <th className="p-4">Confidence</th>
+                                <th className="p-4">Validated</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-[#30363d] text-gray-300">
                             {findings.map((finding, idx) => (
                                 <tr key={idx} className="hover:bg-white/5 transition">
-                                    <td className="p-4 font-mono font-bold">{finding.type}</td>
+                                    <td className="p-4 font-mono font-bold">
+                                        {finding.type}
+                                        {finding.count > 1 && (
+                                            <span className="ml-1 text-[10px] text-gray-500 font-normal">×{finding.count}</span>
+                                        )}
+                                    </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-[10px] font-bold ${finding.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400' :
                                             finding.severity === 'HIGH' ? 'bg-orange-500/20 text-orange-400' :
                                                 'bg-gray-700 text-gray-400'
                                             }`}>{finding.severity}</span>
                                     </td>
-                                    <td className="p-4 font-mono opacity-80">{finding.detail}</td>
+                                    <td className="p-4 font-mono opacity-70 text-[11px]">{finding.value || '—'}</td>
+                                    <td className="p-4">
+                                        {finding.confidence != null ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-16 h-1 bg-gray-800 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-full ${finding.confidence >= 0.7 ? 'bg-[#88FFFF]' : finding.confidence >= 0.4 ? 'bg-yellow-400' : 'bg-gray-500'}`}
+                                                        style={{ width: `${Math.round(finding.confidence * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <span className="font-mono text-gray-300">{Math.round(finding.confidence * 100)}%</span>
+                                            </div>
+                                        ) : '—'}
+                                    </td>
+                                    <td className="p-4">
+                                        {finding.validated
+                                            ? <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-green-500/20 text-green-400">✓ YES</span>
+                                            : <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-gray-700 text-gray-500">NER</span>
+                                        }
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
