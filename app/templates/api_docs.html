@@ -36,6 +36,17 @@
             overflow: hidden;
             /* Prevent double scrollbars with iframe */
         }
+
+        .btn-outline {
+            border: 1px solid #88FFFF;
+            color: #88FFFF;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline:hover {
+            background: rgba(136, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(136, 255, 255, 0.3);
+        }
     </style>
 </head>
 
@@ -55,22 +66,49 @@
             <a href="/about" class="hover:text-white transition">About Us</a>
         </div>
         <div class="flex gap-4 items-center">
-            <div class="hidden md:flex gap-4 items-center">
-                <div id="authSection" class="flex gap-4 items-center">
-                    <span id="nav-username" class="hidden text-sm font-bold text-gray-400 uppercase mr-2"></span>
-                    <a href="/login" id="btn-login"
-                        class="hidden sm:block border border-brand text-brand hover:bg-brand/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
-                        Launch Console
-                    </a>
-                    <a href="/dashboard" id="btn-dashboard"
-                        class="hidden btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
-                        Scan Portal
-                    </a>
+            <!-- Guest State -->
+            <div id="auth-guest" class="hidden sm:flex gap-4 items-center">
+                <a href="/login" id="btn-login"
+                    class="text-sm font-bold text-gray-400 hover:text-white transition uppercase">
+                    Login
+                </a>
+                <a href="/register" id="btn-register"
+                    class="btn-outline px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+                    Register
+                </a>
+            </div>
+            <!-- User State -->
+            <div id="auth-user" class="hidden flex gap-4 items-center">
+                <a href="/dashboard"
+                    class="hidden sm:block btn-outline px-4 py-2 rounded-lg text-xs font-bold uppercase transition bg-brand/10 border-brand text-brand shadow-[0_0_15px_rgba(136,255,255,0.3)]">
+                    Scan Portal
+                </a>
+                <span id="nav-username" class="text-sm font-bold text-white uppercase hidden md:inline"></span>
+                <!-- Avatar Dropdown -->
+                <div class="relative">
+                    <button id="btn-avatar-dropdown"
+                        class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer focus:outline-none">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M12 2C8.686 2 6 4.686 6 8v2H4a2 2 0 00-2 2v6a2 2 0 002 2h2v2a2 2 0 002 2h8a2 2 0 002-2v-2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2V8c0-3.314-2.686-6-6-6zm0 2c2.209 0 4 1.791 4 4v2H8V8c0-2.209 1.791-4 4-4zm-4 8v6h2v-6H8zm4 0v6h-2v-6h2zm4 0v6h-2v-6h2zm-8 8h8v-2h-8v2z" />
+                        </svg>
+                    </button>
+                    <div id="user-dropdown"
+                        class="hidden absolute right-0 mt-2 w-48 bg-[#161B22] border border-[#30363d] rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div class="px-4 py-3 border-b border-[#30363d] sm:hidden">
+                            <span class="block text-xs text-gray-400">Logged in as</span>
+                            <span id="dropdown-username" class="block text-sm font-bold text-white truncate"></span>
+                        </div>
+                        <a href="/dashboard"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 sm:hidden">Scan Portal</a>
+                        <a href="/dashboard#settings"
+                            class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Settings</a>
+                        <button id="btn-logout-desktop"
+                            class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300">Logout</button>
+                    </div>
                 </div>
             </div>
-            <button id="btn-logout" class="hidden text-sm font-bold text-gray-500 hover:text-red-400 transition ml-2">
-                LOGOUT
-            </button>
+            <!-- Mobile Menu Button -->
             <button id="btn-mobile-menu-open" class="lg:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
@@ -105,13 +143,19 @@
                 <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
                 <p id="mobile-username-display" class="text-xl font-bold text-white"></p>
             </div>
-            <a href="/login" id="mobile-btn-login" class="text-brand font-black tracking-widest">[LAUNCH CONSOLE]</a>
-            <a href="/dashboard" id="mobile-btn-dashboard" class="hidden text-brand font-black tracking-widest">[SCAN
-                PORTAL]</a>
-            <a href="/dashboard#archive" id="mobile-btn-reports"
-                class="hidden text-gray-400 font-bold tracking-widest hover:text-white transition">REPORTS</a>
-            <button id="mobile-btn-logout-action"
-                class="hidden text-left text-red-500 font-bold tracking-widest">[LOGOUT]</button>
+            <!-- Mobile Auth -->
+            <div id="mobile-auth-section" class="pt-6 border-t border-gray-800 flex flex-col gap-4">
+                <a href="/login" id="mobile-btn-login"
+                    class="text-gray-400 hover:text-white transition font-bold">[ LOGIN ]</a>
+                <a href="/register" id="mobile-btn-register"
+                    class="bg-brand text-black px-4 py-2 rounded font-bold text-center">REGISTER NOW</a>
+                <a href="/dashboard" id="mobile-btn-dashboard"
+                    class="hidden text-brand font-black tracking-widest">[SCAN PORTAL]</a>
+                <a href="/dashboard#archive" id="mobile-btn-reports"
+                    class="hidden text-gray-400 hover:text-white transition font-bold">REPORTS</a>
+                <button id="mobile-btn-logout-action"
+                    class="hidden text-left text-red-500 font-bold hover:text-red-400">LOGOUT</button>
+            </div>
         </div>
     </div>
 
@@ -121,104 +165,79 @@
     </main>
 
     <script nonce="{{ nonce }}">
+        async function logout() {
+            try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
-            // Function Definitions
-            function toggleMobileMenu() {
-                const menu = document.getElementById('mobileMenu');
-                menu.classList.toggle('hidden');
-            }
-
-            function logout() {
-                fetch('/api/auth/logout', { method: 'POST' })
-                    .then(() => {
-                        localStorage.removeItem('access_token'); // Clean up just in case
-                        window.location.reload();
-                    })
-                    .catch(err => {
-                        console.error("Logout failed", err);
-                        window.location.reload();
-                    });
-            }
-
-            // Event Listeners
+            // Mobile menu
             const btnMobileOpen = document.getElementById('btn-mobile-menu-open');
-            if (btnMobileOpen) btnMobileOpen.addEventListener('click', toggleMobileMenu);
-
             const btnMobileClose = document.getElementById('btn-mobile-menu-close');
+            if (btnMobileOpen) btnMobileOpen.addEventListener('click', toggleMobileMenu);
             if (btnMobileClose) btnMobileClose.addEventListener('click', toggleMobileMenu);
-
             document.querySelectorAll('.mobile-nav-link').forEach(link => {
                 link.addEventListener('click', toggleMobileMenu);
             });
 
-            // Logout Listeners
-            const btnLogout = document.getElementById('btn-logout');
-            if (btnLogout) btnLogout.addEventListener('click', logout);
+            // Avatar dropdown
+            const btnAvatar = document.getElementById('btn-avatar-dropdown');
+            const dropdown = document.getElementById('user-dropdown');
+            if (btnAvatar && dropdown) {
+                btnAvatar.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    dropdown.classList.toggle('hidden');
+                });
+                window.addEventListener('click', (e) => {
+                    if (!btnAvatar.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
 
+            // Logout
+            const btnLogoutDesktop = document.getElementById('btn-logout-desktop');
+            if (btnLogoutDesktop) btnLogoutDesktop.addEventListener('click', logout);
             const btnLogoutMobile = document.getElementById('mobile-btn-logout-action');
             if (btnLogoutMobile) btnLogoutMobile.addEventListener('click', logout);
 
-            // Check Auth logic runs immediately
-            checkAuth();
-        });
-
-        function checkAuth() {
-            // Check Auth via Cookie (API Call)
+            // Auth check
             fetch('/api/users/me')
-                .then(res => {
-                    if (res.ok) return res.json();
-                    throw new Error('Unauthorized');
-                })
+                .then(res => { if (res.ok) return res.json(); throw new Error('Unauthorized'); })
                 .then(user => {
-                    // User is logged in - Update Nav
-                    const btnLogin = document.getElementById('btn-login');
-                    const btnDash = document.getElementById('btn-dashboard');
+                    const guestSection = document.getElementById('auth-guest');
+                    const userSection = document.getElementById('auth-user');
+                    if (guestSection) { guestSection.classList.add('hidden'); guestSection.classList.remove('sm:flex'); }
+                    if (userSection) { userSection.classList.remove('hidden'); userSection.classList.add('flex'); }
 
-                    if (btnLogin) {
-                        btnLogin.classList.add('hidden');
-                        btnLogin.classList.remove('sm:block');
-                    }
-                    if (btnDash) {
-                        btnDash.classList.remove('hidden');
-                        btnDash.classList.add('sm:block');
-                    }
-
-                    // Toggle Logout Button
-                    const btnLogout = document.getElementById('btn-logout');
-                    if (btnLogout) btnLogout.classList.remove('hidden');
-
-                    // Mobile Menu Updates
                     const mBtnLogin = document.getElementById('mobile-btn-login');
+                    const mBtnRegister = document.getElementById('mobile-btn-register');
                     const mBtnDash = document.getElementById('mobile-btn-dashboard');
-                    const mBtnLogout = document.getElementById('mobile-btn-logout-action');
-
-                    if (mBtnLogin) mBtnLogin.classList.add('hidden');
-                    if (mBtnDash) mBtnDash.classList.remove('hidden');
                     const mBtnReports = document.getElementById('mobile-btn-reports');
+                    const mBtnLogout = document.getElementById('mobile-btn-logout-action');
+                    if (mBtnLogin) mBtnLogin.classList.add('hidden');
+                    if (mBtnRegister) mBtnRegister.classList.add('hidden');
+                    if (mBtnDash) mBtnDash.classList.remove('hidden');
                     if (mBtnReports) mBtnReports.classList.remove('hidden');
                     if (mBtnLogout) mBtnLogout.classList.remove('hidden');
 
-                    // Update User Info
                     const navName = document.getElementById('nav-username');
                     const mobileName = document.getElementById('mobile-username-display');
                     const mobileInfo = document.getElementById('mobile-user-info');
-
-                    if (navName) {
-                        navName.innerText = user.username;
-                        navName.classList.remove('hidden');
-                    }
-                    if (mobileName) {
-                        mobileName.innerText = user.username;
-                    }
+                    const dropdownName = document.getElementById('dropdown-username');
+                    if (navName) { navName.innerText = user.username; navName.classList.remove('hidden'); }
+                    if (mobileName) mobileName.innerText = user.username;
                     if (mobileInfo) mobileInfo.classList.remove('hidden');
+                    if (dropdownName) dropdownName.innerText = user.username;
                 })
-                .catch(err => {
-                    // User is NOT logged in or session expired
-                    // UI defaults to "Logged Out" state, so we just ensure logout buttons are hidden
-                    const btnLogout = document.getElementById('btn-logout');
-                    if (btnLogout) btnLogout.classList.add('hidden');
-                });
-        }
+                .catch(() => {});
+        });
     </script>
 </body>
 
