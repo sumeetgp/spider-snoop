@@ -2,8 +2,10 @@ import collections
 import logging
 import math
 import re
+import time
 
 from app.config import settings
+from app.core.detection_metrics import metrics as _metrics
 try:
     from presidio_analyzer import AnalyzerEngine, PatternRecognizer, Pattern
     from presidio_anonymizer import AnonymizerEngine
@@ -113,22 +115,58 @@ class PresidioEngine:
         except Exception as e:
             logger.warning(f"Failed to add custom recognizers: {e}")
 
+    # ── Entropy constants ─────────────────────────────────────────────────────
+    _ENTROPY_WINDOW    = 32
+    _MIN_ENTROPY_LEN   = 16
+    _ENTROPY_THRESHOLD = 3.5
+    _COMMENT_PENALTY   = 4.2
+    _BASE64_RE = re.compile(r'^[A-Za-z0-9+/]{20,}={0,2}$')
+    _BLOCK_COMMENT_RE = re.compile(r'/\*.*?\*/', re.DOTALL)
+
     def _calculate_entropy(self, data: str) -> float:
-        """
-        Calculate Shannon Entropy to detect random keys vs words.
-        High entropy (>3.5) indicates random/cryptographic data.
-        Low entropy (<3.5) indicates natural language or patterns.
-        """
+        """Shannon entropy using Counter (O(n))."""
         if not data:
             return 0.0
-        
         counter = collections.Counter(data)
         length = len(data)
-        entropy = 0.0
-        for count in counter.values():
-            p_x = count / length
-            entropy -= p_x * math.log(p_x, 2)
-        return entropy
+        return -sum(
+            (c / length) * math.log(c / length, 2)
+            for c in counter.values()
+        )
+
+    def _sliding_window_entropy(self, data: str) -> float:
+        """Maximum entropy found in any sliding window of _ENTROPY_WINDOW chars."""
+        w = self._ENTROPY_WINDOW
+        if len(data) <= w:
+            return self._calculate_entropy(data)
+        return max(
+            self._calculate_entropy(data[i:i + w])
+            for i in range(len(data) - w + 1)
+        )
+
+    def _is_common_base64(self, value: str) -> bool:
+        """True when value is base64 content that decodes to ordinary printable ASCII."""
+        if not self._BASE64_RE.match(value):
+            return False
+        try:
+            import base64 as _b64
+            decoded = _b64.b64decode(value + '==').decode('utf-8', errors='strict')
+            printable = sum(c.isprintable() and ord(c) < 128 for c in decoded)
+            return printable / max(len(decoded), 1) > 0.85
+        except Exception:
+            return False
+
+    def _in_code_comment(self, text: str, match_start: int) -> bool:
+        """True when match_start falls inside a // # -- or /* */ comment."""
+        line_start = text.rfind('\n', 0, match_start)
+        line_start = 0 if line_start == -1 else line_start + 1
+        prefix = text[line_start:match_start]
+        if re.search(r'(?://|#\s*|--\s*)', prefix):
+            return True
+        for m in self._BLOCK_COMMENT_RE.finditer(text):
+            if m.start() <= match_start < m.end():
+                return True
+        return False
 
     def _active_verify_aws(self, key_id: str, context_text: str) -> str:
         """
@@ -189,18 +227,55 @@ class PresidioEngine:
 
         findings = []
         try:
+            _t0 = time.monotonic()
             results = self.analyzer.analyze(text=text, language='en', score_threshold=settings.PRESIDIO_SCORE_THRESHOLD)
+            _metrics.record_timing("presidio", (time.monotonic() - _t0) * 1000)
 
             for result in results:
                 entity_val = text[result.start:result.end]
-                
+                etype_lower = result.entity_type.lower()
+                masked = self._mask_value(entity_val)
+
+                # Count every raw Presidio hit
+                _metrics.inc_entity(etype_lower, "presidio", validated=False)
+
                 # --- LEVEL 2: ENTROPY FILTERING ---
-                # Skip low-entropy matches for credential types (reduces false positives)
                 if result.entity_type in ["GITHUB_TOKEN", "AWS_KEY_ID", "PRIVATE_KEY", "GOOGLE_API_KEY"]:
-                    entropy = self._calculate_entropy(entity_val)
-                    if entropy < 3.5:
-                        logger.debug(f"Skipping low-entropy {result.entity_type}: {entity_val[:10]}... (entropy: {entropy:.2f})")
+                    # Skip common base64-encoded plaintext
+                    if self._is_common_base64(entity_val):
+                        logger.debug(f"Skipping common-base64 {result.entity_type}: {entity_val[:10]}...")
+                        _metrics.inc_rejection("entropy")
+                        _metrics.log_fp_sample(
+                            reason="entropy_rejection",
+                            entity_type=etype_lower,
+                            masked_value=masked,
+                            context_snippet=text[max(0, result.start-80):result.end+80],
+                            extra={"sub_reason": "common_base64", "source": "presidio"},
+                        )
                         continue
+
+                    # Only entropy-check strings long enough to be meaningful
+                    if len(entity_val) >= self._MIN_ENTROPY_LEN:
+                        entropy = self._sliding_window_entropy(entity_val)
+
+                        # Raise threshold when match is inside a code comment
+                        threshold = (
+                            self._COMMENT_PENALTY
+                            if self._in_code_comment(text, result.start)
+                            else self._ENTROPY_THRESHOLD
+                        )
+
+                        if entropy < threshold:
+                            logger.debug(f"Skipping low-entropy {result.entity_type}: {entity_val[:10]}... (entropy: {entropy:.2f}, threshold: {threshold})")
+                            _metrics.inc_rejection("entropy")
+                            _metrics.log_fp_sample(
+                                reason="entropy_rejection",
+                                entity_type=etype_lower,
+                                masked_value=masked,
+                                context_snippet=text[max(0, result.start-80):result.end+80],
+                                extra={"entropy": round(entropy, 3), "threshold": threshold, "source": "presidio"},
+                            )
+                            continue
                 
                 # --- LEVEL 3: SEVERITY MAPPING ---
                 severity = "LOW"
@@ -237,8 +312,10 @@ class PresidioEngine:
                 else:
                     finding["verification"] = "Not verified"
                 
+                # Passed all gates — count as validated
+                _metrics.inc_entity(etype_lower, "presidio", validated=True)
                 findings.append(finding)
-                
+
         except Exception as e:
             logger.error(f"Presidio scan failed: {e}")
 

@@ -635,6 +635,18 @@
                             <span class="text-[10px] font-bold text-brand block">ADMIN CONSOLE</span>
                         </div>
                     </button>
+
+                    <button id="nav-metrics"
+                        class="hidden w-full text-left p-3 rounded hover:bg-gray-800 text-gray-400 text-sm font-bold transition flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <div>
+                            <span class="block">DETECTION METRICS</span>
+                            <span class="text-[10px] font-bold text-brand block">ADMIN TELEMETRY</span>
+                        </div>
+                    </button>
                 </nav>
             </div>
 
@@ -1379,6 +1391,128 @@
                             <div id="scTerminalContent" class="terminal-content whitespace-pre-wrap font-mono text-xs">
                                 Initializing Code Security Scan...
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metrics View (Admin Only) -->
+                <div id="metricsView" class="hidden space-y-6">
+                    <!-- Header -->
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h2 class="text-2xl font-black text-white tracking-tight hero-gradient uppercase">Detection Telemetry</h2>
+                            <p class="text-xs text-gray-500 font-mono mt-1">Live counters · rolling inference averages · FP sample buffer</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span id="metricsLastUpdated" class="text-[10px] text-gray-600 font-mono">--</span>
+                            <button id="btnRefreshMetrics" class="px-3 py-1.5 text-xs font-bold border border-brand/30 text-brand rounded hover:bg-brand hover:text-black transition">↻ REFRESH</button>
+                            <button id="btnResetMetrics" class="px-3 py-1.5 text-xs font-bold border border-red-500/30 text-red-400 rounded hover:bg-red-500/20 transition">RESET ALL</button>
+                        </div>
+                    </div>
+
+                    <!-- Top KPI cards -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="glass-panel rounded-xl p-4">
+                            <p class="text-[10px] uppercase text-gray-500 font-mono mb-1">Total Detected</p>
+                            <p id="mKpiDetected" class="text-3xl font-black text-white">—</p>
+                            <p class="text-[10px] text-gray-600 mt-1">raw regex + presidio hits</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-4">
+                            <p class="text-[10px] uppercase text-gray-500 font-mono mb-1">After Validation</p>
+                            <p id="mKpiValidated" class="text-3xl font-black text-brand">—</p>
+                            <p class="text-[10px] text-gray-600 mt-1">passed all gates</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-4">
+                            <p class="text-[10px] uppercase text-gray-500 font-mono mb-1">Rejected</p>
+                            <p id="mKpiRejected" class="text-3xl font-black text-yellow-400">—</p>
+                            <p class="text-[10px] text-gray-600 mt-1">filtered out (FP candidates)</p>
+                        </div>
+                        <div class="glass-panel rounded-xl p-4">
+                            <p class="text-[10px] uppercase text-gray-500 font-mono mb-1">FP Buffer</p>
+                            <p id="mKpiFpBuffer" class="text-3xl font-black text-red-400">—</p>
+                            <p class="text-[10px] text-gray-600 mt-1">samples in ring buffer</p>
+                        </div>
+                    </div>
+
+                    <!-- Model Latency -->
+                    <div class="glass-panel rounded-xl p-5">
+                        <h3 class="text-xs uppercase font-bold text-gray-500 mb-4 tracking-widest">Model Inference Latency (rolling avg)</h3>
+                        <div id="mLatencyBars" class="space-y-3">
+                            <!-- Rendered by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Two-column: Rejections + By Source -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Rejection Breakdown -->
+                        <div class="glass-panel rounded-xl p-5">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-4 tracking-widest">Rejection Breakdown</h3>
+                            <div id="mRejectionBars" class="space-y-2">
+                                <!-- Rendered by JS -->
+                            </div>
+                        </div>
+                        <!-- By Source -->
+                        <div class="glass-panel rounded-xl p-5">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 mb-4 tracking-widest">Detections by Source</h3>
+                            <div id="mSourceBars" class="space-y-2">
+                                <!-- Rendered by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- By Entity Type table -->
+                    <div class="glass-panel rounded-xl p-5">
+                        <h3 class="text-xs uppercase font-bold text-gray-500 mb-4 tracking-widest">Per-Entity Breakdown</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-[10px] uppercase text-gray-500 border-b border-border font-mono">
+                                    <tr>
+                                        <th class="py-2 pr-4">Entity Type</th>
+                                        <th class="py-2 pr-4 text-right">Detected</th>
+                                        <th class="py-2 pr-4 text-right">Validated</th>
+                                        <th class="py-2 pr-4 text-right">Validation Rate</th>
+                                        <th class="py-2 text-right">Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mEntityTableBody" class="divide-y divide-border text-gray-300">
+                                    <tr><td colspan="5" class="py-6 text-center text-gray-600 font-mono text-xs">No data yet</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- FP Samples -->
+                    <div class="glass-panel rounded-xl p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xs uppercase font-bold text-gray-500 tracking-widest">False Positive Samples</h3>
+                            <div class="flex gap-2">
+                                <select id="fpReasonFilter" class="text-xs bg-gray-800 border border-border text-gray-300 rounded px-2 py-1">
+                                    <option value="">All Reasons</option>
+                                    <option value="validator_rejection">validator_rejection</option>
+                                    <option value="entropy_rejection">entropy_rejection</option>
+                                    <option value="context_gate_rejection">context_gate_rejection</option>
+                                    <option value="medical_relabel">medical_relabel</option>
+                                </select>
+                                <select id="fpEntityFilter" class="text-xs bg-gray-800 border border-border text-gray-300 rounded px-2 py-1">
+                                    <option value="">All Types</option>
+                                </select>
+                                <button id="btnLoadFpSamples" class="text-xs text-brand hover:underline font-bold">LOAD</button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-xs text-left">
+                                <thead class="text-[10px] uppercase text-gray-500 border-b border-border font-mono">
+                                    <tr>
+                                        <th class="py-2 pr-4">Reason</th>
+                                        <th class="py-2 pr-4">Entity Type</th>
+                                        <th class="py-2 pr-4">Masked Value</th>
+                                        <th class="py-2">Context Snippet</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mFpTableBody" class="divide-y divide-border text-gray-400">
+                                    <tr><td colspan="4" class="py-6 text-center text-gray-600 font-mono">Click LOAD to fetch samples</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>

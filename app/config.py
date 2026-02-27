@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     DO_SPACES_REGION: str = os.getenv("DO_SPACES_REGION", "sgp1")
     DO_SPACES_BUCKET: str = os.getenv("DO_SPACES_BUCKET", "spider-snoop")
     
+    # Alerting / SMTP
+    SMTP_HOST: Optional[str] = os.getenv("SMTP_HOST")
+    SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+    SMTP_USER: Optional[str] = os.getenv("SMTP_USER")
+    SMTP_PASSWORD: Optional[str] = os.getenv("SMTP_PASSWORD")
+    SMTP_FROM: str = os.getenv("SMTP_FROM", "noreply@spidercob.com")
+    ALERT_WEBHOOK_TIMEOUT: int = 10  # seconds
+
     # Logging
     LOG_LEVEL: str = "INFO"
 

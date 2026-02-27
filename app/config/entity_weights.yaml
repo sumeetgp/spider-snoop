@@ -1,0 +1,81 @@
+# ==========================================
+# Data Classification Scoring Configuration
+# ==========================================
+# Weights range from 0 (Ignore) to 100 (Critical Incident)
+#
+# To apply changes: just save this file — the API hot-reloads it automatically.
+# Scores are CUMULATIVE: a document with 3 findings is scored as the sum of
+# all matching entity weights.  See _global thresholds below.
+
+# --- Critical Severity (Secrets & Credentials) ---
+# Exposure leads to immediate infrastructure compromise.
+private_key: 100
+aws_secret_access_key: 100
+gcp_service_account_key: 100
+database_password: 95
+github_access_token: 90
+slack_bot_token: 90
+jwt_secret_key: 90
+
+# Cloud & SaaS API Keys
+stripe_secret_key: 100
+stripe_restricted_key: 100
+sendgrid_api_key: 95
+twilio_auth_token: 95
+azure_connection_string: 100
+azure_sas_token: 95
+docker_registry_auth: 95
+telegram_bot_token: 95
+mailgun_api_key: 90
+stripe_publishable_key: 60
+twilio_account_sid: 65
+huggingface_token: 70
+npm_access_token: 70
+cloudflare_api_token: 85
+discord_webhook: 75
+pagerduty_key: 70
+ed25519_private_key: 100
+ecdsa_private_key: 100
+certificate: 25
+
+# --- High Severity (Regulated Financial & Health - PCI/HIPAA) ---
+# High risk of major fines and direct financial theft.
+validated_credit_card: 90
+credit_card_cvv: 90
+us_social_security_number: 85
+eu_national_id: 85
+medical_record_number: 85
+bank_routing_number: 80
+bank_account_number: 80
+
+# --- Medical / Healthcare (HIPAA) ---
+# PHI exposure triggers HIPAA breach notification requirements.
+icd10_code: 80            # ICD-10 diagnosis code — links patient to condition
+dea_number: 75            # DEA registration — controlled substance prescribing
+npi_number: 70            # National Provider Identifier — provider identity
+ndc_code: 50              # National Drug Code — prescribed medication
+medical_patient_id: 45    # Patient/provider ID re-labelled from financial FP
+
+# --- Medium Severity (Sensitive PII - GDPR/CCPA) ---
+# High risk of identity theft or targeted phishing.
+passport_number: 75
+drivers_license: 70
+voter_id: 60
+date_of_birth: 50
+physical_address: 45
+gps_coordinates: 40
+
+# --- Low Severity (General PII & Operational) ---
+# Often public, but dangerous when aggregated.
+email_address: 20
+phone_number: 15
+person_name: 10
+ip_address_v4: 10
+ip_address_v6: 10
+mac_address: 5
+job_title: 5
+
+# --- Global Settings ---
+_default_unmapped_entity: 0    # Weight for entity types not listed above
+_incident_threshold: 100       # Trigger incident alert if cumulative score >= this
+_block_action_threshold: 250   # Block transfer if cumulative score >= this

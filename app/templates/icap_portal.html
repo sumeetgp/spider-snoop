@@ -67,7 +67,7 @@
                 <span id="nav-username" class="hidden text-sm font-bold text-white uppercase"></span>
             </div>
         </div>
-        <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+        <button id="btn-mobile-menu-open" class="lg:hidden text-white p-2">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
                 </path>
@@ -82,7 +82,7 @@
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
             </div>
-            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+            <button id="btn-mobile-menu-close" class="text-gray-400 hover:text-white">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                     </path>
@@ -90,11 +90,11 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
-            <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
-            <a href="/api/docs" onclick="toggleMobileMenu()" class="hover:text-white transition">API Docs</a>
-            <a href="/icap" onclick="toggleMobileMenu()" class="text-brand">ICAP Server</a>
-            <a href="/about" onclick="toggleMobileMenu()" class="hover:text-white transition">About Us</a>
+            <a href="/#features" class="mobile-nav-link hover:text-white transition">Capabilities</a>
+            <a href="/enterprise" class="mobile-nav-link hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="mobile-nav-link hover:text-white transition">API Docs</a>
+            <a href="/icap" class="mobile-nav-link text-brand">ICAP Server</a>
+            <a href="/about" class="mobile-nav-link hover:text-white transition">About Us</a>
             <div class="h-px bg-border my-4"></div>
             <div id="mobile-user-info" class="hidden mb-4 text-center">
                 <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
@@ -105,7 +105,7 @@
                 PORTAL]</a>
             <a href="/dashboard#archive" id="mobile-btn-reports"
                 class="hidden text-gray-400 font-bold tracking-widest hover:text-white transition">REPORTS</a>
-            <button id="mobile-btn-logout" onclick="logout()"
+            <button id="mobile-btn-logout"
                 class="hidden text-left text-red-500 font-bold tracking-widest">[LOGOUT]</button>
         </div>
     </div>
@@ -116,86 +116,61 @@
     </main>
 
     <script nonce="{{ nonce }}">
-        // Check Auth & Update Nav
-        const token = localStorage.getItem('access_token');
-
-        // Send token to iframe when it loads
-        window.addEventListener('load', () => {
-            const iframe = document.querySelector('iframe');
-            if (iframe && token) {
-                iframe.addEventListener('load', () => {
-                    iframe.contentWindow.postMessage({ type: 'AUTH_TOKEN', token: token }, '*');
-                });
-            }
-        });
-
-        if (token) {
-            // User is logged in - Update Nav
-            const btnLogin = document.getElementById('btn-login');
-            const btnDash = document.getElementById('btn-dashboard');
-
-            if (btnLogin) {
-                btnLogin.classList.add('hidden');
-                btnLogin.classList.remove('sm:block');
-            }
-            if (btnDash) {
-                btnDash.classList.remove('hidden');
-                btnDash.classList.add('sm:block');
-            }
-
-            // Toggle Logout Button
-            const btnLogout = document.getElementById('btn-logout');
-            if (btnLogout) btnLogout.classList.remove('hidden');
-
-            // Mobile Menu Updates
-            const mBtnLogin = document.getElementById('mobile-btn-login');
-            const mBtnDash = document.getElementById('mobile-btn-dashboard');
-            const mBtnLogout = document.getElementById('mobile-btn-logout');
-
-            if (mBtnLogin) mBtnLogin.classList.add('hidden');
-            if (mBtnDash) mBtnDash.classList.remove('hidden');
-            const mBtnReports = document.getElementById('mobile-btn-reports');
-            if (mBtnReports) mBtnReports.classList.remove('hidden');
-            if (mBtnLogout) mBtnLogout.classList.remove('hidden');
-
-            // Fetch Username
-            fetch('/api/users/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error('Unauthorized');
-                    return res.json();
-                })
-                .then(user => {
-                    const navName = document.getElementById('nav-username');
-                    const mobileName = document.getElementById('mobile-username-display');
-                    const mobileInfo = document.getElementById('mobile-user-info');
-
-                    if (navName) {
-                        navName.innerText = user.username;
-                        navName.classList.remove('hidden');
-                    }
-                    if (mobileName) {
-                        mobileName.innerText = user.username;
-                    }
-                    if (mobileInfo) mobileInfo.classList.remove('hidden');
-                })
-                .catch(err => {
-                    console.warn('Session expired', err);
-                    localStorage.removeItem('access_token');
-                    window.location.reload();
-                });
-        }
-
-        function logout() {
+        // ── Utilities ─────────────────────────────────────────────────────────
+        async function logout() {
+            try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
             localStorage.removeItem('access_token');
-            window.location.reload();
+            window.location.href = '/login';
         }
 
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
             menu.classList.toggle('hidden');
         }
+
+        // ── Event Listeners ───────────────────────────────────────────────────
+        const menuOpen = document.getElementById('btn-mobile-menu-open');
+        const menuClose = document.getElementById('btn-mobile-menu-close');
+        if (menuOpen) menuOpen.addEventListener('click', toggleMobileMenu);
+        if (menuClose) menuClose.addEventListener('click', toggleMobileMenu);
+        const logoutMobile = document.getElementById('mobile-btn-logout');
+        if (logoutMobile) logoutMobile.addEventListener('click', logout);
+        document.querySelectorAll('.mobile-nav-link').forEach(link => {
+            link.addEventListener('click', toggleMobileMenu);
+        });
+
+        // ── Auth Check via Cookie ─────────────────────────────────────────────
+        fetch('/api/users/me')
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error('Unauthorized');
+            })
+            .then(user => {
+                // Switch nav from guest → user state
+                const btnLogin = document.getElementById('btn-login');
+                const btnDash = document.getElementById('btn-dashboard');
+                if (btnLogin) { btnLogin.classList.add('hidden'); btnLogin.classList.remove('sm:block'); }
+                if (btnDash) { btnDash.classList.remove('hidden'); btnDash.classList.add('sm:block'); }
+
+                // Populate username
+                const navName = document.getElementById('nav-username');
+                const mobileName = document.getElementById('mobile-username-display');
+                const mobileInfo = document.getElementById('mobile-user-info');
+                if (navName) { navName.innerText = user.username; navName.classList.remove('hidden'); }
+                if (mobileName) mobileName.innerText = user.username;
+                if (mobileInfo) mobileInfo.classList.remove('hidden');
+
+                // Mobile menu: show dashboard/logout, hide login
+                const mBtnLogin = document.getElementById('mobile-btn-login');
+                const mBtnDash = document.getElementById('mobile-btn-dashboard');
+                const mBtnLogout = document.getElementById('mobile-btn-logout');
+                const mBtnReports = document.getElementById('mobile-btn-reports');
+                if (mBtnLogin) mBtnLogin.classList.add('hidden');
+                if (mBtnDash) mBtnDash.classList.remove('hidden');
+                if (mBtnReports) mBtnReports.classList.remove('hidden');
+                if (mBtnLogout) mBtnLogout.classList.remove('hidden');
+            })
+            .catch(() => { /* Not logged in — default guest UI is shown */ });
     </script>
 </body>
 

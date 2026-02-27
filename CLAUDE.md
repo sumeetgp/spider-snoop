@@ -160,7 +160,38 @@ Local offline copies are loaded from `models/<model_name_with_slashes_replaced_b
 
 ### Frontend Structure (`frontend/src/`)
 
-React 19 SPA with React Router. Key tech: Tailwind CSS ("Obsidian Glass" dark theme), Lucide icons, React Dropzone for uploads, Axios for API calls, tsParticles for background animations.
+React 19 SPA with React Router v6. Tailwind CSS ("Obsidian Glass" dark theme — primary `#88FFFF` cyan on `#0D1117` bg). Lucide icons, React Dropzone, Axios, tsParticles.
+
+**Routing** (`App.jsx`):
+
+| Route | Page |
+|---|---|
+| `/` | `Home` (landing) |
+| `/login`, `/register`, `/forgot-password`, `/reset-password` | Auth pages |
+| `/dashboard` | Main dashboard |
+| `/results/:id` | Offline scan detail |
+| `/about`, `/enterprise`, `/api/docs`, `/firewall/onboarding` | Info pages |
+| `/admin/users`, `/admin/firewall` | Admin pages |
+
+**Layouts**: `LandingLayout` (landing + particles + footer) wraps public pages; `MainLayout` (Navbar + Sidebar + ParticlesBackground) wraps the dashboard.
+
+**Sidebar tracks** → each tab renders a track component inside the dashboard:
+
+| Track Component | Scanning purpose | API endpoint used |
+|---|---|---|
+| `OverviewTrack` | KPI cards, threat charts, recent activity log | `/api/dashboard/overview`, `/api/scans/` |
+| `SentinelTrack` | File Guard — malware + optional CDR "Safe Wash" | `POST /api/scans/upload_file?track=sentinel` |
+| `GuardianTrack` | DLP — docs, images, video/audio; auto-routes media to vision track | `POST /api/scans/upload_file?track=guardian` or `upload_video` |
+| `SecurityTrack` | Supply chain — package manifests, zip archives | `POST /api/security/scan` |
+| `OfflineTrack` | Async job queue for large files (>10 MB); auto-refreshes every 15 s | `/api/scans/?source=OFFLINE` |
+
+**Shared scan UI flow**: `InputZone` (drag-drop upload) → `StagingArea` (review before scan) → `ScanResults` (findings table, AI insights, threat score). `CodeSecurityReport` is a specialised results component for supply-chain CVEs with remediation links.
+
+**PipelineVisualizer**: polls `/api/scans/{id}` every 5 s and renders pipeline stage progress: `UPLOADED → MALWARE_SCANNING → EXTRACTING → CONTENT_SCANNING → AI_ANALYSIS → POLICY_EVAL → COMPLETED`.
+
+**Auth** (`hooks/useAuth.js`): fetches `/api/users/me` on mount using the token from `localStorage`; clears token and logs out on 401.
+
+**API client** (`services/api.js`): all authenticated requests send `Authorization: Bearer {token}`. `uploadFile(file, track, opts)` routes to the correct endpoint based on `track` (`sentinel`, `guardian`, `vision`, `security`). Pass `correct=true` for CDR/Safe Wash.
 
 ### Database Migrations
 

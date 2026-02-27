@@ -18,7 +18,7 @@ services:
     image: clamav/clamav:latest
     platform: linux/amd64
     ports:
-      - "3310:3310"
+      - "127.0.0.1:3310:3310"
     volumes:
       - clamav_db:/var/lib/clamav
 
@@ -32,7 +32,7 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/spider_snoop
       - OPENAI_API_KEY=${OPENAI_API_KEY}
@@ -52,7 +52,7 @@ services:
     image: redis:7-alpine
     container_name: spider-snoop-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     restart: always
 
   celery_worker:
@@ -85,7 +85,7 @@ services:
       # Mount the built React app for Nginx to serve
       - ./frontend/dist:/usr/share/nginx/html:ro
     ports:
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     depends_on:
       - api
     restart: always
@@ -93,7 +93,7 @@ services:
   opa:
     image: openpolicyagent/opa:latest
     ports:
-      - "8181:8181"
+      - "127.0.0.1:8181:8181"
     volumes:
       - ./policies:/policies
     command:

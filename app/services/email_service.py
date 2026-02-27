@@ -7,6 +7,30 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+# List of hard-bounced or false email addresses to prevent sending to and hurting sender reputation
+BLOCKED_EMAILS = {
+    "adminrolecheck123@gmail.com",
+    "enumtest123@gmail.com",
+    "example@example.com",
+    "falsecheck1771947783@gmail.com",
+    "ff31178b_1771666563_rv3a@gmail.com",
+    "ff31178b_gpr6j0@gmail.com",
+    "ff31178b_oq4zqk@gmail.com",
+    "internalcheck1771947666@spidercob.com",
+    "itamar@spidercob.com",
+    "nondev1771947741@gmail.com",
+    "nonexistent123456@spidercob.com",
+    "resetpw1771666029@example.com",
+    "resetpwtest2@example.com",
+    "resetpwtest@example.com",
+    "resetpwx1771666080@example.com",
+    "rltest_51a25a6f@example.com",
+    "tester@spidercob.com",
+    "test_ff31178b@example.com",
+    "test@test.com",
+    "viewercheck123@gmail.com"
+}
+
 class EmailService:
     """Email service for sending emails via SMTP2GO"""
     
@@ -27,8 +51,16 @@ class EmailService:
             text_body: Plain text email body (optional)
             
         Returns:
-            bool: True if email sent successfully, False otherwise
+            bool: True if email sent successfully (or silently blocked), False otherwise
         """
+        # 1. First, check against block list to prevent hard bouncing
+        if to_email.lower().strip() in BLOCKED_EMAILS:
+            logger.warning(f"Blocked email send attempt to blacklisted address: {to_email}")
+            # Silently return True so the upstream caller (e.g. forgot password route) 
+            # thinks it succeeded and doesn't reveal block status to attackers
+            return True
+            
+        # 2. Check if API key exists
         if not self.api_key:
             logger.warning("SMTP2GO_API_KEY not configured. Email not sent.")
             return False

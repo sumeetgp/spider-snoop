@@ -70,6 +70,9 @@ class ScanResponse(BaseModel):
     duration: int = 0
     aiInsight: Optional[str] = None
     compliance_alerts: List[str] = []
+    ml_model: Optional[str] = None
+    inference_time_ms: Optional[int] = None
+    all_scores: Optional[Dict[str, float]] = None
 
     @model_validator(mode='after')
     def populate_frontend_fields(self):
@@ -87,6 +90,9 @@ class ScanResponse(BaseModel):
                  if isinstance(analysis, dict):
                      self.aiInsight = analysis.get('reason')
                      self.compliance_alerts = analysis.get('compliance_alerts', [])
+                     self.ml_model = analysis.get('ml_model')
+                     self.inference_time_ms = analysis.get('inference_time_ms')
+                     self.all_scores = analysis.get('all_scores')
                      # Also try to refresh score if logic differs
                      # if 'score' in analysis: self.score = analysis['score']
              except:

@@ -33,3 +33,4 @@ class User(Base):
     # Relationships - using string references to avoid circular imports
     reset_tokens = relationship("PasswordResetToken", back_populates="user", cascade="all, delete-orphan", lazy="dynamic")
     scans = relationship("DLPScan", back_populates="user", lazy="dynamic", cascade="all, delete-orphan")
+    alert_configs = relationship("AlertConfig", back_populates="user", cascade="all, delete-orphan")

@@ -8,8 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
-    <script src="/static/js/particles.js" defer></script>
-    <script>
+    <script src="/static/js/particles.js" defer nonce="{{ nonce }}"></script>
+    <script nonce="{{ nonce }}">
         tailwind.config = {
             theme: {
                 extend: {
@@ -86,6 +86,17 @@
             letter-spacing: -0.05em;
             color: white;
         }
+
+        .btn-outline {
+            border: 1px solid #88FFFF;
+            color: #88FFFF;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline:hover {
+            background: rgba(136, 255, 255, 0.1);
+            box-shadow: 0 0 15px rgba(136, 255, 255, 0.3);
+        }
     </style>
 </head>
 
@@ -128,7 +139,7 @@
 
                 <!-- Avatar Dropdown -->
                 <div class="relative">
-                    <button onclick="document.getElementById('user-dropdown').classList.toggle('hidden')"
+                    <button id="btn-avatar-dropdown"
                         class="w-8 h-8 flex items-center justify-center bg-gray-800 rounded-full border border-gray-700 text-brand hover:text-white transition cursor-pointer focus:outline-none">
                         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                             <path
@@ -146,12 +157,12 @@
                             class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5 sm:hidden">Scan Portal</a>
                         <a href="/dashboard#settings"
                             class="block px-4 py-2 text-sm text-gray-300 hover:bg-white/5">Settings</a>
-                        <button onclick="logout()"
+                        <button id="btn-logout-desktop"
                             class="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 hover:text-red-300">Logout</button>
                     </div>
                 </div>
             </div>
-            <button onclick="toggleMobileMenu()" class="lg:hidden text-white p-2">
+            <button id="btn-mobile-menu-open" class="lg:hidden text-white p-2">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
                     </path>
@@ -167,7 +178,7 @@
             <div class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
                 <span class="text-3xl">🕸️</span><span>Spider<span class="text-brand">Cob</span></span>
             </div>
-            <button onclick="toggleMobileMenu()" class="text-gray-400 hover:text-white">
+            <button id="btn-mobile-menu-close" class="text-gray-400 hover:text-white">
                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12">
                     </path>
@@ -175,11 +186,11 @@
             </button>
         </div>
         <div class="flex flex-col gap-6 text-xl font-bold text-gray-400">
-            <a href="/#features" onclick="toggleMobileMenu()" class="hover:text-white transition">Capabilities</a>
-            <a href="/enterprise" onclick="toggleMobileMenu()" class="hover:text-white transition">Enterprise</a>
-            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
-            <a href="/icap" onclick="toggleMobileMenu()" class="hover:text-white transition">ICAP Server</a>
-            <a href="/about" onclick="toggleMobileMenu()" class="text-brand">About Us</a>
+            <a href="/#features" class="mobile-nav-link hover:text-white transition">Capabilities</a>
+            <a href="/enterprise" class="mobile-nav-link hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="mobile-nav-link hover:text-white transition">API Docs</a>
+            <a href="/icap" class="mobile-nav-link hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="mobile-nav-link text-brand">About Us</a>
             <div class="h-px bg-border my-4"></div>
             <div id="mobile-user-info" class="hidden mb-4 text-center">
                 <p class="text-[10px] uppercase tracking-widest text-gray-500">Logged in as</p>
@@ -190,7 +201,7 @@
                 PORTAL]</a>
             <a href="/dashboard#archive" id="mobile-btn-reports"
                 class="hidden text-gray-400 font-bold tracking-widest hover:text-white transition">REPORTS</a>
-            <button id="mobile-btn-logout" onclick="logout()"
+            <button id="mobile-btn-logout"
                 class="hidden text-left text-red-500 font-bold tracking-widest">[LOGOUT]</button>
         </div>
     </div>
@@ -338,97 +349,96 @@
         </div>
     </footer>
 
-    <script>
-
-        // Check Auth - Hide CTA if logged in & Update Nav
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            // Hide CTA
-            const h = document.getElementById('cta-heading');
-            const b = document.getElementById('cta-button');
-            if (h) h.style.display = 'none';
-            if (b) b.style.display = 'none';
-
-            // User is logged in - Update Nav
-            const guestSection = document.getElementById('auth-guest');
-            const userSection = document.getElementById('auth-user');
-
-            if (guestSection) {
-                guestSection.classList.add('hidden');
-                guestSection.classList.remove('sm:flex');
-            }
-            if (userSection) {
-                userSection.classList.remove('hidden');
-            }
-
-            // Legacy Button Handling (Safety)
-            const btnLogin = document.getElementById('btn-login');
-            if (btnLogin) btnLogin.classList.add('hidden');
-
-            const btnDash = document.getElementById('btn-dashboard');
-            if (btnDash) {
-                btnDash.classList.remove('hidden');
-                btnDash.classList.add('sm:block');
-            }
-
-            // Toggle Logout Button
-            const btnLogout = document.getElementById('btn-logout');
-            if (btnLogout) btnLogout.classList.remove('hidden');
-
-            // Mobile Menu Updates
-            const mBtnLogin = document.getElementById('mobile-btn-login');
-            const mBtnDash = document.getElementById('mobile-btn-dashboard');
-            const mBtnLogout = document.getElementById('mobile-btn-logout');
-            const mBtnReports = document.getElementById('mobile-btn-reports');
-
-            if (mBtnLogin) mBtnLogin.classList.add('hidden');
-            if (mBtnDash) mBtnDash.classList.remove('hidden');
-            if (mBtnReports) mBtnReports.classList.remove('hidden');
-            if (mBtnLogout) mBtnLogout.classList.remove('hidden');
-
-            // Fetch Username
-            fetch('/api/users/me', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => {
-                    if (!res.ok) throw new Error('Unauthorized');
-                    return res.json();
-                })
-                .then(user => {
-                    const navName = document.getElementById('nav-username');
-                    const mobileName = document.getElementById('mobile-username-display');
-                    const mobileInfo = document.getElementById('mobile-user-info');
-
-                    if (navName) {
-                        navName.innerText = user.username;
-                        navName.classList.remove('hidden');
-                    }
-                    if (mobileName) {
-                        mobileName.innerText = user.username;
-                    }
-                    if (mobileInfo) mobileInfo.classList.remove('hidden');
-                })
-                .catch(err => {
-                    console.warn('Session expired', err);
-                    localStorage.removeItem('access_token');
-                    window.location.reload();
-                });
-        }
-
-        function logout() {
+    <script nonce="{{ nonce }}">
+        // ── Utilities ────────────────────────────────────────────────────────
+        async function logout() {
+            try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
             localStorage.removeItem('access_token');
-            window.location.reload();
+            window.location.href = '/login';
         }
 
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
             menu.classList.toggle('hidden');
-            if (menu.classList.contains('hidden')) {
-                document.body.style.overflow = '';
-            } else {
-                document.body.style.overflow = 'hidden';
-            }
+            document.body.style.overflow = menu.classList.contains('hidden') ? '' : 'hidden';
         }
+
+        // ── Event Listeners ──────────────────────────────────────────────────
+        document.addEventListener('DOMContentLoaded', () => {
+            // Avatar dropdown toggle
+            const avatarBtn = document.getElementById('btn-avatar-dropdown');
+            if (avatarBtn) avatarBtn.addEventListener('click', () => {
+                document.getElementById('user-dropdown').classList.toggle('hidden');
+            });
+
+            // Desktop logout
+            const logoutDesktop = document.getElementById('btn-logout-desktop');
+            if (logoutDesktop) logoutDesktop.addEventListener('click', logout);
+
+            // Mobile logout
+            const logoutMobile = document.getElementById('mobile-btn-logout');
+            if (logoutMobile) logoutMobile.addEventListener('click', logout);
+
+            // Mobile menu open / close
+            const menuOpen = document.getElementById('btn-mobile-menu-open');
+            const menuClose = document.getElementById('btn-mobile-menu-close');
+            if (menuOpen) menuOpen.addEventListener('click', toggleMobileMenu);
+            if (menuClose) menuClose.addEventListener('click', toggleMobileMenu);
+
+            // Close mobile menu on nav link click
+            document.querySelectorAll('.mobile-nav-link').forEach(link => {
+                link.addEventListener('click', toggleMobileMenu);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                const dropdown = document.getElementById('user-dropdown');
+                if (dropdown && !dropdown.classList.contains('hidden') && !e.target.closest('.relative')) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        });
+
+        // ── Auth Check via Cookie ─────────────────────────────────────────────
+        fetch('/api/users/me')
+            .then(res => {
+                if (res.ok) return res.json();
+                throw new Error('Unauthorized');
+            })
+            .then(user => {
+                // Hide footer CTA for logged-in users
+                const h = document.getElementById('cta-heading');
+                const b = document.getElementById('cta-button');
+                if (h) h.style.display = 'none';
+                if (b) b.style.display = 'none';
+
+                // Switch nav: guest → user
+                const guestSection = document.getElementById('auth-guest');
+                const userSection = document.getElementById('auth-user');
+                if (guestSection) { guestSection.classList.add('hidden'); guestSection.classList.remove('sm:flex'); }
+                if (userSection) userSection.classList.remove('hidden');
+
+                // Populate username
+                const navName = document.getElementById('nav-username');
+                const dropName = document.getElementById('dropdown-username');
+                const mobileName = document.getElementById('mobile-username-display');
+                const mobileInfo = document.getElementById('mobile-user-info');
+                if (navName) { navName.innerText = user.username; navName.classList.remove('hidden'); }
+                if (dropName) dropName.innerText = user.username;
+                if (mobileName) mobileName.innerText = user.username;
+                if (mobileInfo) mobileInfo.classList.remove('hidden');
+
+                // Mobile menu: show dashboard/logout, hide login
+                const mBtnLogin = document.getElementById('mobile-btn-login');
+                const mBtnDash = document.getElementById('mobile-btn-dashboard');
+                const mBtnLogout = document.getElementById('mobile-btn-logout');
+                const mBtnReports = document.getElementById('mobile-btn-reports');
+                if (mBtnLogin) mBtnLogin.classList.add('hidden');
+                if (mBtnDash) mBtnDash.classList.remove('hidden');
+                if (mBtnReports) mBtnReports.classList.remove('hidden');
+                if (mBtnLogout) mBtnLogout.classList.remove('hidden');
+            })
+            .catch(() => { /* Not logged in — default guest UI is already shown */ });
     </script>
 </body>
 

@@ -6,8 +6,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Firewall Onboarding | SpiderCob</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono&display=swap"
         rel="stylesheet">
+    <script nonce="{{ nonce }}">
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0D1117',
+                        card: '#161B22',
+                        border: '#30363d',
+                        brand: '#88FFFF',
+                        alert: '#F85149',
+                        text: '#C9D1D9',
+                        accent: '#00E5FF'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body {
             background-color: #0D1117;
@@ -50,14 +71,22 @@
 
 <body class="min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <nav class="border-b border-[#30363d] p-6 flex justify-between items-center bg-[#0D1117] sticky top-0 z-50">
-        <div class="flex items-center gap-2 cursor-pointer" onclick="window.location.href='/'">
-            <span class="text-3xl">🕸️</span>
-            <span class="text-xl font-black tracking-tighter text-white">Spider<span
-                    class="text-[#88FFFF]">Cob</span></span>
+    <!-- Navbar -->
+    <nav class="border-b border-[#30363d] p-4 flex justify-between items-center bg-[#0D1117]/80 backdrop-blur sticky top-0 z-50">
+        <a href="/" class="flex items-center gap-2 text-2xl font-black tracking-tighter text-white">
+            <span class="text-3xl">🕸️</span><span>Spider<span class="text-[#88FFFF]">Cob</span></span>
+        </a>
+        <div class="hidden lg:flex gap-8 items-center text-sm font-bold text-gray-400">
+            <a href="/#features" class="hover:text-white transition">Capabilities</a>
+            <a href="/enterprise" class="hover:text-white transition">Enterprise</a>
+            <a href="/api/docs" class="hover:text-white transition">API Docs</a>
+            <a href="/icap" class="hover:text-white transition">ICAP Server</a>
+            <a href="/about" class="hover:text-white transition">About Us</a>
         </div>
-        <a href="/" class="text-sm font-bold text-gray-400 hover:text-white transition">BACK TO DASHBOARD</a>
+        <a href="/dashboard"
+            class="border border-[#88FFFF] text-[#88FFFF] hover:bg-[#88FFFF]/10 px-5 py-2 rounded-lg text-sm font-bold uppercase transition">
+            Dashboard
+        </a>
     </nav>
 
     <!-- Hero -->
@@ -65,7 +94,7 @@
         <div class="text-center mb-16">
             <h1 class="text-5xl font-black mb-4 hero-gradient">SECURE YOUR LLM TRAFFIC</h1>
             <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-                Integrate SpiderCob's **AI Firewall** in 2 minutes. Protect against PII leaks, block unauthorized
+                Integrate SpiderCob's <strong>AI Firewall</strong> in 2 minutes. Protect against PII leaks, block unauthorized
                 models, and audit every prompt.
             </p>
         </div>

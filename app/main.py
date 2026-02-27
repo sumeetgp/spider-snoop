@@ -11,7 +11,9 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.database import Base, engine
-from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise, proxy
+from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise, proxy, metrics, alerts
+from app.routes import bulk_scans
+from app.routes import export as export_routes
 from app.icap_server import ICAPServer
 from app.models.user import User
 from app.models.audit import ProxyLog
@@ -262,6 +264,10 @@ app.include_router(cdr.router)
 app.include_router(code_security.router)
 app.include_router(enterprise.router)
 app.include_router(proxy.router, prefix="/v1/proxy", tags=["AI Firewall"])
+app.include_router(metrics.router)
+app.include_router(alerts.router)
+app.include_router(bulk_scans.router)
+app.include_router(export_routes.router)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -323,7 +329,7 @@ async def firewall_onboarding(request: Request):
     # Replace host placeholder with actual host from request
     host_url = request.headers.get("host", "localhost:8000")
     html_content = html_content.replace("{{ host_url }}", host_url)
-    
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
     return HTMLResponse(content=html_content)
 @app.get("/register", response_class=HTMLResponse)
 async def register_page(request: Request):
@@ -338,22 +344,26 @@ async def register_page(request: Request):
     return HTMLResponse(content=html_content)
 
 @app.get("/about", response_class=HTMLResponse)
-async def about_page():
+async def about_page(request: Request):
     """About Us page"""
     template_path = Path("app/templates/about.html")
     if not template_path.exists():
         return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
     with open(template_path, "r") as f:
-        return f.read()
+        html_content = f.read()
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/enterprise", response_class=HTMLResponse)
-async def enterprise_page():
+async def enterprise_page(request: Request):
     """Enterprise page"""
     template_path = Path("app/templates/enterprise.html")
     if not template_path.exists():
         return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
     with open(template_path, "r") as f:
-        return f.read()
+        html_content = f.read()
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/api/docs", response_class=HTMLResponse)
 async def api_docs_page(request: Request):

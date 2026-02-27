@@ -1,13 +1,34 @@
 """DLP Engine - Core scanning logic"""
+import collections
 import logging
+import math
 import re
 import asyncio
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Tuple
 from datetime import datetime
 import openai
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+from app.core.detection_metrics import metrics as _metrics
+
+# ── Medical document signals ───────────────────────────────────────────────
+# Used by _classify_document_type() to detect HIPAA-scope medical records.
+_MEDICAL_DOC_KEYWORDS = [
+    "patient", "diagnosis", "physician", "doctor", "hospital", "clinic",
+    "medication", "prescription", "treatment", "lab result", "lab report",
+    "icd", "cpt", "npi", "medical record", "discharge summary", "radiology",
+    "pathology", "vitals", "blood pressure", "heart rate", "respiratory rate",
+    "chief complaint", "history of present illness", "assessment and plan",
+    "specimen", "laboratory", "pharmacy", "prior authorization",
+    "attending physician", "admitting diagnosis", "health information",
+    "medical history", "allergies", "immunization", "vaccine", "dosage",
+    "progress note", "operative report", "procedure note", "mrn",
+]
+
+# Financial patterns that may produce false positives inside medical documents
+_FINANCIAL_TYPES = {"bank_account", "routing_number"}
 
 
 def _mask_value(ptype: str, value: str) -> str:
@@ -80,17 +101,18 @@ class DLPEngine:
 
     async def scan(self, content: str, use_ai: bool = True, file_path: str = None, force_ai: bool = False, skip_regex: bool = False, secrets_only: bool = False, skip_presidio: bool = False, raw_prompt: bool = False) -> Dict[str, Any]:
         """Perform DLP scan on content"""
+        import time as _time
         start_time = datetime.utcnow()
-        
+        _scan_t0 = _time.monotonic()
+
         # 1. Regex Matcher
         scan_results = {}
         if not skip_regex:
-            # Pass secrets_only flag if enabled
             scan_results = self.matcher.scan(content, secrets_only=secrets_only)
-        
+
         findings = []
         risk_level = "LOW"
-        
+
         # Flatten findings from the matcher
         for severity, items in scan_results.items():
             for item in items:
@@ -105,71 +127,258 @@ class DLPEngine:
                     'validated': True,
                     'context_score': ctx_score,
                 })
-                
+
                 # Update overall risk level for Regex
                 if severity == "CRITICAL":
                     risk_level = "CRITICAL"
                 elif severity == "HIGH" and risk_level != "CRITICAL":
                     risk_level = "HIGH"
-                elif severity == "MEDIUM" and risk_level in ["LOW", "INFO", "low", "info"]: # keep lowercase check for safety
+                elif severity == "MEDIUM" and risk_level in ["LOW", "INFO", "low", "info"]:
                     risk_level = "MEDIUM"
 
-        # 2. Presidio NER (Contextual)
-        # Truncate to PRESIDIO_MAX_CONTENT_CHARS to cap transformer inference time.
-        # Run in a thread so the CPU-bound NER doesn't block the async event loop.
-        if self.presidio.enabled and not skip_presidio:
-            presidio_findings = await asyncio.to_thread(
-                self.presidio.scan, content[:settings.PRESIDIO_MAX_CONTENT_CHARS]
-            )
-            for pf in presidio_findings:
-                pf_conf = round(float(pf.get('score', 0.5)), 4)
-                # Add to findings list
-                findings.append({
-                    'type': pf['type'],
-                    'value': _mask_value(pf['type'], pf.get('value', '')),
-                    'matches': [pf.get('value', '')],
-                    'count': 1,
-                    'severity': pf['severity'],
-                    'confidence': pf_conf,
-                    'validated': False,
-                    'context_score': pf_conf,
-                    'metadata': {'score': pf['score']}
-                })
-                
-                # Update risk level based on Presidio
-                if pf['severity'] == "CRITICAL":
-                    risk_level = "CRITICAL"
-                elif pf['severity'] == "HIGH" and risk_level != "CRITICAL":
-                    risk_level = "HIGH"
-                elif pf['severity'] == "MEDIUM" and risk_level in ["LOW", "INFO", "low", "info"]:
-                     risk_level = "MEDIUM"
+        # 1b. Entropy sweep — fast (~1–3 ms), feeds the Presidio pre-filter
+        entropy_result = self._entropy_sweep(content)
 
-        # AI-based detection (optional)
-        ai_verdict = None
-        logger.debug(f"Checking AI Trigger. use_ai={use_ai}, has_key={bool(settings.OPENAI_API_KEY)}, findings={len(findings)}, force_ai={force_ai}")
-        
-        if use_ai and (settings.OPENAI_API_KEY or settings.USE_LOCAL_ML) and (findings or force_ai or raw_prompt):
-            logger.debug("Triggering AI Analysis...")
-            if getattr(settings, 'USE_LANGCHAIN_CISO', False) and not raw_prompt:
-                ai_verdict = await self._ai_analyze_ciso_langchain(content, file_path)
+        # 2. Presidio NER (Contextual) — gated by pre-filter
+        pf_presidio_skipped = False
+        if self.presidio.enabled and not skip_presidio:
+            run_presidio, presidio_gate_reason = self._should_run_presidio(findings, entropy_result)
+            if run_presidio:
+                presidio_findings = await asyncio.to_thread(
+                    self.presidio.scan, content[:settings.PRESIDIO_MAX_CONTENT_CHARS]
+                )
+                for pf in presidio_findings:
+                    pf_conf = round(float(pf.get('score', 0.5)), 4)
+                    findings.append({
+                        'type': pf['type'],
+                        'value': _mask_value(pf['type'], pf.get('value', '')),
+                        'matches': [pf.get('value', '')],
+                        'count': 1,
+                        'severity': pf['severity'],
+                        'confidence': pf_conf,
+                        'validated': False,
+                        'context_score': pf_conf,
+                        'metadata': {'score': pf['score']}
+                    })
+
+                    # Update risk level based on Presidio
+                    if pf['severity'] == "CRITICAL":
+                        risk_level = "CRITICAL"
+                    elif pf['severity'] == "HIGH" and risk_level != "CRITICAL":
+                        risk_level = "HIGH"
+                    elif pf['severity'] == "MEDIUM" and risk_level in ["LOW", "INFO", "low", "info"]:
+                        risk_level = "MEDIUM"
             else:
-                ai_verdict = await self._ai_analyze(content, findings, raw_prompt=raw_prompt)
-            logger.debug(f"AI Analysis Complete. Verdict: {ai_verdict.get('verdict') if ai_verdict else 'None'}")
-        
+                pf_presidio_skipped = True
+                _metrics.inc_rejection("pre_filter_presidio_skip")
+                logger.debug(f"Pre-filter: Presidio skipped ({presidio_gate_reason})")
+
+        # Document-type classification (medical vs general)
+        doc_classification = self._classify_document_type(content)
+
+        # In medical documents, re-label low-confidence financial hits as
+        # patient/provider IDs — bank_account and routing_number patterns
+        # frequently fire on NPI numbers, patient account numbers, and
+        # insurance IDs that are structurally identical to financial numbers.
+        if doc_classification["is_medical"]:
+            relabeled = 0
+            def _relabel_financial(f: dict) -> dict:
+                nonlocal relabeled
+                if (f["type"] in _FINANCIAL_TYPES
+                        and f.get("context_score", 0.5) < 0.45):
+                    relabeled += 1
+                    _metrics.inc_rejection("medical_relabel")
+                    _metrics.log_fp_sample(
+                        reason="medical_relabel",
+                        entity_type=f["type"],
+                        masked_value=f.get("value", ""),
+                        context_snippet=f.get("context", "")[:200],
+                        extra={"relabeled_to": "medical_patient_id",
+                               "doc_confidence": doc_classification["confidence"]},
+                    )
+                    f = dict(f)
+                    f["type"]        = "medical_patient_id"
+                    f["description"] = "Patient/Provider ID (Medical Context)"
+                    f["severity"]    = "MEDIUM"
+                return f
+            findings = [_relabel_financial(f) for f in findings]
+            logger.debug(
+                f"Medical document detected (signals={doc_classification['signals']},"
+                f" conf={doc_classification['confidence']}, relabeled={relabeled})"
+            )
+
+        # AI-based detection — gated by pre-filter
+        ai_verdict = None
+        pf_ai_skipped = False
+
+        if use_ai and (settings.OPENAI_API_KEY or settings.USE_LOCAL_ML):
+            # raw_prompt and force_ai always bypass the pre-filter
+            if raw_prompt or force_ai:
+                run_ai, ai_gate_reason = True, "forced"
+            else:
+                run_ai, ai_gate_reason = self._should_run_ai(findings)
+
+            logger.debug(
+                f"AI pre-filter: run={run_ai} reason={ai_gate_reason} "
+                f"findings={len(findings)} force={force_ai}"
+            )
+
+            if run_ai:
+                _ai_t0 = _time.monotonic()
+                if getattr(settings, 'USE_LANGCHAIN_CISO', False) and not raw_prompt:
+                    ai_verdict = await self._ai_analyze_ciso_langchain(content, file_path)
+                else:
+                    ai_verdict = await self._ai_analyze(content, findings, raw_prompt=raw_prompt)
+                _metrics.record_timing("ai", (_time.monotonic() - _ai_t0) * 1000)
+                logger.debug(f"AI Analysis Complete. Verdict: {ai_verdict.get('verdict') if ai_verdict else 'None'}")
+            else:
+                pf_ai_skipped = True
+                _metrics.inc_rejection("pre_filter_ai_skip")
+                logger.debug(f"Pre-filter: AI skipped ({ai_gate_reason})")
+
         # Calculate duration
         duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
-        
+        _metrics.record_timing("scan_total", (_time.monotonic() - _scan_t0) * 1000)
+
         # Generate verdict
-        verdict = self._generate_verdict(findings, ai_verdict)
-        
+        verdict = self._generate_verdict(findings, ai_verdict, doc_classification)
+
         return {
             'risk_level': risk_level,
             'findings': findings,
             'verdict': verdict,
             'ai_analysis': ai_verdict,
             'scan_duration_ms': duration_ms,
-            'scanned_at': datetime.utcnow().isoformat()
+            'scanned_at': datetime.utcnow().isoformat(),
+            'doc_type': doc_classification["doc_type"],
+            'pre_filter': {
+                'presidio_skipped': pf_presidio_skipped,
+                'ai_skipped': pf_ai_skipped,
+                'entropy': entropy_result,
+            },
         }
+
+    def _classify_document_type(self, content: str) -> dict:
+        """
+        Detect if a document is a HIPAA-scope medical record by keyword density.
+
+        Returns:
+            doc_type    – "MEDICAL_RECORD" or "GENERAL"
+            is_medical  – True when >= 3 medical signals are found
+            confidence  – 0.0–1.0 (hits / 8 saturates at 1.0)
+            signals     – count of matched medical keywords
+        """
+        content_lower = content.lower()
+        hits = [kw for kw in _MEDICAL_DOC_KEYWORDS if kw in content_lower]
+        is_medical = len(hits) >= 3
+        return {
+            "doc_type": "MEDICAL_RECORD" if is_medical else "GENERAL",
+            "is_medical": is_medical,
+            "confidence": round(min(1.0, len(hits) / 8), 2),
+            "signals": len(hits),
+        }
+
+    # ── Pre-filter helpers ────────────────────────────────────────────────────
+
+    def _entropy_sweep(self, content: str) -> dict:
+        """
+        Lightweight content-level entropy sweep (~1–3 ms).
+
+        Checks words ≥ 16 chars for high Shannon-entropy regions that may
+        indicate embedded secrets even when no regex pattern matched.
+        Stops early after finding 2 suspicious tokens to keep latency flat
+        on large documents.
+
+        Returns:
+            suspicious_word_count  – tokens with entropy ≥ 3.5
+            max_entropy            – highest entropy found
+            has_suspicious_content – True when at least 1 suspicious token seen
+        """
+        _THRESHOLD = 3.5
+        _MIN_LEN   = 16
+        _MAX_WORDS = 2000   # cap iteration on huge docs
+        suspicious = 0
+        max_ent    = 0.0
+
+        for i, word in enumerate(content.split()):
+            if i >= _MAX_WORDS:
+                break
+            clean = word.strip('"\'`;:,.()')
+            if len(clean) < _MIN_LEN:
+                continue
+            counter = collections.Counter(clean)
+            n = len(clean)
+            ent = -sum((c / n) * math.log2(c / n) for c in counter.values())
+            if ent > max_ent:
+                max_ent = ent
+            if ent >= _THRESHOLD:
+                suspicious += 1
+                if suspicious >= 2:   # enough evidence — stop scanning
+                    break
+
+        return {
+            "suspicious_word_count": suspicious,
+            "max_entropy": round(max_ent, 3),
+            "has_suspicious_content": suspicious > 0,
+        }
+
+    def _should_run_presidio(self, regex_findings: list, entropy: dict) -> Tuple[bool, str]:
+        """
+        Gate: decide whether the expensive Presidio NER transformer should run.
+
+        Skips when:
+          - Regex found no CRITICAL/HIGH signals
+          - AND entropy sweep detected no suspicious high-entropy strings
+          - AND fewer than 3 medium-severity regex findings (aggregation check)
+
+        Returns (should_run, reason_str).
+        """
+        # Regex found CRITICAL or HIGH signals → deeper NER always useful
+        if any(f["severity"] in ("CRITICAL", "HIGH") for f in regex_findings):
+            return True, "regex_critical_or_high"
+
+        # Content contains high-entropy strings regex may have missed
+        if entropy["has_suspicious_content"]:
+            return True, "entropy_suspicious"
+
+        # Multiple medium-severity hits → aggregation risk worth checking
+        if len(regex_findings) >= 3:
+            return True, "multiple_regex_findings"
+
+        return False, "pre_filter_clean"
+
+    def _should_run_ai(self, findings: list) -> Tuple[bool, str]:
+        """
+        Gate: decide whether the heavy AI analysis stage should run.
+
+        Runs AI when any of these conditions hold:
+          1. CRITICAL severity finding present
+          2. HIGH finding with context_score ≥ 0.5
+          3. ≥ 3 distinct entity types (aggregation risk)
+          4. Cumulative entity score ≥ incident_threshold
+
+        Returns (should_run, reason_str).
+        """
+        if not findings:
+            return False, "no_findings"
+
+        severities = {f["severity"] for f in findings}
+
+        if "CRITICAL" in severities:
+            return True, "critical_finding"
+
+        if any(f["severity"] == "HIGH" and f.get("context_score", 0) >= 0.5
+               for f in findings):
+            return True, "high_confidence_finding"
+
+        if len({f["type"] for f in findings}) >= 3:
+            return True, "multiple_entity_types"
+
+        from app.core.scoring_config import score_findings, get_incident_threshold
+        if score_findings(findings) >= get_incident_threshold():
+            return True, "score_above_incident_threshold"
+
+        return False, "pre_filter_passed"
 
     def redact(self, content: str) -> str:
         """
@@ -748,9 +957,9 @@ class DLPEngine:
         
         return {"verdict": verdict, "score": score, "category": category, "reason": reason, "compliance_alerts": compliance_alerts, "remediation": remediation}
 
-    def _generate_verdict(self, findings: List[Dict], ai_verdict: Any = None) -> str:
+    def _generate_verdict(self, findings: List[Dict], ai_verdict: Any = None, doc_classification: dict = None) -> str:
         """Generate human-readable verdict"""
-        
+
         # 1. Calculate Findings Summary first (User prefers this text)
         findings_text = ""
         finding_types = []
@@ -781,6 +990,10 @@ class DLPEngine:
             status = "BLOCK"
         
         # 3. Construct Final String
+        doc_label = ""
+        if doc_classification and doc_classification.get("is_medical"):
+            doc_label = "[MEDICAL RECORD] "
+
         if findings:
              if status == "BLOCK":
                  prefix = "Critical sensitive data detected"
@@ -788,14 +1001,16 @@ class DLPEngine:
                  prefix = "Potentially sensitive data detected"
              else: # ALLOW
                  prefix = "Low-risk data detected (Allowed)"
-             
-             return f"{status}: {prefix} - {findings_text}"
-        
+
+             return f"{status}: {doc_label}{prefix} - {findings_text}"
+
         # 4. Fallback to AI Reason
         if ai_verdict and isinstance(ai_verdict, dict):
-            return f"{status}: {ai_verdict.get('reason', 'AI Assessment')}"
+            return f"{status}: {doc_label}{ai_verdict.get('reason', 'AI Assessment')}"
 
         if not findings:
+            if doc_label:
+                return f"ALLOW: {doc_label}No sensitive data detected"
             return "ALLOW: No sensitive data detected"
-            
-        return f"{status}: Check findings"
+
+        return f"{status}: {doc_label}Check findings"

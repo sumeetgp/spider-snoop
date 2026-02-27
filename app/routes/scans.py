@@ -8,6 +8,7 @@ from datetime import datetime
 from werkzeug.utils import secure_filename
 
 from app.database import get_db
+from app.core.scoring_config import score_findings, normalize_score
 from app.models.user import User, UserRole
 from app.models.scan import DLPScan, ScanStatus
 from app.schemas.scan import ScanCreate, ScanResponse, ScanStats
@@ -70,26 +71,8 @@ async def create_scan(
         db_scan.findings = result['findings']
         db_scan.verdict = result['verdict']
         
-        # Calculate Threat Score
-        # Calculate Threat Score
-        base_score = 0
-        risk_str = str(result['risk_level']).upper()
-        
-        if "CRITICAL" in risk_str: base_score = 90
-        elif "HIGH" in risk_str: base_score = 75
-        elif "MEDIUM" in risk_str: base_score = 45
-        elif "LOW" in risk_str: base_score = 10
-        
-        # Adjust based on findings count (simple logic)
-        score = base_score + (len(result['findings']) * 2)
-        db_scan.threat_score = min(score, 100) # We might need to add this column to DB or just return it in schema if computed. 
-        # Wait, the SCHEMA has it, but the MODEL (DB) doesn't have it yet. 
-        # For now, to avoid DB migration in this step if user didn't ask for DB change explicitly but "shape project", 
-        # I should probably just return it in the API response or add to DB.
-        # Given "Reshape project", I should assume I can update I will add it to DB in a separate step if needed, 
-        # OR I can just map it in the Pydantic model if I compute it on the fly. 
-        # But `ScanResponse` expects it. 
-        # Let's check `app/models/scan.py` first. 
+        # Threat score driven by entity weights config
+        db_scan.threat_score = normalize_score(score_findings(result['findings']))
         
         if result.get('ai_analysis'):
             import json
@@ -99,13 +82,19 @@ async def create_scan(
         
         db.commit()
         db.refresh(db_scan)
-        
+
+        # Fire alerts (non-blocking)
+        if current_user and result.get('risk_level') in ('HIGH', 'CRITICAL'):
+            from app.core.alerting import fire_alerts as _fire_alerts
+            import asyncio
+            asyncio.create_task(_fire_alerts(result, current_user.id, db_scan.id, db))
+
     except Exception as e:
         db_scan.status = ScanStatus.FAILED
         db_scan.verdict = f"Scan failed: {str(e)}"
         db.commit()
         db.refresh(db_scan)
-    
+
     return db_scan
 
 @router.post("/upload_file", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
@@ -507,14 +496,8 @@ async def upload_file(
         if result.get('ai_analysis') and 'score' in result['ai_analysis']:
              raw_score = result['ai_analysis']['score']
         
-        finding_severities = [f.get('severity', 'UNKNOWN').upper() for f in result['findings']]
-        min_score = 0
-        if "CRITICAL" in finding_severities: min_score = 95
-        elif "HIGH" in finding_severities: min_score = 80
-        elif "MEDIUM" in finding_severities: min_score = 50
-        elif "LOW" in finding_severities: min_score = 25
-        
-        final_score = max(raw_score, min_score)
+        entity_score = normalize_score(score_findings(result['findings']))
+        final_score = max(raw_score, entity_score)
         
         # Force high score if verdict is concerning but findings missing (e.g. text extraction error)
         if "error" in str(result.get('verdict', '')).lower() or "suspicious" in str(result.get('verdict', '')).lower():
@@ -645,10 +628,16 @@ async def upload_file(
              
         # Fields already set above (threat_score, scan_duration_ms)
         db_scan.completed_at = datetime.utcnow()
-        
+
         db.commit()
         db.refresh(db_scan)
-        
+
+        # Fire alerts (non-blocking)
+        if current_user and result.get('risk_level') in ('HIGH', 'CRITICAL'):
+            from app.core.alerting import fire_alerts as _fire_alerts
+            import asyncio
+            asyncio.create_task(_fire_alerts(result, current_user.id, db_scan.id, db))
+
     except HTTPException:
         raise
     except Exception as e:
@@ -830,17 +819,8 @@ async def upload_video(
         db_scan.findings = result['findings']
         db_scan.verdict = result['verdict']
         
-        # Calculate Threat Score
-        # Calculate Threat Score
-        base_score = 0
-        risk_str = str(result['risk_level']).upper()
-        
-        if "CRITICAL" in risk_str: base_score = 90
-        elif "HIGH" in risk_str: base_score = 75
-        elif "MEDIUM" in risk_str: base_score = 45
-        elif "LOW" in risk_str: base_score = 10
-        score = base_score + (len(result['findings']) * 2)
-        db_scan.threat_score = min(score, 100)
+        # Threat score driven by entity weights config
+        db_scan.threat_score = normalize_score(score_findings(result['findings']))
         
         if result.get('ai_analysis'):
             import json

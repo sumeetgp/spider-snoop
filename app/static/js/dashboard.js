@@ -72,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('nav-vision').addEventListener('click', () => showTrack('vision'));
     document.getElementById('nav-security').addEventListener('click', () => showTrack('security'));
     document.getElementById('nav-firewall').addEventListener('click', () => showFirewall());
+    const navMetricsBtn = document.getElementById('nav-metrics');
+    if (navMetricsBtn) navMetricsBtn.addEventListener('click', () => showMetrics());
 
     // Refresh Logic
     const btnRefreshFirewall = document.getElementById('btnRefreshFirewall');
@@ -262,6 +264,8 @@ async function setupAuth() {
                 if (navUsers) navUsers.classList.remove('hidden');
                 const navFirewall = document.getElementById('nav-firewall');
                 if (navFirewall) navFirewall.classList.remove('hidden');
+                const navMetrics = document.getElementById('nav-metrics');
+                if (navMetrics) navMetrics.classList.remove('hidden');
             }
 
             // Enable Credits Widget
@@ -392,6 +396,8 @@ function showTrack(trackId) {
     if (usersView) usersView.classList.add('hidden');
     const firewallView = document.getElementById('firewallView');
     if (firewallView) firewallView.classList.add('hidden');
+    const metricsView = document.getElementById('metricsView');
+    if (metricsView) metricsView.classList.add('hidden');
 
     document.getElementById('inputZone').classList.remove('hidden');
 
@@ -416,6 +422,8 @@ async function showArchive() {
     document.getElementById('resultsView').classList.add('hidden');
     const usersView = document.getElementById('usersView');
     if (usersView) usersView.classList.add('hidden');
+    const metricsView2 = document.getElementById('metricsView');
+    if (metricsView2) metricsView2.classList.add('hidden');
     document.getElementById('archiveView').classList.remove('hidden');
 
     // Fetch Data
@@ -1796,6 +1804,228 @@ function hideAllViews() {
     const firewallView = document.getElementById('firewallView');
     if (firewallView) firewallView.classList.add('hidden');
 }
+
+// ── METRICS VIEW ─────────────────────────────────────────────────────────────
+
+let _metricsRefreshTimer = null;
+
+async function showMetrics() {
+    currentTrack = 'metrics';
+
+    // Nav highlight
+    setActiveNav('nav-metrics');
+
+    // Header
+    document.getElementById('trackTitle').textContent = 'DETECTION METRICS';
+    document.getElementById('trackDesc').textContent = 'Live telemetry · inference latency · false positive samples';
+
+    // Hide all other views
+    document.getElementById('inputZone').classList.add('hidden');
+    document.getElementById('resultsView').classList.add('hidden');
+    document.getElementById('archiveView').classList.add('hidden');
+    const usersView = document.getElementById('usersView');
+    if (usersView) usersView.classList.add('hidden');
+    const firewallView = document.getElementById('firewallView');
+    if (firewallView) firewallView.classList.add('hidden');
+
+    document.getElementById('metricsView').classList.remove('hidden');
+
+    // Wire buttons (idempotent — use replaceWith trick to remove old listeners)
+    const btnRefresh = document.getElementById('btnRefreshMetrics');
+    const btnReset   = document.getElementById('btnResetMetrics');
+    const btnFp      = document.getElementById('btnLoadFpSamples');
+
+    btnRefresh.onclick = () => fetchMetricsSnapshot();
+    btnReset.onclick   = () => resetMetrics();
+    btnFp.onclick      = () => fetchFpSamples();
+
+    // Auto-refresh every 30s
+    if (_metricsRefreshTimer) clearInterval(_metricsRefreshTimer);
+    _metricsRefreshTimer = setInterval(() => {
+        if (currentTrack === 'metrics') fetchMetricsSnapshot();
+        else clearInterval(_metricsRefreshTimer);
+    }, 30000);
+
+    await fetchMetricsSnapshot();
+}
+
+async function fetchMetricsSnapshot() {
+    try {
+        const res = await fetch('/api/metrics');
+        if (!res.ok) { console.error('Metrics fetch failed', res.status); return; }
+        const data = await res.json();
+        renderMetrics(data);
+    } catch (e) {
+        console.error('fetchMetricsSnapshot error', e);
+    }
+}
+
+function renderMetrics(d) {
+    const ent = d.entities || {};
+
+    // KPIs
+    document.getElementById('mKpiDetected').textContent  = (ent.detected_total  ?? 0).toLocaleString();
+    document.getElementById('mKpiValidated').textContent = (ent.after_validation ?? 0).toLocaleString();
+    const rejected = (ent.detected_total ?? 0) - (ent.after_validation ?? 0);
+    document.getElementById('mKpiRejected').textContent  = Math.max(0, rejected).toLocaleString();
+    document.getElementById('mKpiFpBuffer').textContent  = (d.false_positive_buffer_size ?? 0).toLocaleString();
+    document.getElementById('metricsLastUpdated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+    // Model Latency bars
+    const latency = d.avg_inference_ms || {};
+    const latencyEl = document.getElementById('mLatencyBars');
+    const models = Object.entries(latency).sort((a, b) => b[1] - a[1]);
+    const maxLatency = models.length ? models[0][1] : 1;
+    latencyEl.innerHTML = models.length === 0 ? '<p class="text-xs text-gray-600 font-mono">No timing data yet</p>' :
+        models.map(([model, ms]) => {
+            const pct = Math.min(100, (ms / Math.max(maxLatency, 1)) * 100).toFixed(1);
+            const color = ms > 1000 ? 'bg-red-500' : ms > 300 ? 'bg-yellow-400' : 'bg-brand';
+            return `<div class="flex items-center gap-3">
+                <span class="text-xs font-mono text-gray-400 w-28 shrink-0">${model}</span>
+                <div class="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="${color} h-full rounded-full transition-all duration-500" style="width:${pct}%"></div>
+                </div>
+                <span class="text-xs font-mono text-white w-16 text-right">${ms.toFixed(1)} ms</span>
+            </div>`;
+        }).join('');
+
+    // Rejection breakdown
+    const rejMap = ent.rejection_breakdown || {};
+    const rejEl  = document.getElementById('mRejectionBars');
+    const rejEntries = Object.entries(rejMap).sort((a, b) => b[1] - a[1]);
+    const rejMax = rejEntries.length ? rejEntries[0][1] : 1;
+    const rejColors = {
+        validator_rejection:    'bg-red-500',
+        entropy_rejection:      'bg-yellow-400',
+        context_gate_rejection: 'bg-blue-400',
+        medical_relabel:        'bg-purple-400',
+        pre_filter_presidio:    'bg-gray-400',
+        pre_filter_ai:          'bg-gray-500',
+    };
+    rejEl.innerHTML = rejEntries.length === 0 ? '<p class="text-xs text-gray-600 font-mono">No rejections recorded</p>' :
+        rejEntries.map(([reason, count]) => {
+            const pct = Math.min(100, (count / Math.max(rejMax, 1)) * 100).toFixed(1);
+            const clr = rejColors[reason] || 'bg-gray-400';
+            return `<div class="flex items-center gap-3">
+                <span class="text-[10px] font-mono text-gray-400 w-40 shrink-0 truncate">${reason}</span>
+                <div class="flex-1 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="${clr} h-full rounded-full" style="width:${pct}%"></div>
+                </div>
+                <span class="text-xs font-mono text-white w-10 text-right">${count}</span>
+            </div>`;
+        }).join('');
+
+    // By Source
+    const srcMap = d.by_source || {};
+    const srcEl  = document.getElementById('mSourceBars');
+    const srcEntries = Object.entries(srcMap).sort((a, b) => (b[1].detected||0) - (a[1].detected||0));
+    const srcMax = srcEntries.reduce((m, [, v]) => Math.max(m, v.detected||0), 1);
+    srcEl.innerHTML = srcEntries.length === 0 ? '<p class="text-xs text-gray-600 font-mono">No source data yet</p>' :
+        srcEntries.map(([src, counts]) => {
+            const det = counts.detected || 0;
+            const val = counts.validated || 0;
+            const pct = Math.min(100, (det / srcMax) * 100).toFixed(1);
+            return `<div class="flex items-center gap-3">
+                <span class="text-xs font-mono text-gray-400 w-16 shrink-0 capitalize">${src}</span>
+                <div class="flex-1 h-2 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="bg-brand h-full rounded-full" style="width:${pct}%"></div>
+                </div>
+                <span class="text-xs font-mono text-gray-400">${val}/${det}</span>
+            </div>`;
+        }).join('');
+
+    // Per-entity table
+    const byType = d.by_type || {};
+    const rows = Object.entries(byType).sort((a, b) => (b[1].detected||0) - (a[1].detected||0));
+    const tbody = document.getElementById('mEntityTableBody');
+    if (rows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="py-6 text-center text-gray-600 font-mono text-xs">No entity data yet</td></tr>';
+    } else {
+        tbody.innerHTML = rows.map(([type, info]) => {
+            const det = info.detected || 0;
+            const val = info.validated || 0;
+            const rate = det > 0 ? Math.round((val / det) * 100) : 0;
+            const rateColor = rate >= 80 ? 'text-brand' : rate >= 50 ? 'text-yellow-400' : 'text-red-400';
+            const sources = Object.keys(info.by_source || {}).join(', ') || '—';
+            return `<tr class="hover:bg-gray-800/30 transition">
+                <td class="py-2 pr-4 font-mono text-xs text-gray-300">${type}</td>
+                <td class="py-2 pr-4 text-right font-mono">${det.toLocaleString()}</td>
+                <td class="py-2 pr-4 text-right font-mono text-brand">${val.toLocaleString()}</td>
+                <td class="py-2 pr-4 text-right font-mono ${rateColor}">${rate}%</td>
+                <td class="py-2 text-right text-[10px] text-gray-500">${sources}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Populate entity type filter dropdown for FP samples
+    const fpEntityFilter = document.getElementById('fpEntityFilter');
+    const existingTypes = new Set(Array.from(fpEntityFilter.options).map(o => o.value));
+    rows.forEach(([type]) => {
+        if (!existingTypes.has(type)) {
+            const opt = document.createElement('option');
+            opt.value = type;
+            opt.textContent = type;
+            fpEntityFilter.appendChild(opt);
+        }
+    });
+}
+
+async function fetchFpSamples() {
+    const reason = document.getElementById('fpReasonFilter').value;
+    const entityType = document.getElementById('fpEntityFilter').value;
+    let url = '/api/metrics/false-positives?limit=50';
+    if (reason) url += `&reason=${encodeURIComponent(reason)}`;
+    if (entityType) url += `&entity_type=${encodeURIComponent(entityType)}`;
+
+    try {
+        const res = await fetch(url);
+        if (!res.ok) { console.error('FP fetch failed', res.status); return; }
+        const data = await res.json();
+        renderFpSamples(data.samples || []);
+    } catch (e) {
+        console.error('fetchFpSamples error', e);
+    }
+}
+
+function renderFpSamples(samples) {
+    const tbody = document.getElementById('mFpTableBody');
+    if (samples.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="py-6 text-center text-gray-600 font-mono">No samples found</td></tr>';
+        return;
+    }
+    const reasonColors = {
+        validator_rejection:    'text-red-400',
+        entropy_rejection:      'text-yellow-400',
+        context_gate_rejection: 'text-blue-400',
+        medical_relabel:        'text-purple-400',
+    };
+    tbody.innerHTML = samples.map(s => {
+        const clr = reasonColors[s.reason] || 'text-gray-400';
+        const snippet = (s.context_snippet || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<tr class="hover:bg-gray-800/30 transition">
+            <td class="py-2 pr-4 font-mono ${clr} whitespace-nowrap">${s.reason || '—'}</td>
+            <td class="py-2 pr-4 font-mono text-gray-300 whitespace-nowrap">${s.entity_type || '—'}</td>
+            <td class="py-2 pr-4 font-mono text-brand whitespace-nowrap">${s.masked_value || '—'}</td>
+            <td class="py-2 text-gray-500 text-[10px] max-w-xs truncate" title="${snippet}">${snippet || '—'}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function resetMetrics() {
+    if (!confirm('Reset all detection metrics counters and FP buffer? This cannot be undone.')) return;
+    try {
+        const res = await fetch('/api/metrics/reset', { method: 'POST' });
+        if (res.ok) {
+            await fetchMetricsSnapshot();
+            document.getElementById('mFpTableBody').innerHTML =
+                '<tr><td colspan="4" class="py-6 text-center text-gray-600 font-mono">Buffer cleared — click LOAD to refresh</td></tr>';
+        }
+    } catch (e) {
+        console.error('resetMetrics error', e);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 function setActiveNav(activeId) {
     document.querySelectorAll('aside nav button').forEach(b => {
