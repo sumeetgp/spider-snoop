@@ -9,7 +9,8 @@ from app.utils import limiter
 from app.utils import limiter as limiter_module
 from app.database import get_db
 from app.utils.auth import get_current_active_user
-from unittest.mock import MagicMock
+from app.routes.scans import get_dlp_engine
+from unittest.mock import MagicMock, AsyncMock
 
 # Mock User class
 class MockUser:
@@ -33,7 +34,7 @@ def override_get_db():
         db = MagicMock()
         db.add = MagicMock()
         db.commit = MagicMock()
-        
+
         def fake_refresh(obj):
             obj.id = 123
             obj.created_at = datetime.utcnow()
@@ -45,24 +46,29 @@ def override_get_db():
             if not hasattr(obj, 'verdict'): obj.verdict = "Safe"
             if not hasattr(obj, 'scan_duration_ms'): obj.scan_duration_ms = 10
             if not hasattr(obj, 'completed_at'): obj.completed_at = datetime.utcnow()
-        
+
         db.refresh.side_effect = fake_refresh
         yield db
     finally:
         pass
 
-# Mock DLP Engine functionality to avoid OpenAI calls and validation errors
-@pytest.fixture(autouse=True)
-def mock_dlp_engine():
-    with patch("app.routes.scans.dlp_engine.scan") as mock_scan:
-        mock_scan.return_value = {
+# Mock DLP Engine — uses dependency override, not attribute patch
+class MockDLPEngine:
+    async def scan(self, content, file_path=None, use_ai=False, force_ai=False, **kwargs):
+        return {
             "risk_level": "LOW",
             "findings": [],
             "verdict": "Safe",
             "ai_analysis": None,
             "scan_duration_ms": 10
         }
-        yield mock_scan
+
+@pytest.fixture(autouse=True)
+def mock_dlp_engine():
+    mock_engine = MockDLPEngine()
+    app.dependency_overrides[get_dlp_engine] = lambda: mock_engine
+    yield mock_engine
+    app.dependency_overrides.pop(get_dlp_engine, None)
 
 client = TestClient(app)
 
@@ -72,10 +78,17 @@ def get_test_token(username: str, role: UserRole):
 
 @pytest.fixture(autouse=True)
 def setup_dependencies():
+    _saved = dict(app.dependency_overrides)
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_active_user] = None
     yield
-    app.dependency_overrides = {}
+    # Restore only the keys we changed, preserving others
+    app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_current_active_user, None)
+    # Restore any previously existing values
+    for k, v in _saved.items():
+        if k not in app.dependency_overrides:
+            app.dependency_overrides[k] = v
 
 @pytest.fixture(autouse=True)
 def clear_limiters():
@@ -95,21 +108,21 @@ def test_rate_limit_analyst():
     # Setup mock user
     user = MockUser("rate_limit_analyst", UserRole.ANALYST)
     app.dependency_overrides[get_current_active_user] = lambda: user
-    
+
     token = get_test_token("rate_limit_analyst", UserRole.ANALYST)
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Send 50 requests (Allowed)
     for i in range(50):
         res = client.post("/api/scans/", json={"source": "test", "content": "test"}, headers=headers)
         if res.status_code != 201:
              pytest.fail(f"Request {i+1} failed with {res.status_code}: {res.text}")
-    
+
     # Request 51: Should look blocked?
-    # Actually, default implementation might allow burst? 
-    # But "50/60minute" usually means fixed window or moving window. 
+    # Actually, default implementation might allow burst?
+    # But "50/60minute" usually means fixed window or moving window.
     # 51st should fail.
-    
+
     res = client.post("/api/scans/", json={"source": "test", "content": "test"}, headers=headers)
     assert res.status_code == 429
     assert "Rate limit exceeded" in res.text
@@ -118,13 +131,12 @@ def test_rate_limit_admin():
     # Setup mock user
     user = MockUser("rate_limit_admin", UserRole.ADMIN)
     app.dependency_overrides[get_current_active_user] = lambda: user
-    
+
     token = get_test_token("rate_limit_admin", UserRole.ADMIN)
     headers = {"Authorization": f"Bearer {token}"}
-    
+
     # Admin should bypass the limit (10000/minute)
     # Testing 55 is enough to prove it exceeds the 50 limit of normal users
     for i in range(55):
         res = client.post("/api/scans/", json={"source": "test", "content": "test"}, headers=headers)
         assert res.status_code == 201
-

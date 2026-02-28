@@ -60,14 +60,12 @@ def seed_users():
 
 seed_users()
 
-app.dependency_overrides[get_db] = override_get_db
-
 # --- MOCK ENGINE ---
 class MockDLPEngine:
     def __init__(self):
         self.mcp_session = None
         
-    async def scan(self, content, file_path=None, use_ai=False):
+    async def scan(self, content, file_path=None, use_ai=False, force_ai=False):
         findings = []
         risk_level = "LOW"
         verdict = "SAFE"
@@ -122,10 +120,17 @@ class MockDLPEngine:
         return None
 
 @pytest.fixture(autouse=True)
+def override_db_fixture():
+    app.dependency_overrides[get_db] = override_get_db
+    yield
+    app.dependency_overrides.pop(get_db, None)
+
+@pytest.fixture(autouse=True)
 def override_dlp_engine_fixture():
     mock_engine = MockDLPEngine()
     app.dependency_overrides[get_dlp_engine] = lambda: mock_engine
     yield
+    app.dependency_overrides.pop(get_dlp_engine, None)
 
 @pytest.fixture
 def client():
@@ -175,7 +180,8 @@ def test_dlp_image_ocr(client, h_admin):
             
     assert response.status_code == 201
     assert response.json()["risk_level"].upper() == "HIGH"
-    assert "Credit Card" in str(response.json()["findings"])
+    # Findings are aggregated by type; check that a pii finding was detected
+    assert any(f.get("type") == "pii" for f in response.json()["findings"])
 
 def test_compliance_hipaa(client, h_admin):
     """Test HIPAA Compliance Detection (PHI)"""

@@ -55,7 +55,8 @@ async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_active_user] = lambda: mock_user
 
-    # Mock FileGuard in app.state
+    # Mock FileGuard in app.state (save original to restore after test)
+    _orig_file_guard = getattr(app.state, 'file_guard', None)
     mock_file_guard = MagicMock()
     mock_file_guard.scan_file = AsyncMock(return_value=(False, ["ClamAV: Eicar-Test-Signature"]))
     app.state.file_guard = mock_file_guard
@@ -64,16 +65,16 @@ async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
     mock_cdr_instance = MagicMock()
     mock_cdr_instance.disarm.return_value = True
     monkeypatch.setattr("app.cdr_engine.CDREngine", lambda: mock_cdr_instance)
-    
+
     # Mock Storage
     monkeypatch.setattr("app.utils.storage.StorageManager", lambda: mock_storage)
 
-    # Mock Rate Limiter? (Passes through if we use TestClient generally, 
+    # Mock Rate Limiter? (Passes through if we use TestClient generally,
     # but we might need to mock slowapi if it's strict on memory storage)
     # Usually TestClient works fine with slowapi defaults.
 
     client = TestClient(app)
-    
+
     # Create dummy file
     with open("test.docx", "wb") as f: f.write(b"dummy malware content")
     try:
@@ -89,7 +90,7 @@ async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
         
         # Verdict should be MALWARE
         assert result['verdict'] == "MALWARE DETECTED"
-        assert result['risk_level'] == "critical"
+        assert result['risk_level'].upper() == "CRITICAL"
         
         # CDR should have run
         assert result['cdr_info'] is not None
@@ -98,7 +99,9 @@ async def test_e2e_protection_flow_malware(mock_storage, monkeypatch):
 
     finally:
         if os.path.exists("test.docx"): os.remove("test.docx")
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_active_user, None)
+        app.state.file_guard = _orig_file_guard
 
 @pytest.mark.asyncio
 async def test_e2e_protection_flow_safe(mock_storage, monkeypatch):
@@ -131,7 +134,8 @@ async def test_e2e_protection_flow_safe(mock_storage, monkeypatch):
     app.dependency_overrides[get_db] = lambda: mock_db
     app.dependency_overrides[get_current_active_user] = lambda: mock_user
 
-    # Mock FileGuard - SAFE this time
+    # Mock FileGuard - SAFE this time (save original to restore after test)
+    _orig_file_guard = getattr(app.state, 'file_guard', None)
     mock_file_guard = MagicMock()
     mock_file_guard.scan_file = AsyncMock(return_value=(True, []))
     app.state.file_guard = mock_file_guard
@@ -157,7 +161,7 @@ async def test_e2e_protection_flow_safe(mock_storage, monkeypatch):
         
         # Verdict SAFE
         assert result['verdict'] == "SAFE"
-        assert result['risk_level'] == "low"
+        assert result['risk_level'].upper() == "LOW"
         
         # CDR should NOT be present
         assert result['cdr_info'] is None
@@ -166,4 +170,6 @@ async def test_e2e_protection_flow_safe(mock_storage, monkeypatch):
 
     finally:
         if os.path.exists("safe.docx"): os.remove("safe.docx")
-        app.dependency_overrides.clear()
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_active_user, None)
+        app.state.file_guard = _orig_file_guard

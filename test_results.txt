@@ -1,0 +1,311 @@
+............................F...F..F.F.................................. [ 38%]
+..............................FFFFF..................................... [ 77%]
+......................................FFF                                [100%]
+=================================== FAILURES ===================================
+____________________________ test_code_integration _____________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________________ test_dlp_compliance_parsing __________________________
+tests/test_compliance.py:38: in test_dlp_compliance_parsing
+    assert "HIPAA" in result['compliance_alerts']
+E   AssertionError: assert 'HIPAA' in []
+------------------------------ Captured log call -------------------------------
+WARNING  app.core.presidio_engine:presidio_engine.py:43 Presidio dependencies not found. NER disabled.
+________________ TestDLPCapabilities.test_pattern_detection_pii ________________
+tests/test_dlp_capabilities.py:37: in test_pattern_detection_pii
+    assert 'ssn' in types
+E   AssertionError: assert 'ssn' in ['email', 'phone_us']
+------------------------------ Captured log setup ------------------------------
+WARNING  app.core.presidio_engine:presidio_engine.py:43 Presidio dependencies not found. NER disabled.
+______________________ TestDLPCapabilities.test_redaction ______________________
+tests/test_dlp_capabilities.py:54: in test_redaction
+    assert "000-00-0000" not in redacted
+E   AssertionError: assert '000-00-0000' not in 'My SSN is 000-00-0000'
+E     
+E     '000-00-0000' is contained here:
+E       My SSN is 000-00-0000
+------------------------------ Captured log setup ------------------------------
+WARNING  app.core.presidio_engine:presidio_engine.py:43 Presidio dependencies not found. NER disabled.
+_______________________ test_scan_bytes_clamav_detected ________________________
+tests/test_file_guard.py:64: in test_scan_bytes_clamav_detected
+    assert is_safe is False
+E   assert True is False
+------------------------------ Captured log call -------------------------------
+ERROR    app.core.file_guard:file_guard.py:123 ClamAV byte scan failed: Error 8 connecting clamav:3310. nodename nor servname provided, or not known.
+________________________ test_scan_bytes_yara_detected _________________________
+tests/test_file_guard.py:84: in test_scan_bytes_yara_detected
+    assert is_safe is False
+E   assert True is False
+------------------------------ Captured log call -------------------------------
+ERROR    app.core.file_guard:file_guard.py:123 ClamAV byte scan failed: Error 8 connecting clamav:3310. nodename nor servname provided, or not known.
+_______________________ test_connection_failure_handling _______________________
+tests/test_file_guard.py:98: in test_connection_failure_handling
+    assert guard._clamd_client is None
+E   assert <clamd.ClamdNetworkSocket object at 0x121c542f0> is None
+E    +  where <clamd.ClamdNetworkSocket object at 0x121c542f0> = <app.core.file_guard.FileGuard object at 0x121c54320>._clamd_client
+_______________________________ test_file_guard ________________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_______________________________ test_integration _______________________________
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+  - pytest-tornasync
+  - pytest-trio
+  - pytest-twisted
+_________________________ test_scan_dependencies_pypi __________________________
+tests/test_supply_chain.py:64: in test_scan_dependencies_pypi
+    assert "SUPPLY CHAIN VULNERABILITIES" in result
+E   AssertionError: assert 'SUPPLY CHAIN VULNERABILITIES' in '✓ CLEAN: Scanned 1 packages. No known vulnerabilities found.'
+________________________ test_scan_secrets_codebase_zip ________________________
+tests/test_supply_chain.py:91: in test_scan_secrets_codebase_zip
+    assert "AKIA1234567890123456" in result
+E   AssertionError: assert 'AKIA1234567890123456' in 'CODEBASE SECRETS DETECTED (TruffleHog + Internal Regex):\n[CRITICAL] aws_access_key found in config.py: AKIA123456... (Source: Internal Regex)'
+____________________________ test_video_upload_flow ____________________________
+tests/test_video_dlp.py:53: in test_video_upload_flow
+    assert response.status_code == 201
+E   assert 401 == 201
+E    +  where 401 = <Response [401 Unauthorized]>.status_code
+=============================== warnings summary ===============================
+app/config.py:6
+  /Users/sgpt/spidercob/spider-snoop/app/config.py:6: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Settings(BaseSettings):
+
+app/database.py:20
+  /Users/sgpt/spidercob/spider-snoop/app/database.py:20: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/passlib/utils/__init__.py:854: DeprecationWarning: 'crypt' is deprecated and slated for removal in Python 3.13
+    from crypt import crypt as _crypt
+
+app/schemas/user.py:23
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/user.py:23: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserResponse(UserBase):
+
+app/schemas/scan.py:7
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/scan.py:7: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class UserBasicInfo(BaseModel):
+
+app/schemas/scan.py:28
+  /Users/sgpt/spidercob/spider-snoop/app/schemas/scan.py:28: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class ScanResponse(BaseModel):
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:920
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:920: DeprecationWarning: 'enablePackrat' deprecated - use 'enable_packrat'
+    ParserElement.enablePackrat()
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:957
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:957: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    decimal_literal.setParseAction(lambda t: int(t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:961
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:961: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    octal_literal.setParseAction(lambda t: int(t[0], base=8))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:965
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:965: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hex_literal.setParseAction(lambda t: int(t[0], base=16))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:977
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:977: DeprecationWarning: 'escQuote' argument is deprecated, use 'esc_quote'
+    quoted_string = QuotedString('"', escQuote='""')
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:978
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:978: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    quoted_string.setParseAction(lambda t: str(t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1059
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1059: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    vba_chr.setParseAction(vba_chr_tostr)
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1067
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1067: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    vba_asc.setParseAction(lambda t: ord(t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1075
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1075: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    vba_val.setParseAction(lambda t: int(t[0].strip()))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1082
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1082: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    strReverse.setParseAction(lambda t: VbaExpressionString(str(t[0])[::-1]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1089
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1089: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    environ.setParseAction(lambda t: VbaExpressionString('%%%s%%' % t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1099
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1099: DeprecationWarning: 'initChars' argument is deprecated, use 'init_chars'
+    latin_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1099
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1099: DeprecationWarning: 'bodyChars' argument is deprecated, use 'body_chars'
+    latin_identifier = Word(initChars=alphas, bodyChars=alphanums + '_')
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1108
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1108: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    quoted_hex_string.setParseAction(lambda t: str(t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1112
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1112: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    hex_function_call.setParseAction(lambda t: VbaExpressionString(binascii.a2b_hex(t.hex_string)))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1122
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1122: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    quoted_base64_string.setParseAction(lambda t: str(t[0]))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1126
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1126: DeprecationWarning: 'setParseAction' deprecated - use 'set_parse_action'
+    base64_function_call.setParseAction(lambda t: VbaExpressionString(binascii.a2b_base64(t.base64_string)))
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1143
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1143: DeprecationWarning: 'infixNotation' deprecated - use 'infix_notation'
+    vba_expr_str <<= infixNotation(vba_expr_str_item,
+
+.venv/lib/python3.12/site-packages/oletools/olevba.py:1198
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/oletools/olevba.py:1198: DeprecationWarning: 'infixNotation' deprecated - use 'infix_notation'
+    vba_expr_int <<= infixNotation(vba_expr_int_item,
+
+app/routes/alerts.py:66
+  /Users/sgpt/spidercob/spider-snoop/app/routes/alerts.py:66: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AlertConfigOut(BaseModel):
+
+app/routes/alerts.py:78
+  /Users/sgpt/spidercob/spider-snoop/app/routes/alerts.py:78: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class AlertHistoryOut(BaseModel):
+
+.venv/lib/python3.12/site-packages/clamd/__init__.py:6
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/clamd/__init__.py:6: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+    __version__ = __import__('pkg_resources').get_distribution('clamd').version
+
+tests/test_cdr.py::test_image_sanitization
+tests/test_cdr_capabilities.py::TestCDRCapabilities::test_image_sanitization
+  /Users/sgpt/spidercob/spider-snoop/app/cdr_engine.py:104: DeprecationWarning: Image.Image.getdata is deprecated and will be removed in Pillow 14 (2027-10-15). Use get_flattened_data instead.
+    data = list(img.getdata()) # Forces loading data
+
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_secret_scan_codebase
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_os_package_scan
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_financial
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_pii
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_secrets
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_ner_integration
+  /Users/sgpt/spidercob/spider-snoop/app/dlp_engine.py:105: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    start_time = datetime.utcnow()
+
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+  /Users/sgpt/spidercob/spider-snoop/.venv/lib/python3.12/site-packages/torch/jit/_script.py:1480: DeprecationWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_secret_scan_codebase
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_os_package_scan
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_financial
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_pii
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_secrets
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_ner_integration
+  /Users/sgpt/spidercob/spider-snoop/app/dlp_engine.py:240: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    duration_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_secret_scan_codebase
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_os_package_scan
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_financial
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_pii
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_secrets
+tests/test_dlp_capabilities.py::TestDLPCapabilities::test_ner_integration
+  /Users/sgpt/spidercob/spider-snoop/app/dlp_engine.py:252: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    'scanned_at': datetime.utcnow().isoformat(),
+
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_dependency_scan_manifest
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_secret_scan_codebase
+tests/test_code_security_integration.py::TestCodeSecurityCapabilities::test_os_package_scan
+  /Users/sgpt/spidercob/spider-snoop/app/routes/code_security.py:666: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.completed_at = datetime.utcnow()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+tests/test_e2e_protection.py::test_e2e_protection_flow_safe
+tests/test_risk_engine.py::test_malware_detection
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:271: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.created_at = datetime.utcnow()
+
+tests/test_e2e_protection.py::test_e2e_protection_flow_malware
+tests/test_e2e_protection.py::test_e2e_protection_flow_safe
+tests/test_risk_engine.py::test_malware_detection
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:272: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.completed_at = datetime.utcnow()
+
+tests/test_icap_server.py::test_icap_options
+  /Users/sgpt/spidercob/spider-snoop/app/icap_server.py:170: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+
+tests/test_icap_server.py::test_icap_auth_missing
+  /Users/sgpt/spidercob/spider-snoop/app/icap_server.py:225: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+
+tests/test_icap_server.py::test_icap_scan_safe
+  /Users/sgpt/spidercob/spider-snoop/app/icap_server.py:180: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+
+tests/test_icap_server.py::test_icap_scan_block
+  /Users/sgpt/spidercob/spider-snoop/app/icap_server.py:212: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "Date: " + datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT"),
+
+tests/test_rate_limit.py::test_rate_limit_analyst
+tests/test_rate_limit.py::test_rate_limit_admin
+tests/test_risk_engine.py::test_dlp_text_scan
+tests/test_risk_engine.py::test_dlp_image_ocr
+tests/test_risk_engine.py::test_compliance_hipaa
+tests/test_risk_engine.py::test_malware_detection
+tests/test_risk_engine.py::test_rbac_user_list
+tests/test_risk_engine.py::test_rbac_user_list
+  /Users/sgpt/spidercob/spider-snoop/app/utils/auth.py:32: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    expire = datetime.utcnow() + timedelta(minutes=15)
+
+tests/test_rate_limit.py: 210 warnings
+  /Users/sgpt/spidercob/spider-snoop/tests/test_rate_limit.py:40: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    obj.created_at = datetime.utcnow()
+
+tests/test_rate_limit.py: 105 warnings
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:81: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.completed_at = datetime.utcnow()
+
+tests/test_risk_engine.py::test_dlp_text_scan
+tests/test_risk_engine.py::test_dlp_image_ocr
+tests/test_risk_engine.py::test_compliance_hipaa
+  /Users/sgpt/spidercob/spider-snoop/app/routes/scans.py:630: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    db_scan.completed_at = datetime.utcnow()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_code_scanner_integration.py::test_code_integration - Failed...
+FAILED tests/test_compliance.py::test_dlp_compliance_parsing - AssertionError...
+FAILED tests/test_dlp_capabilities.py::TestDLPCapabilities::test_pattern_detection_pii
+FAILED tests/test_dlp_capabilities.py::TestDLPCapabilities::test_redaction - ...
+FAILED tests/test_file_guard.py::test_scan_bytes_clamav_detected - assert Tru...
+FAILED tests/test_file_guard.py::test_scan_bytes_yara_detected - assert True ...
+FAILED tests/test_file_guard.py::test_connection_failure_handling - assert <c...
+FAILED tests/test_file_guard_standalone.py::test_file_guard - Failed: async d...
+FAILED tests/test_file_security_integration.py::test_integration - Failed: as...
+FAILED tests/test_supply_chain.py::test_scan_dependencies_pypi - AssertionErr...
+FAILED tests/test_supply_chain.py::test_scan_secrets_codebase_zip - Assertion...
+FAILED tests/test_video_dlp.py::test_video_upload_flow - assert 401 == 201
+12 failed, 173 passed, 397 warnings in 14.45s
