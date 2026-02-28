@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from app.models.scan import ScanStatus, RiskLevel
+from app.schemas.policy import ContextInput
 
 class UserBasicInfo(BaseModel):
     id: int
@@ -15,6 +16,7 @@ class UserBasicInfo(BaseModel):
 class ScanCreate(BaseModel):
     content: str = Field(..., min_length=1, description="Text content to scan for sensitive data")
     source: str = Field("API", description="Source of the scan (e.g., API, Manual, App)")
+    context: Optional[ContextInput] = None
 
     model_config = {
         "json_schema_extra": {
@@ -42,6 +44,7 @@ class ScanResponse(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime]
     user: Optional[UserBasicInfo] = None
+    policy_decision: Optional[Dict[str, Any]] = None
     
     @property
     def scan_id(self) -> str:

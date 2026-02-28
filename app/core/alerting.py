@@ -46,19 +46,27 @@ def _should_fire(scan_risk_level: str, trigger_on: str) -> bool:
 
 
 def _build_webhook_payload(scan_result: dict, scan_id: Optional[int]) -> dict:
+    policy_info = scan_result.get("policy_decision") or {}
     return {
-        "event": "dlp_alert",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "scan_id": scan_id,
-        "risk_level": scan_result.get("risk_level"),
-        "verdict": scan_result.get("verdict"),
-        "threat_score": scan_result.get("threat_score"),
-        "findings_count": len(scan_result.get("findings", [])),
+        "event":              "dlp_alert",
+        "timestamp":          datetime.now(timezone.utc).isoformat(),
+        "scan_id":            scan_id,
+        "risk_level":         scan_result.get("risk_level"),
+        "verdict":            scan_result.get("verdict"),
+        "threat_score":       scan_result.get("threat_score"),
+        "findings_count":     len(scan_result.get("findings", [])),
         "top_findings": [
             {"type": f.get("type"), "severity": f.get("severity")}
             for f in (scan_result.get("findings") or [])[:5]
         ],
-        "source": scan_result.get("source", "API"),
+        "source":              scan_result.get("source", "API"),
+        "policy_decision":     policy_info.get("action", "allow"),
+        "policy_triggered":    policy_info.get("policy_name"),
+        "enforcement_action":  policy_info.get("action", "allow"),
+        "policy_simulated":    policy_info.get("simulated", False),
+        "would_have_blocked_by": (
+            policy_info.get("policy_name") if policy_info.get("simulated") else None
+        ),
     }
 
 

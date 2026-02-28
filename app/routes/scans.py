@@ -79,7 +79,46 @@ async def create_scan(
             db_scan.ai_analysis = json.dumps(result['ai_analysis'])
         db_scan.scan_duration_ms = result['scan_duration_ms']
         db_scan.completed_at = datetime.utcnow()
-        
+
+        # ── POLICY EVALUATION ────────────────────────────────────────────────
+        db_scan.status = ScanStatus.POLICY_EVAL
+        db.commit()
+
+        from app.core.policy_engine import PolicyEngine, ContextPayload
+        from app.models.policy import Policy, PolicyDecisionLog
+
+        _ctx_raw = getattr(scan_data, 'context', None)
+        if _ctx_raw is not None and hasattr(_ctx_raw, 'model_dump'):
+            _ctx_dict = _ctx_raw.model_dump()
+        elif isinstance(_ctx_raw, dict):
+            _ctx_dict = _ctx_raw
+        else:
+            _ctx_dict = {}
+        ctx = ContextPayload(**_ctx_dict)
+        all_policies = db.query(Policy).all()
+        decision = PolicyEngine().evaluate(result, ctx, all_policies, current_user)
+
+        db.add(PolicyDecisionLog(
+            scan_id=db_scan.id,
+            user_id=current_user.id if current_user else None,
+            policy_id=decision.policy_id,
+            policy_name=decision.policy_name,
+            decision=decision.action.value,
+            matched_conditions=decision.matched_conditions,
+            context_snapshot=ctx.__dict__,
+            simulated=decision.simulated,
+            would_have_action=decision.would_have_action.value if decision.would_have_action else None,
+            evaluation_trace=decision.evaluation_trace,
+        ))
+
+        if decision.is_blocking:
+            db_scan.verdict = f"BLOCKED: {decision.policy_name}"
+            db_scan.risk_level = "CRITICAL"
+
+        result['policy_decision'] = decision.to_dict()
+        # ── END POLICY EVALUATION ────────────────────────────────────────────
+
+        db_scan.status = ScanStatus.COMPLETED
         db.commit()
         db.refresh(db_scan)
 
@@ -629,6 +668,39 @@ async def upload_file(
         # Fields already set above (threat_score, scan_duration_ms)
         db_scan.completed_at = datetime.utcnow()
 
+        # ── POLICY EVALUATION ────────────────────────────────────────────────
+        db_scan.status = ScanStatus.POLICY_EVAL
+        db.commit()
+
+        from app.core.policy_engine import PolicyEngine, ContextPayload
+        from app.models.policy import Policy, PolicyDecisionLog
+
+        # File uploads have no context payload — use defaults
+        ctx = ContextPayload()
+        all_policies = db.query(Policy).all()
+        decision = PolicyEngine().evaluate(result, ctx, all_policies, current_user)
+
+        db.add(PolicyDecisionLog(
+            scan_id=db_scan.id,
+            user_id=current_user.id if current_user else None,
+            policy_id=decision.policy_id,
+            policy_name=decision.policy_name,
+            decision=decision.action.value,
+            matched_conditions=decision.matched_conditions,
+            context_snapshot=ctx.__dict__,
+            simulated=decision.simulated,
+            would_have_action=decision.would_have_action.value if decision.would_have_action else None,
+            evaluation_trace=decision.evaluation_trace,
+        ))
+
+        if decision.is_blocking:
+            db_scan.verdict = f"BLOCKED: {decision.policy_name}"
+            db_scan.risk_level = "CRITICAL"
+
+        result['policy_decision'] = decision.to_dict()
+        # ── END POLICY EVALUATION ────────────────────────────────────────────
+
+        db_scan.status = ScanStatus.COMPLETED
         db.commit()
         db.refresh(db_scan)
 

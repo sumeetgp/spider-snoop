@@ -14,6 +14,7 @@ from app.database import Base, engine
 from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise, proxy, metrics, alerts
 from app.routes import bulk_scans
 from app.routes import export as export_routes
+from app.routes import policies as policies_routes
 from app.icap_server import ICAPServer
 from app.models.user import User
 from app.models.audit import ProxyLog
@@ -40,6 +41,18 @@ async def lifespan(app: FastAPI):
     # Create database tables
     # Base.metadata.create_all(bind=engine) # Handled by Alembic in production
     logger.info("Database initialized")
+
+    # Seed default policies (no-op if table already has rows)
+    try:
+        from app.database import SessionLocal
+        from app.routes.policies import seed_default_policies
+        _seed_db = SessionLocal()
+        try:
+            seed_default_policies(_seed_db)
+        finally:
+            _seed_db.close()
+    except Exception as _e:
+        logger.warning(f"Policy seed failed (non-fatal): {_e}")
 
     # Warm up ML engine eagerly so the first scan request is not slow
     try:
@@ -268,6 +281,7 @@ app.include_router(metrics.router)
 app.include_router(alerts.router)
 app.include_router(bulk_scans.router)
 app.include_router(export_routes.router)
+app.include_router(policies_routes.router)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
