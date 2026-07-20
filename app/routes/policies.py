@@ -68,15 +68,15 @@ _DEFAULT_POLICIES = [
 ]
 
 
-def seed_default_policies(db: Session) -> None:
-    """Insert default policies only when the table is empty."""
+def seed_default_policies(db: Session, org_id: int) -> None:
+    """Insert default policies for an org when that org has no policies yet."""
     try:
-        if db.query(Policy).count() > 0:
+        if db.query(Policy).filter(Policy.org_id == org_id).count() > 0:
             return
         for p in _DEFAULT_POLICIES:
-            db.add(Policy(**p))
+            db.add(Policy(**p, org_id=org_id))
         db.commit()
-        logger.info("Policy Engine: seeded %d default policies", len(_DEFAULT_POLICIES))
+        logger.info("Policy Engine: seeded %d default policies for org_id=%d", len(_DEFAULT_POLICIES), org_id)
     except Exception as exc:
         logger.warning("Policy Engine: seed failed (non-fatal): %s", exc)
         db.rollback()
@@ -84,14 +84,18 @@ def seed_default_policies(db: Session) -> None:
 
 # ── Auth helpers ───────────────────────────────────────────────────────────────
 
+_ADMIN_ROLES = (UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.ORG_ADMIN)
+_ANALYST_ROLES = (UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.ORG_ADMIN, UserRole.ANALYST)
+
+
 def _require_admin(current_user: User = Depends(get_current_active_user)) -> User:
-    if current_user.role != UserRole.ADMIN:
+    if current_user.role not in _ADMIN_ROLES:
         raise HTTPException(status_code=403, detail="Admin role required")
     return current_user
 
 
 def _require_analyst(current_user: User = Depends(get_current_active_user)) -> User:
-    if current_user.role not in (UserRole.ADMIN, UserRole.ANALYST):
+    if current_user.role not in _ANALYST_ROLES:
         raise HTTPException(status_code=403, detail="Analyst or Admin role required")
     return current_user
 
@@ -101,10 +105,13 @@ def _require_analyst(current_user: User = Depends(get_current_active_user)) -> U
 @router.get("/", response_model=List[PolicyOut])
 def list_policies(
     db: Session = Depends(get_db),
-    _: User = Depends(_require_analyst),
+    current_user: User = Depends(_require_analyst),
 ):
-    """List all policies ordered by priority."""
-    return db.query(Policy).order_by(Policy.priority).all()
+    """List policies for the current user's organization, ordered by priority."""
+    q = db.query(Policy)
+    if current_user.role not in (UserRole.SUPERADMIN, UserRole.ADMIN):
+        q = q.filter(Policy.org_id == current_user.org_id)
+    return q.order_by(Policy.priority).all()
 
 
 @router.post("/", response_model=PolicyOut, status_code=status.HTTP_201_CREATED)
@@ -113,16 +120,21 @@ def create_policy(
     db: Session = Depends(get_db),
     current_user: User = Depends(_require_admin),
 ):
-    """Create a new policy."""
+    """Create a new policy scoped to the current user's organization."""
     if body.action not in PolicyAction._value2member_map_:
         raise HTTPException(
             status_code=422,
             detail=f"Invalid action '{body.action}'. Must be one of: {list(PolicyAction._value2member_map_)}",
         )
-    if db.query(Policy).filter(Policy.name == body.name).first():
-        raise HTTPException(status_code=409, detail=f"Policy '{body.name}' already exists")
+    existing = db.query(Policy).filter(
+        Policy.org_id == current_user.org_id,
+        Policy.name == body.name,
+    ).first()
+    if existing:
+        raise HTTPException(status_code=409, detail=f"Policy '{body.name}' already exists in this organization")
 
     policy = Policy(
+        org_id=current_user.org_id,
         name=body.name,
         description=body.description,
         conditions=body.conditions.model_dump(),
@@ -142,11 +154,14 @@ def create_policy(
 def get_policy(
     policy_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(_require_analyst),
+    current_user: User = Depends(_require_analyst),
 ):
     policy = db.query(Policy).filter(Policy.id == policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
+    if current_user.role not in (UserRole.SUPERADMIN, UserRole.ADMIN):
+        if policy.org_id != current_user.org_id:
+            raise HTTPException(status_code=404, detail="Policy not found")
     return policy
 
 
@@ -155,17 +170,17 @@ def update_policy(
     policy_id: int,
     body: PolicyUpdate,
     db: Session = Depends(get_db),
-    _: User = Depends(_require_admin),
+    current_user: User = Depends(_require_admin),
 ):
     policy = db.query(Policy).filter(Policy.id == policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
+    if current_user.role not in (UserRole.SUPERADMIN, UserRole.ADMIN):
+        if policy.org_id != current_user.org_id:
+            raise HTTPException(status_code=404, detail="Policy not found")
 
     if body.action is not None and body.action not in PolicyAction._value2member_map_:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Invalid action '{body.action}'",
-        )
+        raise HTTPException(status_code=422, detail=f"Invalid action '{body.action}'")
 
     update_data = body.model_dump(exclude_unset=True)
     if "conditions" in update_data and update_data["conditions"] is not None:
@@ -184,11 +199,14 @@ def delete_policy(
     policy_id: int,
     hard: bool = Query(False, description="Hard delete instead of disabling"),
     db: Session = Depends(get_db),
-    _: User = Depends(_require_admin),
+    current_user: User = Depends(_require_admin),
 ):
     policy = db.query(Policy).filter(Policy.id == policy_id).first()
     if not policy:
         raise HTTPException(status_code=404, detail="Policy not found")
+    if current_user.role not in (UserRole.SUPERADMIN, UserRole.ADMIN):
+        if policy.org_id != current_user.org_id:
+            raise HTTPException(status_code=404, detail="Policy not found")
 
     if hard:
         db.delete(policy)
@@ -203,10 +221,13 @@ def delete_policy(
 def evaluate_policy(
     body: PolicyEvaluateRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(_require_analyst),
+    current_user: User = Depends(_require_analyst),
 ):
     """Dry-run policy evaluation against a mock scan result + context."""
-    all_policies = db.query(Policy).all()
+    all_policies = db.query(Policy).filter(Policy.org_id == current_user.org_id).all()
+    if not any(p.enabled for p in all_policies):
+        # No enabled org-scoped policies — evaluate against built-in defaults
+        all_policies = [Policy(**{**p, "enabled": True}) for p in _DEFAULT_POLICIES]
     ctx = ContextPayload(**body.context.model_dump())
     decision = PolicyEngine().evaluate(body.scan_result, ctx, all_policies)
     return PolicyDecisionOut(
@@ -228,10 +249,15 @@ def list_decisions(
     policy_id: Optional[int] = Query(None),
     days:      Optional[int] = Query(None, description="Limit to last N days"),
     db: Session = Depends(get_db),
-    _: User = Depends(_require_analyst),
+    current_user: User = Depends(_require_analyst),
 ):
-    """List policy decision log entries with optional filters."""
+    """List policy decision log entries with optional filters, scoped to current org."""
     q = db.query(PolicyDecisionLog)
+    if current_user.role not in (UserRole.SUPERADMIN, UserRole.ADMIN):
+        # Scope to org by joining through policies
+        q = q.join(Policy, PolicyDecisionLog.policy_id == Policy.id, isouter=True).filter(
+            (Policy.org_id == current_user.org_id) | (PolicyDecisionLog.policy_id == None)
+        )
     if scan_id is not None:
         q = q.filter(PolicyDecisionLog.scan_id == scan_id)
     if policy_id is not None:

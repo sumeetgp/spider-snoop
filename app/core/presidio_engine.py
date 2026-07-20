@@ -343,8 +343,9 @@ class PresidioEngine:
                 text=text,
                 analyzer_results=results
             )
-            
-            return anonymized_result.text
+            # Presidio's default replacement is <ENTITY_TYPE>; convert to [REDACTED:ENTITY_TYPE]
+            result_text = re.sub(r'<([A-Z_]+)>', lambda m: f'[REDACTED:{m.group(1)}]', anonymized_result.text)
+            return result_text
             
         except Exception as e:
             logger.error(f"Presidio redaction failed: {e}")
