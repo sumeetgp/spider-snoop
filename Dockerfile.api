@@ -1,21 +1,39 @@
-# Lightweight API Dockerfile
+# ─── Builder stage ───────────────────────────────────────────────────────────
+# Installs all Python dependencies into an isolated venv.
+# No build-time tools leak into the final runtime image.
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN python -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+RUN pip install --no-cache-dir "pip>=26.1.2"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y triton 2>/dev/null || true
+
+# Pre-bake spaCy model into the venv (avoids download on container startup)
+RUN python -m spacy download en_core_web_sm
+
+# ─── Runtime stage ───────────────────────────────────────────────────────────
 FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies (minimal)
+# Runtime system deps only — no wget, gnupg, or build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    gnupg \
+    curl \
     libgomp1 \
     tesseract-ocr \
     tesseract-ocr-eng \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements (Lightweight)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy the fully-installed venv from builder
+COPY --from=builder /venv /venv
+ENV PATH="/venv/bin:$PATH"
 
 # Copy application code
 COPY . .
