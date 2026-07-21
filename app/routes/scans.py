@@ -148,6 +148,7 @@ async def create_scan(
         await _offload_content(db_scan, scan_data.content, db)
 
         # Push real-time event to connected WebSocket clients
+        import asyncio
         from app.routes.ws import manager as _ws_manager
         asyncio.create_task(_ws_manager.broadcast_event({
             "type": "scan_complete",
