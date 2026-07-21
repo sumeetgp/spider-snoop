@@ -17,7 +17,10 @@ from app.dlp_engine import DLPEngine
 from app.core.dlp_patterns import DLPPatternMatcher
 
 from app.dlp_engine import DLPEngine
+from app.core.remediation_engine import RemediationEngine
 from app.utils.limiter import limiter, get_rate_limit_key
+
+_remediation_engine = RemediationEngine()
 from fastapi import Request
 
 router = APIRouter(prefix="/api/scans", tags=["DLP Scanning"])
@@ -30,6 +33,24 @@ def get_dlp_engine():
     if _dlp_engine_instance is None:
         _dlp_engine_instance = DLPEngine()
     return _dlp_engine_instance
+
+
+_CONTENT_OFFLOAD_THRESHOLD = 1000  # chars; below this, store inline in DB
+
+async def _offload_content(db_scan, content: str, db) -> None:
+    """Upload content exceeding threshold to DO Spaces; update db_scan in-place and commit."""
+    if not content or len(content) <= _CONTENT_OFFLOAD_THRESHOLD:
+        return
+    try:
+        from app.utils.storage import StorageManager
+        storage = StorageManager()
+        url = await storage.upload_text(content, f"scan-content/{db_scan.id}.txt")
+        if url:
+            db_scan.content = content[:500] + f"\n[...{len(content) - 500} chars — full content in content_url...]"
+            db_scan.content_url = url
+            db.commit()
+    except Exception as exc:
+        logger.warning(f"Content offload failed for scan {db_scan.id}: {exc}")
 
 
 @router.post("/", response_model=ScanResponse, status_code=status.HTTP_201_CREATED)
@@ -53,6 +74,7 @@ async def create_scan(
     # Create scan record
     db_scan = DLPScan(
         user_id=current_user.id,
+        org_id=current_user.org_id,
         source=scan_data.source,
         content=scan_data.content,
         status=ScanStatus.SCANNING
@@ -95,7 +117,7 @@ async def create_scan(
         else:
             _ctx_dict = {}
         ctx = ContextPayload(**_ctx_dict)
-        all_policies = db.query(Policy).all()
+        all_policies = db.query(Policy).filter(Policy.org_id == current_user.org_id).all()
         decision = PolicyEngine().evaluate(result, ctx, all_policies, current_user)
 
         db.add(PolicyDecisionLog(
@@ -122,10 +144,26 @@ async def create_scan(
         db.commit()
         db.refresh(db_scan)
 
+        # Offload large content to DO Spaces (non-blocking on failure)
+        await _offload_content(db_scan, scan_data.content, db)
+
+        # Push real-time event to connected WebSocket clients
+        from app.routes.ws import manager as _ws_manager
+        asyncio.create_task(_ws_manager.broadcast_event({
+            "type": "scan_complete",
+            "scan": {
+                "id": db_scan.id,
+                "risk_level": db_scan.risk_level,
+                "verdict": db_scan.verdict,
+                "source": db_scan.source,
+                "created_at": db_scan.created_at.isoformat() if db_scan.created_at else None,
+                "user_id": db_scan.user_id,
+            },
+        }, owner_user_id=current_user.id))
+
         # Fire alerts (non-blocking)
         if current_user and result.get('risk_level') in ('HIGH', 'CRITICAL'):
             from app.core.alerting import fire_alerts as _fire_alerts
-            import asyncio
             asyncio.create_task(_fire_alerts(result, current_user.id, db_scan.id, db))
 
     except Exception as e:
@@ -174,10 +212,11 @@ async def upload_file(
     temp_filename = f"storage/temp_{uuid.uuid4()}{file_ext}"
     
     try:
-        # Save to disk
+        # Save to disk off the event loop to avoid blocking async workers
+        import asyncio as _asyncio
         with open(temp_filename, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
+            await _asyncio.to_thread(shutil.copyfileobj, file.file, buffer)
+
         file_size_mb = os.path.getsize(temp_filename) / (1024 * 1024)
         
         # Async Pipeline for Large Files (>10MB)
@@ -199,6 +238,7 @@ async def upload_file(
             # 2. Log into DB as UPLOADED
             db_scan = DLPScan(
                 user_id=current_user.id,
+                org_id=current_user.org_id,
                 source=f"OFFLINE: {public_url}",
                 content=f"[ASYNC UPLOAD] {safe_filename} ({file_size_mb:.2f}MB)",
                 status=ScanStatus.UPLOADED
@@ -286,8 +326,9 @@ async def upload_file(
             sanitized_filename = secure_filename(file.filename or "") or "unknown_file"
             db_scan = DLPScan(
                 user_id=current_user.id,
+                org_id=current_user.org_id,
                 source=f"FILE:{sanitized_filename}",
-                content=f"[SENTINEL SCAN]\nFile: {sanitized_filename}\nSize: {file_size_mb:.2f}MB", 
+                content=f"[SENTINEL SCAN]\nFile: {sanitized_filename}\nSize: {file_size_mb:.2f}MB",
                 status=ScanStatus.COMPLETED
             )
             
@@ -434,6 +475,7 @@ async def upload_file(
         # Create scan record
         db_scan = DLPScan(
             user_id=current_user.id,
+            org_id=current_user.org_id,
             source=f"API_UPLOAD:{safe_filename}",
             content=content[:50000], # Limit DB storage
             status=ScanStatus.SCANNING
@@ -500,7 +542,7 @@ async def upload_file(
             if not aggregated[key]["value"] and finding.get('value'):
                 aggregated[key]["value"] = finding['value']
 
-        # Convert to enriched list format
+        # Convert to enriched list format (with per-finding remediation)
         result['findings'] = [
             {
                 "type": ftype,
@@ -510,6 +552,7 @@ async def upload_file(
                 "confidence": data['confidence'],
                 "validated": data['validated'],
                 "context_score": data['context_score'],
+                "remediation": _remediation_engine.get_remediation(ftype),
             }
             for ftype, data in aggregated.items()
         ]
@@ -677,7 +720,7 @@ async def upload_file(
 
         # File uploads have no context payload — use defaults
         ctx = ContextPayload()
-        all_policies = db.query(Policy).all()
+        all_policies = db.query(Policy).filter(Policy.org_id == current_user.org_id).all()
         decision = PolicyEngine().evaluate(result, ctx, all_policies, current_user)
 
         db.add(PolicyDecisionLog(
@@ -703,6 +746,24 @@ async def upload_file(
         db_scan.status = ScanStatus.COMPLETED
         db.commit()
         db.refresh(db_scan)
+
+        # Offload large extracted content to DO Spaces (non-blocking on failure)
+        await _offload_content(db_scan, content, db)
+
+        # Push real-time event to connected WebSocket clients
+        import asyncio
+        from app.routes.ws import manager as _ws_manager
+        asyncio.create_task(_ws_manager.broadcast_event({
+            "type": "scan_complete",
+            "scan": {
+                "id": db_scan.id,
+                "risk_level": db_scan.risk_level,
+                "verdict": db_scan.verdict,
+                "source": db_scan.source,
+                "created_at": db_scan.created_at.isoformat() if db_scan.created_at else None,
+                "user_id": db_scan.user_id,
+            },
+        }, owner_user_id=current_user.id))
 
         # Fire alerts (non-blocking)
         if current_user and result.get('risk_level') in ('HIGH', 'CRITICAL'):
@@ -775,9 +836,10 @@ async def upload_video(
     stored_filename = f"storage/{current_user.id}_{int(datetime.utcnow().timestamp())}_{_safe_basename}"
     
     try:
+        import asyncio as _asyncio
         with open(stored_filename, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
-            
+            await _asyncio.to_thread(shutil.copyfileobj, file.file, buffer)
+
         # Check size (approx)
         if os.path.getsize(stored_filename) > 50 * 1024 * 1024:
             os.remove(stored_filename)
@@ -913,8 +975,8 @@ async def upload_video(
 
 @router.get("/", response_model=List[ScanResponse])
 async def list_scans(
-    skip: int = 0,
-    limit: int = 100,
+    skip: int = Query(0, ge=0, le=10_000_000),
+    limit: int = Query(100, ge=1, le=1000),
     days: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user)

@@ -13,8 +13,11 @@ from app.config import settings
 from app.database import Base, engine
 from app.routes import auth, users, scans, dashboard, cdr, code_security, enterprise, proxy, metrics, alerts
 from app.routes import bulk_scans
+from app.routes import ws as ws_routes
 from app.routes import export as export_routes
 from app.routes import policies as policies_routes
+from app.routes import organizations as org_routes
+from app.routes import reports as reports_routes
 from app.icap_server import ICAPServer
 from app.models.user import User
 from app.models.audit import ProxyLog
@@ -42,25 +45,36 @@ async def lifespan(app: FastAPI):
     # Base.metadata.create_all(bind=engine) # Handled by Alembic in production
     logger.info("Database initialized")
 
-    # Seed default policies (no-op if table already has rows)
+    # Seed default policies for the default organization (no-op if org already has policies)
     try:
         from app.database import SessionLocal
         from app.routes.policies import seed_default_policies
+        from app.models.organization import Organization
         _seed_db = SessionLocal()
         try:
-            seed_default_policies(_seed_db)
+            default_org = _seed_db.query(Organization).filter_by(slug='default').first()
+            if default_org:
+                seed_default_policies(_seed_db, default_org.id)
         finally:
             _seed_db.close()
     except Exception as _e:
         logger.warning(f"Policy seed failed (non-fatal): {_e}")
 
-    # Warm up ML engine eagerly so the first scan request is not slow
-    try:
-        from app.core.ml_engine import get_ml_engine
-        await asyncio.to_thread(get_ml_engine().warmup)
-        logger.info("ML engine warmed up successfully")
-    except Exception as e:
-        logger.warning(f"ML engine warmup failed (non-fatal): {e}")
+    # Warm up ML engine + Presidio in the background — startup completes immediately
+    async def _warmup():
+        try:
+            from app.core.ml_engine import get_ml_engine
+            await asyncio.to_thread(get_ml_engine().warmup)
+            logger.info("ML engine warmed up successfully")
+        except Exception as e:
+            logger.warning(f"ML engine warmup failed (non-fatal): {e}")
+        try:
+            from app.core.presidio_engine import PresidioEngine
+            await asyncio.to_thread(PresidioEngine)
+            logger.info("Presidio engine warmed up successfully")
+        except Exception as e:
+            logger.warning(f"Presidio warmup failed (non-fatal): {e}")
+    asyncio.create_task(_warmup())
     
     # Start ICAP server in background
     try:
@@ -137,7 +151,45 @@ app = FastAPI(
     docs_url=None, # Disabled for custom theme
     redoc_url=None,
     openapi_url="/api/openapi.json",
+    redirect_slashes=False,
 )
+
+# Custom OpenAPI schema — adds BearerAuth (HTTP Bearer) alongside OAuth2
+from fastapi.openapi.utils import get_openapi
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+    # Replace OAuth2PasswordBearer with a clean HTTP Bearer scheme.
+    # The API accepts standard Bearer tokens — the OAuth2 form in Swagger UI
+    # is confusing (shows client_id, client_secret, scope). BearerAuth shows
+    # a single token input field which matches how the API actually works.
+    schema.setdefault("components", {}).setdefault("securitySchemes", {})
+    schema["components"]["securitySchemes"] = {
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": "JWT from POST /api/auth/login → access_token",
+        }
+    }
+    # Replace any OAuth2PasswordBearer references with BearerAuth
+    for path_item in schema.get("paths", {}).values():
+        for operation in path_item.values():
+            if not isinstance(operation, dict):
+                continue
+            if "security" in operation:
+                operation["security"] = [{"BearerAuth": []}]
+    app.openapi_schema = schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
 
 # Custom Dark Theme for Swagger UI
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -189,14 +241,24 @@ async def custom_swagger_ui_html(request: Request):
 @app.get("/icap/content", response_class=HTMLResponse)
 async def icap_docs_content(request: Request):
     """Serve ICAP Documentation Content (Raw)"""
-    nonce = getattr(request.state, 'nonce', '')
-    return templates.TemplateResponse("icap_docs.html", {"request": request, "nonce": nonce})
+    template_path = Path("app/templates/icap_docs.html")
+    if not template_path.exists():
+        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
+    with open(template_path, "r") as f:
+        html_content = f.read()
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.get("/icap", response_class=HTMLResponse)
 async def icap_portal(request: Request):
-    """Serve ICAP Portal Wrapper"""
-    nonce = getattr(request.state, 'nonce', '')
-    return templates.TemplateResponse("icap_portal.html", {"request": request, "nonce": nonce})
+    """Serve ICAP Integration Portal"""
+    template_path = Path("app/templates/icap_portal.html")
+    if not template_path.exists():
+        return HTMLResponse(content="<h1>Error: Template not found</h1>", status_code=500)
+    with open(template_path, "r") as f:
+        html_content = f.read()
+    html_content = html_content.replace("{{ nonce }}", request.state.nonce)
+    return HTMLResponse(content=html_content)
 
 @app.post("/api/icap/test")
 async def test_icap_connection(request: Request, current_user: User = Depends(get_current_active_user)):
@@ -258,7 +320,8 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173", "http://localhost:5174", "http://localhost:8000", 
+        "https://spidercob.com",
+        "http://localhost:5173", "http://localhost:5174", "http://localhost:8000",
         "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:8000",
         "http://localhost:8080", "http://localhost",
         "http://127.0.0.1:8080", "http://127.0.0.1"
@@ -282,6 +345,9 @@ app.include_router(alerts.router)
 app.include_router(bulk_scans.router)
 app.include_router(export_routes.router)
 app.include_router(policies_routes.router)
+app.include_router(org_routes.router)
+app.include_router(reports_routes.router)
+app.include_router(ws_routes.router)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

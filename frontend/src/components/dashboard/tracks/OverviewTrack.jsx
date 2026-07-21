@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { Activity, ShieldAlert, FileSearch, ShieldCheck, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useEffect, useState, useRef } from 'react';
+import { Activity, ShieldAlert, FileSearch, ShieldCheck, Clock, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Wifi, WifiOff } from 'lucide-react';
+import { useDashboardFeed } from '../../../hooks/useDashboardFeed';
 
 const OverviewTrack = () => {
     const [stats, setStats] = useState(null);
@@ -11,6 +12,9 @@ const OverviewTrack = () => {
     const [page, setPage] = useState(1);
     const limit = 10;
     const [expandedRows, setExpandedRows] = useState({});
+
+    const { latestEvent, connected } = useDashboardFeed();
+    const seenIds = useRef(new Set());
 
     const fetchStats = async () => {
         try {
@@ -54,6 +58,30 @@ const OverviewTrack = () => {
         fetchScans();
     }, [page]);
 
+    // Real-time feed: prepend new scan rows and bump KPI counters
+    useEffect(() => {
+        if (!latestEvent || latestEvent.type !== 'scan_complete') return;
+        const scan = latestEvent.scan;
+        if (!scan || seenIds.current.has(scan.id)) return;
+        seenIds.current.add(scan.id);
+
+        // Only update the table when the user is on page 1
+        if (page === 1) {
+            setScans(prev => {
+                const next = [scan, ...prev];
+                return next.slice(0, limit); // keep page size
+            });
+        }
+
+        // Bump aggregate stats
+        setStats(prev => {
+            if (!prev) return prev;
+            const rl = (scan.risk_level || 'LOW').toUpperCase();
+            const newByRisk = { ...prev.scans_by_risk, [rl]: (prev.scans_by_risk?.[rl] || 0) + 1 };
+            return { ...prev, total_scans: prev.total_scans + 1, scans_by_risk: newByRisk };
+        });
+    }, [latestEvent]);
+
     const toggleRow = (id) => {
         setExpandedRows(prev => ({
             ...prev,
@@ -77,9 +105,19 @@ const OverviewTrack = () => {
     return (
         <div className="space-y-6 animate-fade-in pb-10">
             {/* Header */}
-            <div>
-                <h2 className="text-2xl font-black text-white tracking-tight">SECURITY POSTURE</h2>
-                <p className="text-gray-400 text-sm">Real-time overview of your security landscape.</p>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h2 className="text-2xl font-black text-white tracking-tight">SECURITY POSTURE</h2>
+                    <p className="text-gray-400 text-sm">Real-time overview of your security landscape.</p>
+                </div>
+                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-mono transition-all ${
+                    connected
+                        ? 'border-green-500/30 bg-green-500/10 text-green-400'
+                        : 'border-gray-600/30 bg-gray-800/30 text-gray-500'
+                }`}>
+                    {connected ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
+                    {connected ? 'LIVE' : 'CONNECTING'}
+                </div>
             </div>
 
             {/* KPI Cards */}
@@ -196,7 +234,15 @@ const OverviewTrack = () => {
             <div className="bg-[#0D1117] border border-[#30363d] rounded-xl overflow-hidden">
                 <div className="p-6 border-b border-[#30363d] flex justify-between items-center">
                     <div>
-                        <h3 className="text-lg font-bold text-white">Recent Activity</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-white">Recent Activity</h3>
+                            {connected && (
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                </span>
+                            )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-1">Showing last 7 days</p>
                     </div>
                     <div className="flex gap-2">
